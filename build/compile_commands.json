@@ -1,0 +1,32 @@
+[
+{
+  "directory": "/home/irin/code/secure-inference/PrivateGPT/build",
+  "command": "/usr/bin/g++ -isystem /usr/local/include/SEAL-4.1 -g -std=gnu++17 -o CMakeFiles/main.dir/src/main.cpp.o -c /home/irin/code/secure-inference/PrivateGPT/src/main.cpp",
+  "file": "/home/irin/code/secure-inference/PrivateGPT/src/main.cpp",
+  "output": "CMakeFiles/main.dir/src/main.cpp.o"
+},
+{
+  "directory": "/home/irin/code/secure-inference/PrivateGPT/build",
+  "command": "/usr/bin/g++ -isystem /usr/local/include/SEAL-4.1 -g -std=gnu++17 -o CMakeFiles/main.dir/src/gelu.cpp.o -c /home/irin/code/secure-inference/PrivateGPT/src/gelu.cpp",
+  "file": "/home/irin/code/secure-inference/PrivateGPT/src/gelu.cpp",
+  "output": "CMakeFiles/main.dir/src/gelu.cpp.o"
+},
+{
+  "directory": "/home/irin/code/secure-inference/PrivateGPT/build",
+  "command": "/usr/bin/g++ -isystem /usr/local/include/SEAL-4.1 -g -std=gnu++17 -o CMakeFiles/main.dir/src/layer_norm.cpp.o -c /home/irin/code/secure-inference/PrivateGPT/src/layer_norm.cpp",
+  "file": "/home/irin/code/secure-inference/PrivateGPT/src/layer_norm.cpp",
+  "output": "CMakeFiles/main.dir/src/layer_norm.cpp.o"
+},
+{
+  "directory": "/home/irin/code/secure-inference/PrivateGPT/build",
+  "command": "/usr/bin/g++ -isystem /usr/local/include/SEAL-4.1 -g -std=gnu++17 -o CMakeFiles/main.dir/src/ckks_evaluator.cpp.o -c /home/irin/code/secure-inference/PrivateGPT/src/ckks_evaluator.cpp",
+  "file": "/home/irin/code/secure-inference/PrivateGPT/src/ckks_evaluator.cpp",
+  "output": "CMakeFiles/main.dir/src/ckks_evaluator.cpp.o"
+},
+{
+  "directory": "/home/irin/code/secure-inference/PrivateGPT/build",
+  "command": "/usr/bin/g++ -isystem /usr/local/include/SEAL-4.1 -g -std=gnu++17 -o CMakeFiles/main.dir/src/softmax.cpp.o -c /home/irin/code/secure-inference/PrivateGPT/src/softmax.cpp",
+  "file": "/home/irin/code/secure-inference/PrivateGPT/src/softmax.cpp",
+  "output": "CMakeFiles/main.dir/src/softmax.cpp.o"
+}
+]
