@@ -343,3 +343,5 @@ ASALocalRun/
 # Built targets.
 libsealpir.a
 
+/build
+/comile_commands.json
