@@ -1,13 +1,18 @@
 #include "ckks_evaluator.h"
+using namespace std::chrono;
 
 void CKKSEvaluator::re_encrypt(Ciphertext &ct)
 {
+    auto start = high_resolution_clock::now();
+    cout << "Communication cost:  " << ct.save_size(compr_mode_type::zstd) << " bytes" << endl;
     Plaintext temp;
     vector<double> v;
     decryptor->decrypt(ct, temp);
     encoder->decode(temp, v);
     encoder->encode(v, scale, temp);
     encryptor->encrypt(temp, ct);
+    auto end = high_resolution_clock::now();
+    cout << duration_cast<milliseconds>(end - start).count() / 2 << " milliseconds" << endl;
     // cout << "depth = " << context->get_context_data(ct.parms_id())->chain_index() << "\n";
 }
 
