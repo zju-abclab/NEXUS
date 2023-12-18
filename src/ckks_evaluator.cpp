@@ -1,10 +1,19 @@
 #include "ckks_evaluator.h"
+#include <seal/util/defines.h>
 using namespace std::chrono;
 
 void CKKSEvaluator::re_encrypt(Ciphertext &ct)
 {
     auto start = high_resolution_clock::now();
-    cout << "Communication cost:  " << ct.save_size(compr_mode_type::zstd) << " bytes" << endl;
+    while (ct.coeff_modulus_size() >1)
+    {
+        evaluator->mod_switch_to_next_inplace(ct);
+    }
+    vector<seal_byte> data;
+    data.resize(ct.save_size(compr_mode_type::zstd));
+    comm += ct.save(data.data(),data.size(),compr_mode_type::zstd);
+    round++;
+    // cout << "Communication cost:  " << ct.save(data.data(),data.size(),compr_mode_type::zstd) << " bytes" << endl;
     Plaintext temp;
     vector<double> v;
     decryptor->decrypt(ct, temp);

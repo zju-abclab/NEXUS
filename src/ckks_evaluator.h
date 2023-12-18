@@ -26,7 +26,7 @@ private:
     pair<Ciphertext, Ciphertext> goldSchmidtIter(Ciphertext v, Ciphertext y, int d = 1);
     Ciphertext initGuess(Ciphertext x);
     Ciphertext evalLine(Ciphertext x, Plaintext m, Plaintext c);
-
+    
 public:
     Encryptor *encryptor = nullptr;
     Decryptor *decryptor = nullptr;
@@ -36,6 +36,8 @@ public:
     GaloisKeys *galois_keys = nullptr;
     double scale;
     size_t N;
+    size_t comm = 0;
+    size_t round = 0;
     CKKSEvaluator(SEALContext &context, Encryptor &encryptor, Decryptor &decryptor, CKKSEncoder &encoder, Evaluator &evaluator, double scale, RelinKeys &relin_keys, GaloisKeys &galois_keys)
     {
         this->scale = scale;
