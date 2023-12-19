@@ -42,9 +42,27 @@ vector<double> CKKSEvaluator::init_vec_with_value(int N, double init_value)
 {
     std::vector<double> v(N);
 
-    for (int i = 0; i < N; ++i)
-    {
+    for (int i = 0; i < N; ++i) {
         v[i] = init_value;
+    }
+
+    return v;
+}
+
+vector<double> CKKSEvaluator::init_mask(int N, int m)
+{
+    std::vector<double> v(N);
+
+    for (int i = 0; i < N/m; ++i) {
+        if (i % 2 == 0) {
+            for (int j = 0; j < m; ++j) {
+                v[i*m+j] = 1;
+            }
+        } else {
+            for (int j = 0; j < m; ++j) {
+                v[i*m+j] = 0;
+            }
+        }
     }
 
     return v;

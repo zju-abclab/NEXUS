@@ -14,4 +14,5 @@ public:
         this->ckks = &ckks;
     }
     void softmax(Ciphertext &x, Ciphertext &res, int len);
+    void softmax2(Ciphertext &x, Ciphertext &res, int len);
 };

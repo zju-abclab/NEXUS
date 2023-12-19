@@ -6,9 +6,9 @@
 #include<random>
 #include<chrono>
 #include<math.h>
-#include "gelu.h"
+//#include "gelu.h"
 //#include "layer_norm.h"
-//#include "softmax.h"
+#include "softmax.h"
 
 using namespace std;
 using namespace seal;
@@ -40,11 +40,11 @@ int main()
     keygen.create_galois_keys(galois_keys);
 
     CKKSEvaluator ckks_evaluator(context, encryptor, decryptor, encoder, evaluator, scale, relin_keys, galois_keys);
-    GeLUEvaluator gelu_evaluator(ckks_evaluator);
+    //GeLUEvaluator gelu_evaluator(ckks_evaluator);
     //LNEvaluator ln_evaluator(ckks_evaluator);
-    //SoftmaxEvaluator softmax_evaluator(ckks_evaluator);
+    SoftmaxEvaluator softmax_evaluator(ckks_evaluator);
     double bound = 1.0 / (1 << 16);
-    vector<double> input = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, bound};
+    vector<double> input = {-0.4, -0.3, -0.2, -0.1, 0.1, 0.2, 0.3, 0.4};
     Plaintext plain_input;
     Ciphertext cipher_input;
     Ciphertext cipher_output;
@@ -52,10 +52,10 @@ int main()
     ckks_evaluator.encoder->encode(input, scale, plain_input);
     ckks_evaluator.encryptor->encrypt(plain_input, cipher_input);
 
-    auto start = high_resolution_clock::now();
-    gelu_evaluator.gelu(cipher_input, cipher_output);
-    auto end = high_resolution_clock::now();
-    cout << poly_modulus_degree/2 << " times gelu() takes: " << duration_cast<milliseconds>(end - start).count() / 2.5 << " milliseconds" << endl;
+    // auto start = high_resolution_clock::now();
+    // gelu_evaluator.gelu(cipher_input, cipher_output);
+    // auto end = high_resolution_clock::now();
+    // cout << poly_modulus_degree/2 << " times gelu() takes: " << duration_cast<milliseconds>(end - start).count() / 2.5 << " milliseconds" << endl;
     // auto start = high_resolution_clock::now();
     // int size = input.size();
     // ln_evaluator.layer_norm(cipher_input, cipher_output, size);
@@ -63,12 +63,14 @@ int main()
     // auto end = high_resolution_clock::now();
     // cout << poly_modulus_degree/4 << " times LN() takes: " << duration_cast<milliseconds>(end - start).count() / 2.5 << " milliseconds" << endl;
     // ckks_evaluator.print_decrypted_ct(cipher_output, 8);
-    // auto start = high_resolution_clock::now();
-    // int size = 8;
-    // softmax_evaluator.softmax(cipher_input, cipher_output, size);
-    // auto end = high_resolution_clock::now();
-    // cout << poly_modulus_degree/4 << " times softmax() takes: " << duration_cast<milliseconds>(end - start).count() / 2.5 << " milliseconds" << endl;
-    //ckks_evaluator.print_decrypted_ct(cipher_output, 8);
+    auto start = high_resolution_clock::now();
+    int size = input.size();
+    softmax_evaluator.softmax2(cipher_input, cipher_output, size);
+    auto end = high_resolution_clock::now();
+    cout << poly_modulus_degree/4 << " times softmax() takes: " << duration_cast<milliseconds>(end - start).count() / 2.5 << " milliseconds" << endl;
+
+    
+    ckks_evaluator.print_decrypted_ct(cipher_output, 8);
     cout << "communication cost: " << ckks_evaluator.comm  << " bytes" << endl;
     cout << "communication round: " << ckks_evaluator.round  <<  endl;
 }
