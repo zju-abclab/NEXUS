@@ -2,7 +2,8 @@
 #include <seal/util/defines.h>
 using namespace std::chrono;
 
-void CKKSEvaluator::re_encrypt(Ciphertext& ct) {
+void CKKSEvaluator::re_encrypt(Ciphertext &ct)
+{
     auto start = high_resolution_clock::now();
     while (ct.coeff_modulus_size() > 1) {
         evaluator->mod_switch_to_next_inplace(ct);
@@ -25,7 +26,8 @@ void CKKSEvaluator::re_encrypt(Ciphertext& ct) {
     // context->get_context_data(ct.parms_id())->chain_index() << "\n";
 }
 
-void CKKSEvaluator::print_decrypted_ct(Ciphertext& ct, int nums) {
+void CKKSEvaluator::print_decrypted_ct(Ciphertext &ct, int nums)
+{
     Plaintext temp;
     vector<double> v;
     decryptor->decrypt(ct, temp);
@@ -36,7 +38,8 @@ void CKKSEvaluator::print_decrypted_ct(Ciphertext& ct, int nums) {
     cout << "\n";
 }
 
-vector<double> CKKSEvaluator::init_vec_with_value(int N, double init_value) {
+vector<double> CKKSEvaluator::init_vec_with_value(int N, double init_value)
+{
     std::vector<double> v(N);
 
     for (int i = 0; i < N; ++i) {
@@ -46,8 +49,46 @@ vector<double> CKKSEvaluator::init_vec_with_value(int N, double init_value) {
     return v;
 }
 
-Ciphertext CKKSEvaluator::poly_eval(Ciphertext x, vector<Plaintext> coeff) {
+vector<double> CKKSEvaluator::init_mask(int N, int m)
+{
+    std::vector<double> v(N);
 
+    for (int i = 0; i < N / m; ++i) {
+        if (i % 2 == 0) {
+            for (int j = 0; j < m; ++j) {
+                v[i * m + j] = 1;
+            }
+        } else {
+            for (int j = 0; j < m; ++j) {
+                v[i * m + j] = 0;
+            }
+        }
+    }
+
+    return v;
+}
+
+vector<double> CKKSEvaluator::init_mask(int N, int m)
+{
+    std::vector<double> v(N);
+
+    for (int i = 0; i < N / m; ++i) {
+        if (i % 2 == 0) {
+            for (int j = 0; j < m; ++j) {
+                v[i * m + j] = 1;
+            }
+        } else {
+            for (int j = 0; j < m; ++j) {
+                v[i * m + j] = 0;
+            }
+        }
+    }
+
+    return v;
+}
+
+Ciphertext CKKSEvaluator::poly_eval(Ciphertext x, vector<Plaintext> coeff)
+{
     // cout << "Initial depth " <<
     // context->get_context_data(x.parms_id())->chain_index() << "\n"; x^2
     Ciphertext x_2;
@@ -151,9 +192,10 @@ Ciphertext CKKSEvaluator::poly_eval(Ciphertext x, vector<Plaintext> coeff) {
     return sum_5_7;
 }
 
-Ciphertext CKKSEvaluator::sgn_eval(Ciphertext x, int d_g, int d_f, double factor) {
-    vector<double> df_coeff = {0, 35.0 / 16, 0, -35.0 / 16, 0, 21.0 / 16, 0, -5.0 / 16};
-    vector<double> dg_coeff = {0, 4589.0 / 1024, 0, -16577.0 / 1024, 0, 25614.0 / 1024, 0, -12860.0 / 1024};
+Ciphertext CKKSEvaluator::sgn_eval(Ciphertext x, int d_g, int d_f, double factor)
+{
+    vector<double> df_coeff = { 0, 35.0 / 16, 0, -35.0 / 16, 0, 21.0 / 16, 0, -5.0 / 16 };
+    vector<double> dg_coeff = { 0, 4589.0 / 1024, 0, -16577.0 / 1024, 0, 25614.0 / 1024, 0, -12860.0 / 1024 };
 
     vector<double> df_coeff_last;
     vector<double> dg_coeff_last;
@@ -195,10 +237,11 @@ Ciphertext CKKSEvaluator::sgn_eval(Ciphertext x, int d_g, int d_f, double factor
     return x;
 }
 
-Ciphertext CKKSEvaluator::newtonIter(Ciphertext x, Ciphertext res, int iter) {
-
+Ciphertext CKKSEvaluator::newtonIter(Ciphertext x, Ciphertext res, int iter)
+{
     for (int i = 0; i < iter; i++) {
-        if (context->get_context_data(res.parms_id())->chain_index() < 4) re_encrypt(res);
+        if (context->get_context_data(res.parms_id())->chain_index() < 4)
+            re_encrypt(res);
         // cout << i << " " << depth(res) << "\n";
         Plaintext three_half, neg_half;
         encoder->encode(1.5, scale, three_half);
@@ -254,7 +297,8 @@ Ciphertext CKKSEvaluator::newtonIter(Ciphertext x, Ciphertext res, int iter) {
     return res;
 }
 
-pair<Ciphertext, Ciphertext> CKKSEvaluator::goldSchmidtIter(Ciphertext v, Ciphertext y, int d) {
+pair<Ciphertext, Ciphertext> CKKSEvaluator::goldSchmidtIter(Ciphertext v, Ciphertext y, int d)
+{
     Ciphertext x, h, r, temp;
     Plaintext constant;
     encoder->encode(0.5, scale, constant);
@@ -315,7 +359,8 @@ pair<Ciphertext, Ciphertext> CKKSEvaluator::goldSchmidtIter(Ciphertext v, Cipher
     return make_pair(x, h);
 }
 
-Ciphertext CKKSEvaluator::invert_sqrt(Ciphertext x, int d_newt, int d_gold) {
+Ciphertext CKKSEvaluator::invert_sqrt(Ciphertext x, int d_newt, int d_gold)
+{
     Ciphertext res = initGuess(x);
     Ciphertext y = newtonIter(x, res, d_newt);
     pair<Ciphertext, Ciphertext> sqrt_inv_sqrt = goldSchmidtIter(x, y, d_gold);
@@ -324,13 +369,15 @@ Ciphertext CKKSEvaluator::invert_sqrt(Ciphertext x, int d_newt, int d_gold) {
     return sqrt_inv_sqrt.second;
 }
 
-uint64_t CKKSEvaluator::get_modulus(Ciphertext& x, int k) {
-    const vector<Modulus>& modulus = context->get_context_data(x.parms_id())->parms().coeff_modulus();
+uint64_t CKKSEvaluator::get_modulus(Ciphertext &x, int k)
+{
+    const vector<Modulus> &modulus = context->get_context_data(x.parms_id())->parms().coeff_modulus();
     int sz = modulus.size();
     return modulus[sz - k].value();
 }
 
-Ciphertext CKKSEvaluator::initGuess(Ciphertext x) {
+Ciphertext CKKSEvaluator::initGuess(Ciphertext x)
+{
     Plaintext A, B;
     // a = 1e-3; b = 750
     // encoder->encode(-0.00019703, scale, A);
@@ -343,7 +390,8 @@ Ciphertext CKKSEvaluator::initGuess(Ciphertext x) {
     return evalLine(x, A, B);
 }
 
-Ciphertext CKKSEvaluator::evalLine(Ciphertext x, Plaintext m, Plaintext c) {
+Ciphertext CKKSEvaluator::evalLine(Ciphertext x, Plaintext m, Plaintext c)
+{
     // cout << "line\n";
     evaluator->mod_switch_to_inplace(m, x.parms_id());
     evaluator->multiply_plain_inplace(x, m);
@@ -354,7 +402,8 @@ Ciphertext CKKSEvaluator::evalLine(Ciphertext x, Plaintext m, Plaintext c) {
     return x;
 }
 
-Ciphertext CKKSEvaluator::exp(Ciphertext x) {
+Ciphertext CKKSEvaluator::exp(Ciphertext x)
+{
     Ciphertext b0, b1;
     Plaintext p0, p1, delta;
     vector<double> dest;
@@ -380,10 +429,10 @@ Ciphertext CKKSEvaluator::exp(Ciphertext x) {
     evaluator->sub(b0, b1, a1);                    // a1 = b0 - b1
     evaluator->add_plain(b1, zero_point_five, a2); // a2 = b1 + 0.5
 
-    double A[] = {0.999469891622, 0.998104199650, 0.501415542413, 0.169660297661, 0.042133244334,
-                  0.007501312598, 0.000879175634, 0.000059258169, 0.000001716078};
-    double B[] = {6.943979090878,  -16.061172554433, 21.461821805218, -14.267410003218, 6.156317208726,
-                  -1.632082712072, 0.275766518989,   -0.026342660111, 0.001204185268};
+    double A[] = { 0.999469891622, 0.998104199650, 0.501415542413, 0.169660297661, 0.042133244334,
+                   0.007501312598, 0.000879175634, 0.000059258169, 0.000001716078 };
+    double B[] = { 6.943979090878,  -16.061172554433, 21.461821805218, -14.267410003218, 6.156317208726,
+                   -1.632082712072, 0.275766518989,   -0.026342660111, 0.001204185268 };
 
     vector<Plaintext> coeff_A(9), coeff_B(9);
     for (size_t i = 0; i < 9; i++) {
@@ -442,7 +491,8 @@ Ciphertext CKKSEvaluator::exp(Ciphertext x) {
     return res;
 }
 
-Ciphertext CKKSEvaluator::exp_poly_eval(vector<Ciphertext> x_pow, vector<Plaintext> coeff) {
+Ciphertext CKKSEvaluator::exp_poly_eval(vector<Ciphertext> x_pow, vector<Plaintext> coeff)
+{
     vector<Ciphertext> coeff_x(coeff.size());
     for (size_t i = 1; i < coeff.size(); i++) {
         evaluator->mod_switch_to_inplace(coeff[i], x_pow[i].parms_id());
