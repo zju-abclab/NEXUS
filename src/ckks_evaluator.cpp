@@ -2,18 +2,17 @@
 #include <seal/util/defines.h>
 using namespace std::chrono;
 
-void CKKSEvaluator::re_encrypt(Ciphertext &ct)
-{
+void CKKSEvaluator::re_encrypt(Ciphertext& ct) {
     auto start = high_resolution_clock::now();
-    while (ct.coeff_modulus_size() >1)
-    {
+    while (ct.coeff_modulus_size() > 1) {
         evaluator->mod_switch_to_next_inplace(ct);
     }
     vector<seal_byte> data;
     data.resize(ct.save_size(compr_mode_type::zstd));
-    comm += ct.save(data.data(),data.size(),compr_mode_type::zstd);
+    comm += ct.save(data.data(), data.size(), compr_mode_type::zstd);
     round++;
-    // cout << "Communication cost:  " << ct.save(data.data(),data.size(),compr_mode_type::zstd) << " bytes" << endl;
+    // cout << "Communication cost:  " <<
+    // ct.save(data.data(),data.size(),compr_mode_type::zstd) << " bytes" << endl;
     Plaintext temp;
     vector<double> v;
     decryptor->decrypt(ct, temp);
@@ -22,38 +21,35 @@ void CKKSEvaluator::re_encrypt(Ciphertext &ct)
     encryptor->encrypt(temp, ct);
     auto end = high_resolution_clock::now();
     cout << duration_cast<milliseconds>(end - start).count() / 2 << " milliseconds" << endl;
-    // cout << "depth = " << context->get_context_data(ct.parms_id())->chain_index() << "\n";
+    // cout << "depth = " <<
+    // context->get_context_data(ct.parms_id())->chain_index() << "\n";
 }
 
-void CKKSEvaluator::print_decrypted_ct(Ciphertext &ct, int nums)
-{
+void CKKSEvaluator::print_decrypted_ct(Ciphertext& ct, int nums) {
     Plaintext temp;
     vector<double> v;
     decryptor->decrypt(ct, temp);
     encoder->decode(temp, v);
-    for (int i = 0; i < nums; i++)
-    {
+    for (int i = 0; i < nums; i++) {
         cout << v[i] << " ";
     }
     cout << "\n";
 }
 
-vector<double> CKKSEvaluator::init_vec_with_value(int N, double init_value)
-{
+vector<double> CKKSEvaluator::init_vec_with_value(int N, double init_value) {
     std::vector<double> v(N);
 
-    for (int i = 0; i < N; ++i)
-    {
+    for (int i = 0; i < N; ++i) {
         v[i] = init_value;
     }
 
     return v;
 }
 
-Ciphertext CKKSEvaluator::poly_eval(Ciphertext x, vector<Plaintext> coeff)
-{
-    // cout << "Initial depth " << context->get_context_data(x.parms_id())->chain_index() << "\n";
-    // x^2
+Ciphertext CKKSEvaluator::poly_eval(Ciphertext x, vector<Plaintext> coeff) {
+
+    // cout << "Initial depth " <<
+    // context->get_context_data(x.parms_id())->chain_index() << "\n"; x^2
     Ciphertext x_2;
     evaluator->square(x, x_2);
     evaluator->relinearize_inplace(x_2, *relin_keys);
@@ -75,107 +71,123 @@ Ciphertext CKKSEvaluator::poly_eval(Ciphertext x, vector<Plaintext> coeff)
     evaluator->rescale_to_next_inplace(x_4);
     // cout << "x_4: " << x_4.scale() << " x_2: " << x_2.scale() << "\n";
 
-    // x^5
+    // // x^5
     Ciphertext x_5;
-    evaluator->mod_switch_to_inplace(x_2, x_3.parms_id());
-    evaluator->multiply(x_2, x_3, x_5);
-    evaluator->relinearize_inplace(x_5, *relin_keys);
-    evaluator->rescale_to_next_inplace(x_5);
-    // cout << "x_5: " << x_5.scale() << " x_3: " << x_3.scale() << "\n";
+    // evaluator->mod_switch_to_inplace(x_2, x_3.parms_id());
+    // evaluator->multiply(x_2, x_3, x_5);
+    // evaluator->relinearize_inplace(x_5, *relin_keys);
+    // evaluator->rescale_to_next_inplace(x_5);
+    // // cout << "x_5: " << x_5.scale() << " x_3: " << x_3.scale() << "\n";
 
-    // x^7
+    // // x^7
     Ciphertext x_7;
-    evaluator->multiply(x_3, x_4, x_7);
-    evaluator->relinearize_inplace(x_7, *relin_keys);
-    evaluator->rescale_to_next_inplace(x_7);
+    // evaluator->multiply(x_3, x_4, x_7);
+    // evaluator->relinearize_inplace(x_7, *relin_keys);
+    // evaluator->rescale_to_next_inplace(x_7);
     // cout << "x_7: " << x_7.scale() << "\n";
 
     // cout << depth(x_7) <<"\n";
     // Multiply constants
+
+    Ciphertext new_x, new_x3, sum_5_7;
+
     evaluator->mod_switch_to_inplace(coeff[1], x.parms_id());
-    evaluator->multiply_plain_inplace(x, coeff[1]);
-    evaluator->rescale_to_next_inplace(x);
+    evaluator->multiply_plain(x, coeff[1], new_x);
+    evaluator->rescale_to_next_inplace(new_x);
 
     evaluator->mod_switch_to_inplace(coeff[3], x_3.parms_id());
-    evaluator->multiply_plain_inplace(x_3, coeff[3]);
-    evaluator->rescale_to_next_inplace(x_3);
+    evaluator->multiply_plain(x_3, coeff[3], new_x3);
+    evaluator->rescale_to_next_inplace(new_x3);
 
-    evaluator->mod_switch_to_inplace(coeff[5], x_5.parms_id());
-    evaluator->multiply_plain_inplace(x_5, coeff[5]);
+    // cout << x.scale() << " " << x_3.scale() << " " << scale << endl;
+
+    evaluator->mod_switch_to_inplace(coeff[5], x_3.parms_id());
+    evaluator->mod_switch_to_inplace(x, x_3.parms_id());
+    evaluator->multiply_plain(x, coeff[5], x_5);
     evaluator->rescale_to_next_inplace(x_5);
 
-    evaluator->mod_switch_to_inplace(coeff[7], x_7.parms_id());
-    evaluator->multiply_plain_inplace(x_7, coeff[7]);
+    evaluator->mod_switch_to_inplace(coeff[7], x_3.parms_id());
+    evaluator->multiply_plain(x_3, coeff[7], x_7);
     evaluator->rescale_to_next_inplace(x_7);
 
-    // c7*x^7 + c5*x^5 + c3*x^3 + c1*x
-    x.scale() = scale;
-    x_3.scale() = scale;
+    // cout << x_5.scale() << " " << x_7.scale() << " " << scale << endl;
+
     x_5.scale() = scale;
     x_7.scale() = scale;
-    evaluator->mod_switch_to_inplace(x, x_7.parms_id());
-    evaluator->mod_switch_to_inplace(x_3, x_7.parms_id());
-    evaluator->mod_switch_to_inplace(x_5, x_7.parms_id());
-    evaluator->add_inplace(x, x_3);
-    evaluator->add_inplace(x, x_5);
-    evaluator->add_inplace(x, x_7);
 
-    // cout << "Final depth " << context->get_context_data(x.parms_id())->chain_index() << "\n";
+    evaluator->add(x_5, x_7, sum_5_7);
 
-    return x;
+    evaluator->mod_reduce_to_next_inplace(x_4);
+    evaluator->multiply_inplace(sum_5_7, x_4);
+    evaluator->relinearize_inplace(sum_5_7, *relin_keys);
+    evaluator->rescale_to_next_inplace(sum_5_7);
+
+    // c7*x^7 + c5*x^5 + c3*x^3 + c1*x
+    // x.scale() = scale;
+    // x_3.scale() = scale;
+    // x_5.scale() = scale;
+    // x_7.scale() = scale;
+
+    new_x.scale() = scale;
+    new_x3.scale() = scale;
+    sum_5_7.scale() = scale;
+
+    evaluator->mod_switch_to_inplace(new_x, sum_5_7.parms_id());
+    evaluator->mod_switch_to_inplace(new_x3, sum_5_7.parms_id());
+
+    evaluator->add_inplace(sum_5_7, new_x);
+    evaluator->add_inplace(sum_5_7, new_x3);
+
+    // evaluator->mod_switch_to_inplace(x, x_7.parms_id());
+    // evaluator->mod_switch_to_inplace(x_3, x_7.parms_id());
+    // evaluator->mod_switch_to_inplace(x_5, x_7.parms_id());
+    // evaluator->add_inplace(x, x_3);
+    // evaluator->add_inplace(x, x_5);
+    // evaluator->add_inplace(x, x_7);
+
+    // cout << "Final depth " <<
+    // context->get_context_data(x.parms_id())->chain_index() << "\n";
+
+    return sum_5_7;
 }
 
-Ciphertext CKKSEvaluator::sgn_eval(Ciphertext x, int d_g, int d_f, double factor)
-{
+Ciphertext CKKSEvaluator::sgn_eval(Ciphertext x, int d_g, int d_f, double factor) {
     vector<double> df_coeff = {0, 35.0 / 16, 0, -35.0 / 16, 0, 21.0 / 16, 0, -5.0 / 16};
     vector<double> dg_coeff = {0, 4589.0 / 1024, 0, -16577.0 / 1024, 0, 25614.0 / 1024, 0, -12860.0 / 1024};
 
     vector<double> df_coeff_last;
     vector<double> dg_coeff_last;
-    for (size_t i = 0; i < df_coeff.size(); i++)
-    {
+    for (size_t i = 0; i < df_coeff.size(); i++) {
         df_coeff_last.push_back(df_coeff[i] * factor);
     }
-    for (size_t i = 0; i < dg_coeff.size(); i++)
-    {
+    for (size_t i = 0; i < dg_coeff.size(); i++) {
         dg_coeff_last.push_back(dg_coeff[i] * factor);
     }
 
     vector<Plaintext> encode_df(8), encode_dg(8), encode_df_last(8), encode_dg_last(8);
-    for (int i = 0; i < 8; i++)
-    {
+    for (int i = 0; i < 8; i++) {
         encoder->encode(df_coeff[i], scale, encode_df[i]);
         encoder->encode(dg_coeff[i], scale, encode_dg[i]);
         encoder->encode(df_coeff_last[i], scale, encode_df_last[i]);
         encoder->encode(dg_coeff_last[i], scale, encode_dg_last[i]);
     }
-    for (int i = 0; i < d_g; i++)
-    {
-        if (context->get_context_data(x.parms_id())->chain_index() < 4)
-        {
+    for (int i = 0; i < d_g; i++) {
+        if (context->get_context_data(x.parms_id())->chain_index() < 4) {
             re_encrypt(x);
         }
-        if (i == d_g - 1)
-        {
+        if (i == d_g - 1) {
             x = poly_eval(x, encode_dg_last);
-        }
-        else
-        {
+        } else {
             x = poly_eval(x, encode_dg);
         }
     }
-    for (int i = 0; i < d_f; i++)
-    {
-        if (context->get_context_data(x.parms_id())->chain_index() < 4)
-        {
+    for (int i = 0; i < d_f; i++) {
+        if (context->get_context_data(x.parms_id())->chain_index() < 4) {
             re_encrypt(x);
         }
-        if (i == d_f - 1)
-        {
+        if (i == d_f - 1) {
             x = poly_eval(x, encode_df_last);
-        }
-        else
-        {
+        } else {
             x = poly_eval(x, encode_df);
         }
     }
@@ -183,13 +195,10 @@ Ciphertext CKKSEvaluator::sgn_eval(Ciphertext x, int d_g, int d_f, double factor
     return x;
 }
 
-Ciphertext CKKSEvaluator::newtonIter(Ciphertext x, Ciphertext res, int iter)
-{
+Ciphertext CKKSEvaluator::newtonIter(Ciphertext x, Ciphertext res, int iter) {
 
-    for (int i = 0; i < iter; i++)
-    {
-        if (context->get_context_data(res.parms_id())->chain_index() < 4)
-            re_encrypt(res);
+    for (int i = 0; i < iter; i++) {
+        if (context->get_context_data(res.parms_id())->chain_index() < 4) re_encrypt(res);
         // cout << i << " " << depth(res) << "\n";
         Plaintext three_half, neg_half;
         encoder->encode(1.5, scale, three_half);
@@ -210,7 +219,8 @@ Ciphertext CKKSEvaluator::newtonIter(Ciphertext x, Ciphertext res, int iter)
         evaluator->mod_switch_to_inplace(neg_half, x.parms_id());
         evaluator->multiply_plain(x, neg_half, res_x);
         evaluator->rescale_to_next_inplace(res_x);
-        if (context->get_context_data(res.parms_id())->chain_index() < context->get_context_data(res_x.parms_id())->chain_index())
+        if (context->get_context_data(res.parms_id())->chain_index() <
+            context->get_context_data(res_x.parms_id())->chain_index())
             evaluator->mod_switch_to_inplace(res_x, res.parms_id());
         else
             evaluator->mod_switch_to_inplace(res, res_x.parms_id());
@@ -244,8 +254,7 @@ Ciphertext CKKSEvaluator::newtonIter(Ciphertext x, Ciphertext res, int iter)
     return res;
 }
 
-pair<Ciphertext, Ciphertext> CKKSEvaluator::goldSchmidtIter(Ciphertext v, Ciphertext y, int d)
-{
+pair<Ciphertext, Ciphertext> CKKSEvaluator::goldSchmidtIter(Ciphertext v, Ciphertext y, int d) {
     Ciphertext x, h, r, temp;
     Plaintext constant;
     encoder->encode(0.5, scale, constant);
@@ -260,12 +269,10 @@ pair<Ciphertext, Ciphertext> CKKSEvaluator::goldSchmidtIter(Ciphertext v, Cipher
     evaluator->rescale_to_next_inplace(h);
     // cout << "gold\n";
 
-    for (int i = 0; i < d; i++)
-    {
+    for (int i = 0; i < d; i++) {
         encoder->encode(0.5, scale, constant);
         // r = 0.5 - xh
-        if (context->get_context_data(x.parms_id())->chain_index() < 3)
-        {
+        if (context->get_context_data(x.parms_id())->chain_index() < 3) {
             re_encrypt(x);
             re_encrypt(h);
         }
@@ -308,8 +315,7 @@ pair<Ciphertext, Ciphertext> CKKSEvaluator::goldSchmidtIter(Ciphertext v, Cipher
     return make_pair(x, h);
 }
 
-Ciphertext CKKSEvaluator::invert_sqrt(Ciphertext x, int d_newt, int d_gold)
-{
+Ciphertext CKKSEvaluator::invert_sqrt(Ciphertext x, int d_newt, int d_gold) {
     Ciphertext res = initGuess(x);
     Ciphertext y = newtonIter(x, res, d_newt);
     pair<Ciphertext, Ciphertext> sqrt_inv_sqrt = goldSchmidtIter(x, y, d_gold);
@@ -318,15 +324,13 @@ Ciphertext CKKSEvaluator::invert_sqrt(Ciphertext x, int d_newt, int d_gold)
     return sqrt_inv_sqrt.second;
 }
 
-uint64_t CKKSEvaluator::get_modulus(Ciphertext &x, int k)
-{
-    const vector<Modulus> &modulus = context->get_context_data(x.parms_id())->parms().coeff_modulus();
+uint64_t CKKSEvaluator::get_modulus(Ciphertext& x, int k) {
+    const vector<Modulus>& modulus = context->get_context_data(x.parms_id())->parms().coeff_modulus();
     int sz = modulus.size();
     return modulus[sz - k].value();
 }
 
-Ciphertext CKKSEvaluator::initGuess(Ciphertext x)
-{
+Ciphertext CKKSEvaluator::initGuess(Ciphertext x) {
     Plaintext A, B;
     // a = 1e-3; b = 750
     // encoder->encode(-0.00019703, scale, A);
@@ -339,8 +343,7 @@ Ciphertext CKKSEvaluator::initGuess(Ciphertext x)
     return evalLine(x, A, B);
 }
 
-Ciphertext CKKSEvaluator::evalLine(Ciphertext x, Plaintext m, Plaintext c)
-{
+Ciphertext CKKSEvaluator::evalLine(Ciphertext x, Plaintext m, Plaintext c) {
     // cout << "line\n";
     evaluator->mod_switch_to_inplace(m, x.parms_id());
     evaluator->multiply_plain_inplace(x, m);
@@ -351,16 +354,14 @@ Ciphertext CKKSEvaluator::evalLine(Ciphertext x, Plaintext m, Plaintext c)
     return x;
 }
 
-Ciphertext CKKSEvaluator::exp(Ciphertext x)
-{
+Ciphertext CKKSEvaluator::exp(Ciphertext x) {
     Ciphertext b0, b1;
     Plaintext p0, p1, delta;
     vector<double> dest;
 
     encoder->encode(init_vec_with_value(N, -8.0), x.parms_id(), x.scale(), p0);
     encoder->encode(init_vec_with_value(N, 1.5), x.parms_id(), x.scale(), p1);
-    encoder->encode(
-        init_vec_with_value(N, 1.0 / 32), x.parms_id(), x.scale(), delta);
+    encoder->encode(init_vec_with_value(N, 1.0 / 32), x.parms_id(), x.scale(), delta);
 
     evaluator->sub_plain(x, p0, b0);
     evaluator->multiply_plain_inplace(b0, delta);
@@ -379,12 +380,13 @@ Ciphertext CKKSEvaluator::exp(Ciphertext x)
     evaluator->sub(b0, b1, a1);                    // a1 = b0 - b1
     evaluator->add_plain(b1, zero_point_five, a2); // a2 = b1 + 0.5
 
-    double A[] = {0.999469891622, 0.998104199650, 0.501415542413, 0.169660297661, 0.042133244334, 0.007501312598, 0.000879175634, 0.000059258169, 0.000001716078};
-    double B[] = {6.943979090878, -16.061172554433, 21.461821805218, -14.267410003218, 6.156317208726, -1.632082712072, 0.275766518989, -0.026342660111, 0.001204185268};
+    double A[] = {0.999469891622, 0.998104199650, 0.501415542413, 0.169660297661, 0.042133244334,
+                  0.007501312598, 0.000879175634, 0.000059258169, 0.000001716078};
+    double B[] = {6.943979090878,  -16.061172554433, 21.461821805218, -14.267410003218, 6.156317208726,
+                  -1.632082712072, 0.275766518989,   -0.026342660111, 0.001204185268};
 
     vector<Plaintext> coeff_A(9), coeff_B(9);
-    for (size_t i = 0; i < 9; i++)
-    {
+    for (size_t i = 0; i < 9; i++) {
         encoder->encode(A[i], scale, coeff_A[i]);
         encoder->encode(B[i], scale, coeff_B[i]);
     }

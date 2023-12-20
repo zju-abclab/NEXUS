@@ -1,18 +1,18 @@
-#include <seal/seal.h>
-#include <iostream>
-#include <vector>
-#include <string>
-#include <random>
 #include <chrono>
+#include <cstdint>
+#include <iostream>
 #include <math.h>
+#include <random>
+#include <seal/seal.h>
+#include <string>
+#include <vector>
 
 using namespace std;
 using namespace seal;
+using namespace seal::util;
 
-class CKKSEvaluator
-{
+class CKKSEvaluator {
 private:
-    SEALContext *context = nullptr;
     double x_l = 1e-4, x_r = 1e3;
     double k2 = 1.6885913944245319, k1 = 0.08385114624023438;
     double x2 = 339.8933847174716, x1 = 0.12670372040311723;
@@ -22,12 +22,13 @@ private:
     Plaintext a, b, half, div_b, neg_p, err, M1, M2, C1, C2;
     Ciphertext poly_eval(Ciphertext x, vector<Plaintext> coeff);
     Ciphertext exp_poly_eval(vector<Ciphertext> x_pow, vector<Plaintext> coeff);
-    Ciphertext newtonIter(Ciphertext x, Ciphertext res, int iter=4);
+    Ciphertext newtonIter(Ciphertext x, Ciphertext res, int iter = 4);
     pair<Ciphertext, Ciphertext> goldSchmidtIter(Ciphertext v, Ciphertext y, int d = 1);
     Ciphertext initGuess(Ciphertext x);
     Ciphertext evalLine(Ciphertext x, Plaintext m, Plaintext c);
-    
+
 public:
+    SEALContext *context = nullptr;
     Encryptor *encryptor = nullptr;
     Decryptor *decryptor = nullptr;
     CKKSEncoder *encoder = nullptr;
@@ -38,7 +39,17 @@ public:
     size_t N;
     size_t comm = 0;
     size_t round = 0;
-    CKKSEvaluator(SEALContext &context, Encryptor &encryptor, Decryptor &decryptor, CKKSEncoder &encoder, Evaluator &evaluator, double scale, RelinKeys &relin_keys, GaloisKeys &galois_keys)
+    std::vector<std::uint32_t> rots;
+
+    CKKSEvaluator(
+        SEALContext &context,
+        Encryptor &encryptor,
+        Decryptor &decryptor,
+        CKKSEncoder &encoder,
+        Evaluator &evaluator,
+        double scale,
+        RelinKeys &relin_keys,
+        GaloisKeys &galois_keys)
     {
         this->scale = scale;
         this->encryptor = &encryptor;
@@ -59,6 +70,10 @@ public:
         this->encoder->encode(m2, scale, M2);
         this->encoder->encode(c1, scale, C1);
         this->encoder->encode(c2, scale, C2);
+
+        for (int i = 0; i < 12; i++) {
+            rots.push_back((N + exponentiate_uint(2, i)) / exponentiate_uint(2, i));
+        }
     }
     void re_encrypt(Ciphertext &ct);
     void print_decrypted_ct(Ciphertext &ct, int nums);
