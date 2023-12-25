@@ -28,5 +28,11 @@
   "command": "/usr/bin/c++  -isystem /usr/local/include/SEAL-4.1 -g -std=gnu++17 -o CMakeFiles/main.dir/src/softmax.cpp.o -c /home/andy/MPC/secureGPT2/src/softmax.cpp",
   "file": "/home/andy/MPC/secureGPT2/src/softmax.cpp",
   "output": "CMakeFiles/main.dir/src/softmax.cpp.o"
+},
+{
+  "directory": "/home/andy/MPC/secureGPT2",
+  "command": "/usr/bin/c++  -isystem /usr/local/include/SEAL-4.1 -g -std=gnu++17 -o CMakeFiles/main.dir/src/matrix_mul.cpp.o -c /home/andy/MPC/secureGPT2/src/matrix_mul.cpp",
+  "file": "/home/andy/MPC/secureGPT2/src/matrix_mul.cpp",
+  "output": "CMakeFiles/main.dir/src/matrix_mul.cpp.o"
 }
 ]

@@ -2,6 +2,8 @@
 #include <cmath>
 #include <seal/ciphertext.h>
 #include <seal/plaintext.h>
+#include <seal/util/defines.h>
+#include <seal/valcheck.h>
 #include <vector>
 
 using namespace std;
@@ -68,38 +70,68 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
     }
 
     vector<Ciphertext> b_compressed_cts;
-    for (int i = 0; i < 768 * 768 / ckks->N; i++) {
+    for (int i = 0; i < 768 * 768 / ckks->degree; i++) {
         Plaintext pt;
         Ciphertext ct;
         expandEncode(y[i], ct);
         b_compressed_cts.push_back(ct);
     }
 
+    vector<seal::seal_byte> ct_bytes(b_compressed_cts[0].save_size());
+    auto send_size = 0;
+    for (auto &ct : b_compressed_cts) {
+        auto ctt = ckks->encryptor->encrypt_symmetric(a_pts[0]);
+        send_size += ctt.save(ct_bytes.data(), ct_bytes.size());
+    }
+
+    cout << send_size / 1024.0 / 1024.0 << " MB" << endl;
+
     time_start = high_resolution_clock::now();
     vector<Ciphertext> b_expanded_cts;
-    for (Ciphertext &ct : b_compressed_cts) {
-        vector<Ciphertext> temp_cts = expand_ciphertext(ct, ckks->N, *ckks->galois_keys, ckks->rots);
-        cout << "expanding..." << endl;
+
+    for (auto i = 0; i < b_compressed_cts.size(); i++) {
+        vector<Ciphertext> temp_cts =
+            expand_ciphertext(b_compressed_cts[i], ckks->degree, *ckks->galois_keys, ckks->rots);
+        // cout << "expanding..." << endl;
         b_expanded_cts.insert(
             b_expanded_cts.end(), make_move_iterator(temp_cts.begin()), make_move_iterator(temp_cts.end()));
     }
+
     time_end = high_resolution_clock::now();
-    cout << "expanding time: " << duration_cast<std::chrono::seconds>(time_end - time_start).count() << "seconds"
+    cout << "expanding time: " << duration_cast<std::chrono::seconds>(time_end - time_start).count() << " seconds"
          << endl;
 
-    vector<Ciphertext> res_cts;
-    Plaintext pt(ckks->N, 0);
+    Plaintext pt;
+    Ciphertext zero;
+    ckks->encoder->encode(std::vector<double>(ckks->N / 2, 0.0), ckks->scale, pt);
+    ckks->encryptor->encrypt(pt, zero);
+
     time_start = high_resolution_clock::now();
     for (int i = 0; i < 768; i++) {
-        Ciphertext res_col_ct;
-        ckks->encryptor->encrypt(pt, res_col_ct);
+        Ciphertext res_col_ct = zero;
         for (int j = 0; j < 768; j++) {
             Ciphertext temp;
+            // b_expanded_cts[i * 768 + j].scale() *= 4096;
+
             ckks->evaluator->multiply_plain(b_expanded_cts[i * 768 + j], a_pts[j], temp);
+            res_col_ct.scale() = temp.scale();
             ckks->evaluator->add(res_col_ct, temp, res_col_ct);
         }
-        res_cts.push_back(res_col_ct);
+        res_col_ct.scale() *= 4096;
+        res.push_back(res_col_ct);
     }
+    for (auto &ct : res) {
+        while (ct.coeff_modulus_size() > 1) {
+            ckks->evaluator->rescale_to_next_inplace(ct);
+        }
+    }
+    vector<seal::seal_byte> rece_bytes(res[0].save_size());
+    auto rece_size = 0;
+    for (auto &ct : res) {
+        rece_size += ct.save(rece_bytes.data(), rece_bytes.size());
+    }
+    cout << rece_size / 1024.0 / 1024.0 << " MB" << endl;
+
     time_end = high_resolution_clock::now();
     cout << "calculating res time: " << duration_cast<seconds>(time_end - time_start).count() << "seconds" << endl;
 }
@@ -107,7 +139,7 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
 void MMEvaluator::expandEncode(vector<double> &val, Ciphertext &ct)
 {
     Plaintext zero_pt;
-    ckks->encoder->encode(std::vector<double>(ckks->N / 2, 0), ckks->scale, zero_pt);
+    ckks->encoder->encode(std::vector<double>(ckks->N / 2, 0.0), ckks->scale, zero_pt);
     Ciphertext zero;
     ckks->encryptor->encrypt(zero_pt, zero);
 
@@ -116,7 +148,7 @@ void MMEvaluator::expandEncode(vector<double> &val, Ciphertext &ct)
     auto param = context_data->parms();
     auto ntt_tables = context_data->small_ntt_tables();
 
-    auto poly_modulus_degree = ckks->N;
+    auto poly_modulus_degree = ckks->degree;
 
     Plaintext p(poly_modulus_degree * 2);
 
