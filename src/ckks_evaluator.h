@@ -1,10 +1,13 @@
+#pragma once
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <iostream>
 #include <math.h>
 #include <random>
 #include <seal/seal.h>
 #include <string>
+#include <sys/types.h>
 #include <vector>
 
 using namespace std;
@@ -37,6 +40,7 @@ public:
     GaloisKeys *galois_keys = nullptr;
     double scale;
     size_t N;
+    size_t degree;
     size_t comm = 0;
     size_t round = 0;
     std::vector<std::uint32_t> rots;
@@ -60,7 +64,8 @@ public:
         this->galois_keys = &galois_keys;
         this->context = &context;
 
-        N = encoder.slot_count();
+        N = encoder.slot_count() * 2;
+        degree = N;
         this->encoder->encode(x_l, scale, a);
         this->encoder->encode(x_r, scale, b);
         this->encoder->encode(1 / (x_r - x_l), scale, div_b);
@@ -71,8 +76,8 @@ public:
         this->encoder->encode(c1, scale, C1);
         this->encoder->encode(c2, scale, C2);
 
-        for (int i = 0; i < 12; i++) {
-            rots.push_back((N + exponentiate_uint(2, i)) / exponentiate_uint(2, i));
+        for (int i = 0; i < uint(std::ceil(log2(degree))); i++) {
+            rots.push_back((degree + exponentiate_uint(2, i)) / exponentiate_uint(2, i));
         }
     }
     void re_encrypt(Ciphertext &ct);
