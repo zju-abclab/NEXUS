@@ -107,17 +107,16 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
     ckks->encryptor->encrypt(pt, zero);
 
     time_start = high_resolution_clock::now();
+    Ciphertext temp;
+
     for (int i = 0; i < 768; i++) {
         Ciphertext res_col_ct = zero;
         for (int j = 0; j < 768; j++) {
-            Ciphertext temp;
-            // b_expanded_cts[i * 768 + j].scale() *= 4096;
-
             ckks->evaluator->multiply_plain(b_expanded_cts[i * 768 + j], a_pts[j], temp);
             res_col_ct.scale() = temp.scale();
             ckks->evaluator->add(res_col_ct, temp, res_col_ct);
         }
-        res_col_ct.scale() *= 4096;
+        res_col_ct.scale() *= 2 * 4096.0;
         res.push_back(res_col_ct);
     }
     for (auto &ct : res) {
