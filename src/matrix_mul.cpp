@@ -109,17 +109,16 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
     time_start = high_resolution_clock::now();
     for (int i = 0; i < 768; i++) {
         Ciphertext res_col_ct = zero;
+        vector<Ciphertext> temp_cts(768);
         for (int j = 0; j < 768; j++) {
-            Ciphertext temp;
-            // b_expanded_cts[i * 768 + j].scale() *= 4096;
-
-            ckks->evaluator->multiply_plain(b_expanded_cts[i * 768 + j], a_pts[j], temp);
-            res_col_ct.scale() = temp.scale();
-            ckks->evaluator->add(res_col_ct, temp, res_col_ct);
+            ckks->evaluator->multiply_plain(b_expanded_cts[i * 768 + j], a_pts[j], temp_cts[j]);
         }
+        res_col_ct.scale() = temp_cts[0].scale();
+        ckks->evaluator->add_many(temp_cts, res_col_ct);
         res_col_ct.scale() *= 4096;
         res.push_back(res_col_ct);
     }
+
     for (auto &ct : res) {
         while (ct.coeff_modulus_size() > 1) {
             ckks->evaluator->rescale_to_next_inplace(ct);
@@ -133,7 +132,7 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
     cout << rece_size / 1024.0 / 1024.0 << " MB" << endl;
 
     time_end = high_resolution_clock::now();
-    cout << "calculating res time: " << duration_cast<seconds>(time_end - time_start).count() << "seconds" << endl;
+    cout << "calculating res time: " << duration_cast<seconds>(time_end - time_start).count() << " seconds" << endl;
 }
 
 void MMEvaluator::expandEncode(vector<double> &val, Ciphertext &ct)

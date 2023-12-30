@@ -28,5 +28,11 @@
   "command": "/usr/bin/g++ -isystem /usr/local/include/SEAL-4.1 -g -std=gnu++17 -o CMakeFiles/main.dir/src/softmax.cpp.o -c /home/irin/code/secure-inference/PrivateGPT/src/softmax.cpp",
   "file": "/home/irin/code/secure-inference/PrivateGPT/src/softmax.cpp",
   "output": "CMakeFiles/main.dir/src/softmax.cpp.o"
+},
+{
+  "directory": "/home/irin/code/secure-inference/PrivateGPT/build",
+  "command": "/usr/bin/g++ -isystem /usr/local/include/SEAL-4.1 -g -std=gnu++17 -o CMakeFiles/main.dir/src/matrix_mul.cpp.o -c /home/irin/code/secure-inference/PrivateGPT/src/matrix_mul.cpp",
+  "file": "/home/irin/code/secure-inference/PrivateGPT/src/matrix_mul.cpp",
+  "output": "CMakeFiles/main.dir/src/matrix_mul.cpp.o"
 }
 ]
