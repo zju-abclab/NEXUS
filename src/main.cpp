@@ -65,22 +65,22 @@ int main()
     // gelu_evaluator.gelu(cipher_input, cipher_output);
     // auto end = high_resolution_clock::now();
     // cout << poly_modulus_degree/2 << " times gelu() takes: " << duration_cast<milliseconds>(end - start).count()
-    // / 2.5 << " milliseconds" << endl; auto start = high_resolution_clock::now(); int size = input.size();
+    // / 1.0 << " milliseconds" << endl; auto start = high_resolution_clock::now(); int size = input.size();
     // ln_evaluator.layer_norm(cipher_input, cipher_output, size);
     // //ckks_evaluator.sgn_eval(cipher_input, 7, 3, 0.5);
     // auto end = high_resolution_clock::now();
-    // cout << poly_modulus_degree/4 << " times LN() takes: " << duration_cast<milliseconds>(end - start).count() / 2.5
+    // cout << poly_modulus_degree/4 << " times LN() takes: " << duration_cast<milliseconds>(end - start).count() / 1.0
     // << " milliseconds" << endl; ckks_evaluator.print_decrypted_ct(cipher_output, 8); auto start =
     // high_resolution_clock::now(); int size = 8; softmax_evaluator.softmax(cipher_input, cipher_output, size); auto
     // end = high_resolution_clock::now(); cout << poly_modulus_degree/4 << " times softmax() takes: " <<
-    // duration_cast<milliseconds>(end - start).count() / 2.5 << " milliseconds" << endl;
+    // duration_cast<milliseconds>(end - start).count() / 1.0 << " milliseconds" << endl;
     // ckks_evaluator.print_decrypted_ct(cipher_output, 8);
     // auto start = high_resolution_clock::now();
     // int size = input.size();
     // softmax_evaluator.softmax2(cipher_input, cipher_output, size);
     // auto end = high_resolution_clock::now();
     // cout << poly_modulus_degree / 4
-    //      << " times softmax() takes: " << duration_cast<milliseconds>(end - start).count() / 2.5 << " milliseconds"
+    //      << " times softmax() takes: " << duration_cast<milliseconds>(end - start).count() / 1.0 << " milliseconds"
     //      << endl;
 
     // ckks_evaluator.print_decrypted_ct(cipher_output, 8);
@@ -92,7 +92,7 @@ int main()
 void MM_test()
 {
     EncryptionParameters parms(scheme_type::ckks);
-    long logN = 12;
+    long logN = 13;
     size_t poly_modulus_degree = 1 << logN;
     double scale = pow(2.0, 40);
     parms.set_poly_modulus_degree(poly_modulus_degree);
@@ -113,7 +113,7 @@ void MM_test()
     GaloisKeys galois_keys;
 
     std::vector<std::uint32_t> rots;
-    for (int i = 0; i < 12; i++) {
+    for (int i = 0; i < logN; i++) {
         rots.push_back((poly_modulus_degree + exponentiate_uint(2, i)) / exponentiate_uint(2, i));
     }
     keygen.create_galois_keys(rots, galois_keys);
@@ -123,10 +123,10 @@ void MM_test()
     MMEvaluator mme(ckks_evaluator);
 
     vector<vector<double>> X(768);
-    vector<vector<double>> Y(144, vector<double>(4096, 0.0));
+    vector<vector<double>> Y(72, vector<double>(poly_modulus_degree, 0.0));
     for (auto i = 0; i < 768; i++) {
-        vector<double> val(2048);
-        for (auto j = 0; j < 2048; j++) {
+        vector<double> val(poly_modulus_degree / 2);
+        for (auto j = 0; j < poly_modulus_degree / 2; j++) {
             val[j] = 10.0 * 2.0 * (1.0 * rand() / RAND_MAX - 0.5);
         }
         X[i] = val;

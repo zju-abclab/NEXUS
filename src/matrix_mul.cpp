@@ -107,6 +107,8 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
     ckks->encryptor->encrypt(pt, zero);
 
     time_start = high_resolution_clock::now();
+    Ciphertext temp;
+
     for (int i = 0; i < 768; i++) {
         Ciphertext res_col_ct = zero;
         vector<Ciphertext> temp_cts(768);
