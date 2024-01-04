@@ -53,7 +53,7 @@ int main()
     // LNEvaluator ln_evaluator(ckks_evaluator);
     // SoftmaxEvaluator softmax_evaluator(ckks_evaluator);
     // double bound = 1.0 / (1 << 16);
-    vector<double> input = { -0.4, -0.3, -0.2, -0.1, 0.1, 0.2, 0.3, 0.4 };
+    vector<double> input = {-3.0, -1.0, 0.0, 1.0, 3.0};
     Plaintext plain_input;
     Ciphertext cipher_input;
     Ciphertext cipher_output;

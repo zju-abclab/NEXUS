@@ -178,7 +178,8 @@ Ciphertext CKKSEvaluator::poly_eval(Ciphertext x, vector<Plaintext> coeff)
 Ciphertext CKKSEvaluator::sgn_eval2(Ciphertext x, int d_g, int d_f) {
     Ciphertext dest = x;
     for (int i = 0; i < d_g; i++) {
-        if (context->get_context_data(dest.parms_id())->chain_index() < 5) {
+        //cout << "depth: " << context->get_context_data(dest.parms_id())->chain_index() << endl;
+        if (context->get_context_data(dest.parms_id())->chain_index() < 4) {
             re_encrypt(dest);
         }
         if (i == d_g - 1) {
@@ -188,7 +189,9 @@ Ciphertext CKKSEvaluator::sgn_eval2(Ciphertext x, int d_g, int d_f) {
         }
     }
     for (int i = 0; i < d_f; i++) {
-        if (context->get_context_data(dest.parms_id())->chain_index() < 5) {
+        //cout << "depth: " << context->get_context_data(dest.parms_id())->chain_index() << endl;
+
+        if (context->get_context_data(dest.parms_id())->chain_index() < 4) {
             re_encrypt(dest);
         }
         if (i == d_f - 1) {
