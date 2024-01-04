@@ -28,9 +28,9 @@ void GeLUEvaluator::gelu(Ciphertext &x, Ciphertext &res)
     ckks->evaluator->rescale_to_next_inplace(b2);
 
     // time_start = high_resolution_clock::now();
-    b0 = ckks->sgn_eval(b0, 7, 3, 0.5);
-    b1 = ckks->sgn_eval(b1, 7, 3, 0.5);
-    b2 = ckks->sgn_eval(b2, 7, 3, 0.5);
+    b0 = ckks->sgn_eval2(b0, 2, 2);
+    b1 = ckks->sgn_eval2(b1, 2, 2);
+    b2 = ckks->sgn_eval2(b2, 2, 2);
 
     
     Plaintext zero_point_five;
@@ -138,17 +138,17 @@ void GeLUEvaluator::gelu(Ciphertext &x, Ciphertext &res)
 
     Ciphertext s1, s2, s3;
     // cout << Ax.scale() << " " << Bx.scale() << " " << a1.scale() << endl;
-    ckks->evaluator->mod_switch_to_inplace(a1, Ax.parms_id());
+    ckks->evaluator->mod_switch_to_inplace(Ax, a1.parms_id());
     ckks->evaluator->multiply(Ax, a1, s1);
     ckks->evaluator->relinearize_inplace(s1, *ckks->relin_keys);
     ckks->evaluator->rescale_to_next_inplace(s1);
 
-    ckks->evaluator->mod_switch_to_inplace(a2, Bx.parms_id());
+    ckks->evaluator->mod_switch_to_inplace(Bx, a2.parms_id());
     ckks->evaluator->multiply(Bx, a2, s2);
     ckks->evaluator->relinearize_inplace(s2, *ckks->relin_keys);
     ckks->evaluator->rescale_to_next_inplace(s2);
 
-    ckks->evaluator->mod_switch_to_inplace(a3, x.parms_id());
+    ckks->evaluator->mod_switch_to_inplace(x, a3.parms_id());
     ckks->evaluator->multiply(x, a3, s3);
     ckks->evaluator->relinearize_inplace(s3, *ckks->relin_keys);
     ckks->evaluator->rescale_to_next_inplace(s3);
