@@ -49,6 +49,7 @@ public:
     GaloisKeys *galois_keys = nullptr;
     double scale;
     size_t N;
+    size_t slot_count;
     size_t degree;
     size_t comm = 0;
     size_t round = 0;
@@ -76,6 +77,7 @@ public:
 
         N = encoder.slot_count() * 2;
         degree = N;
+        slot_count = encoder.slot_count();
         this->sgn_factor = sgn_factor;
         this->encoder->encode(x_l, scale, a);
         this->encoder->encode(x_r, scale, b);

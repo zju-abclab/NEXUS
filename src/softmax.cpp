@@ -41,7 +41,7 @@ void SoftmaxEvaluator::softmax2(Ciphertext &x, Ciphertext &res, int len) {
         sign = ckks->sgn_eval(a_minus_b, 7, 3, 0.5);
         
         ckks->encoder->encode(
-        ckks->init_vec_with_value(ckks->N/2, 0.5), a.parms_id(), a.scale(), zero_point_five);
+        ckks->init_vec_with_value(ckks->slot_count, 0.5), a.parms_id(), a.scale(), zero_point_five);
         ckks->evaluator->multiply_plain_inplace(a_plus_b, zero_point_five);
         ckks->evaluator->rescale_to_next_inplace(a_plus_b);
         ckks->evaluator->mod_switch_to_inplace(sign, a_minus_b.parms_id());
@@ -56,10 +56,10 @@ void SoftmaxEvaluator::softmax2(Ciphertext &x, Ciphertext &res, int len) {
     a.scale() = ckks->scale;
     ckks->evaluator->mod_switch_to_inplace(x, a.parms_id());
     ckks->evaluator->sub_inplace(x, a);
-    ckks->encoder->encode(ckks->init_vec_with_value(ckks->N/2, 1.0/64), x.parms_id(), x.scale(), inverse_64);
+    ckks->encoder->encode(ckks->init_vec_with_value(ckks->slot_count, 1.0/64), x.parms_id(), x.scale(), inverse_64);
     ckks->evaluator->multiply_plain_inplace(x, inverse_64);
     ckks->evaluator->rescale_to_next_inplace(x);
-    ckks->encoder->encode(ckks->init_vec_with_value(ckks->N/2, 1.0), x.parms_id(), x.scale(), one);
+    ckks->encoder->encode(ckks->init_vec_with_value(ckks->slot_count, 1.0), x.parms_id(), x.scale(), one);
     ckks->evaluator->add_plain_inplace(x, one);
     ckks->re_encrypt(x);
     //x^64
