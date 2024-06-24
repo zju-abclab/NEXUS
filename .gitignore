@@ -346,3 +346,5 @@ libsealpir.a
 
 /build
 /comile_commands.json
+
+cuda/build
