@@ -54,7 +54,7 @@ int main()
     LNEvaluator ln_evaluator(ckks_evaluator);
     SoftmaxEvaluator softmax_evaluator(ckks_evaluator);
     // double bound = 1.0 / (1 << 16);
-    vector<double> input = {-0.4, -0.3, -0.2, -0.1, 0.1, 0.2, 0.3, 0.4};
+    vector<double> input = {-5, -4, -3, -2, -1, 1, 2, 3, 4, 5};
     Plaintext plain_input;
     Ciphertext cipher_input;
     Ciphertext cipher_output;
@@ -62,7 +62,6 @@ int main()
     ckks_evaluator.encoder->encode(input, scale, plain_input);
     ckks_evaluator.encryptor->encrypt(plain_input, cipher_input);
 
-    // cipher_output = ckks_evaluator.sgn_eval2(cipher_input, 4, 4);
     vector<double> gelu_plain = gelu_evaluator.gelu_plain(input);
     for (int i = 0; i < input.size(); i++) {
         cout << gelu_plain[i] << " ";
