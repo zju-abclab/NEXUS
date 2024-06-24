@@ -40,6 +40,20 @@ void CKKSEvaluator::print_decrypted_ct(Ciphertext &ct, int nums)
     cout << "\n";
 }
 
+double CKKSEvaluator::calculateMAE(vector<double>& y_true, Ciphertext &ct) {
+    Plaintext temp;
+    vector<double> y_pred;
+    decryptor->decrypt(ct, temp);
+    encoder->decode(temp, y_pred);
+
+    double sum_absolute_errors = 0.0;
+    for (size_t i = 0; i < y_true.size(); ++i) {
+        sum_absolute_errors += abs(y_true[i] - y_pred[i]);
+    }
+
+    return sum_absolute_errors / y_true.size();
+}
+
 vector<double> CKKSEvaluator::init_vec_with_value(int N, double init_value)
 {
     std::vector<double> v(N);
@@ -93,25 +107,13 @@ Ciphertext CKKSEvaluator::poly_eval(Ciphertext x, vector<Plaintext> coeff)
     evaluator->square(x_2, x_4);
     evaluator->relinearize_inplace(x_4, *relin_keys);
     evaluator->rescale_to_next_inplace(x_4);
-    // cout << "x_4: " << x_4.scale() << " x_2: " << x_2.scale() << "\n";
 
-    // // x^5
+    // x^5
     Ciphertext x_5;
-    // evaluator->mod_switch_to_inplace(x_2, x_3.parms_id());
-    // evaluator->multiply(x_2, x_3, x_5);
-    // evaluator->relinearize_inplace(x_5, *relin_keys);
-    // evaluator->rescale_to_next_inplace(x_5);
-    // // cout << "x_5: " << x_5.scale() << " x_3: " << x_3.scale() << "\n";
 
-    // // x^7
+    // x^7
     Ciphertext x_7;
-    // evaluator->multiply(x_3, x_4, x_7);
-    // evaluator->relinearize_inplace(x_7, *relin_keys);
-    // evaluator->rescale_to_next_inplace(x_7);
-    // cout << "x_7: " << x_7.scale() << "\n";
 
-    // cout << depth(x_7) <<"\n";
-    // Multiply constants
 
     Ciphertext new_x, new_x3, sum_5_7;
 

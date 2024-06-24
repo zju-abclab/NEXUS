@@ -1,16 +1,16 @@
-# SecureGPT
-SecureGPT is an efficient secure transformer framework for chatGPT inference
+# NEXUS
+NEXUS is the first non-interactive protocol for secure transformer inference.
 
 
 # Compiling SEAL
 
-SecureGPT depends on [Microsoft SEAL version 4.1](https://github.com/microsoft/SEAL/tree/4.1).
+NEXUS depends on [Microsoft SEAL version 4.1](https://github.com/microsoft/SEAL/tree/4.1).
 
-Download and install SEAL (follow the instructions in the above link) before before compiling SecureGPT.
+Download and install SEAL (follow the instructions in the above link) before before compiling NEXUS.
 
-# Compiling SecureGPT
+# Compiling NEXUS
 
-Once Microsoft SEAL 4.1 is installed, to build SecureGPT simply run:
+Once Microsoft SEAL 4.1 is installed, to build NEXUS simply run:
 
 ```
 cmake .

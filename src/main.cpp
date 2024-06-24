@@ -62,6 +62,11 @@ int main()
     ckks_evaluator.encoder->encode(input, scale, plain_input);
     ckks_evaluator.encryptor->encrypt(plain_input, cipher_input);
 
+    // cipher_output = ckks_evaluator.sgn_eval2(cipher_input, 4, 4);
+    vector<double> gelu_plain = gelu_evaluator.gelu_plain(input);
+    for (int i = 0; i < input.size(); i++) {
+        cout << gelu_plain[i] << " ";
+    }
     auto start = high_resolution_clock::now();
     gelu_evaluator.gelu(cipher_input, cipher_output);
     auto end = high_resolution_clock::now();
@@ -83,9 +88,12 @@ int main()
     //      << " times softmax() takes: " << duration_cast<milliseconds>(end - start).count() / 1.0 << " milliseconds"
     //      << endl;
 
+    
+
     ckks_evaluator.print_decrypted_ct(cipher_output, 8);
-    cout << "communication cost: " << ckks_evaluator.comm << " bytes" << endl;
-    cout << "communication round: " << ckks_evaluator.round << endl;
+    cout << "Mean Absolute Error: " <<  ckks_evaluator.calculateMAE(gelu_plain, cipher_output);
+    // cout << "communication cost: " << ckks_evaluator.comm << " bytes" << endl;
+    // cout << "communication round: " << ckks_evaluator.round << endl;
     //MM_test();
 }
 

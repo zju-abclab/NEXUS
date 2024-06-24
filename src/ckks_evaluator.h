@@ -105,6 +105,7 @@ public:
     void re_encrypt(Ciphertext &ct);
     void print_decrypted_ct(Ciphertext &ct, int nums);
     vector<double> init_vec_with_value(int N, double init_value);
+    double calculateMAE(vector<double>& y_true, Ciphertext &ct);
     vector<double> init_mask(int N, int m);
     uint64_t get_modulus(Ciphertext &x, int k);
     Ciphertext invert_sqrt(Ciphertext x, int d_newt = 20, int d_gold = 1);

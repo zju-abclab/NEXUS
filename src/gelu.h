@@ -14,4 +14,5 @@ public:
         this->ckks = &ckks;
     }
     void gelu(Ciphertext &x, Ciphertext &res);
+    vector<double> gelu_plain(vector<double>& input);
 };

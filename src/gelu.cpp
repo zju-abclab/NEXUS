@@ -14,7 +14,7 @@ void GeLUEvaluator::gelu(Ciphertext &x, Ciphertext &res)
     ckks->encoder->encode(ckks->init_vec_with_value(ckks->slot_count, -1.95), x.parms_id(), x.scale(), p1);
     ckks->encoder->encode(ckks->init_vec_with_value(ckks->slot_count, 3.0), x.parms_id(), x.scale(), p2);
     ckks->encoder->encode(
-        ckks->init_vec_with_value(ckks->slot_count, 1.0 / 16), x.parms_id(), x.scale(), delta);
+        ckks->init_vec_with_value(ckks->slot_count, 1.0 / 8), x.parms_id(), x.scale(), delta);
 
     ckks->evaluator->sub_plain(x, p0, b0);
     ckks->evaluator->multiply_plain_inplace(b0, delta);
@@ -167,4 +167,17 @@ void GeLUEvaluator::gelu(Ciphertext &x, Ciphertext &res)
     // cout << N << " times GELU" << endl;
     // cout << "Computation cost:  " << duration_cast<milliseconds>(time_end - time_start).count() << " ms"
     //      << endl; // TODO: HEXL Acc
+}
+
+
+vector<double> GeLUEvaluator::gelu_plain(vector<double>& input) {
+    vector<double> output;
+    output.reserve(input.size());
+    
+    for (double x : input) {
+        double gelu_x = 0.5 * x * (1.0 + std::tanh(std::sqrt(2.0 / M_PI) * (x + 0.044715 * x * x * x)));
+        output.push_back(gelu_x);
+    }
+
+    return output;
 }
