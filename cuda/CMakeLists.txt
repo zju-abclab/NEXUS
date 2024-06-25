@@ -37,8 +37,8 @@ endif ()
 include_directories(thirdparty/phantom-fhe/include)
 
 # NexusCUDA
-file(GLOB_RECURSE NEXUS_SOURCE_FILES CONFIGURE_DEPENDS
-  "src/*.cu" "src/*.cuh"
+file(GLOB_RECURSE NEXUS_CUDA_SOURCE_FILES CONFIGURE_DEPENDS
+  "src/*.cu"
   "thirdparty/phantom-fhe/src/*.cu"
 )
-add_executable(main ${NEXUS_SOURCE_FILES})
+add_executable(main ${NEXUS_CUDA_SOURCE_FILES})

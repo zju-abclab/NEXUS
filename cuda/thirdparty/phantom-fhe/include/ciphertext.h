@@ -156,6 +156,10 @@ public:
         return parms_id_;
     }
 
+    [[nodiscard]] std::size_t params_id() const noexcept {
+        return chain_index_;
+    }
+
     [[nodiscard]] auto &chain_index() const noexcept {
         return chain_index_;
     }
@@ -166,6 +170,10 @@ public:
 
     [[nodiscard]] auto &coeff_modulus_size() const noexcept {
         return coeff_modulus_size_;
+    }
+
+    [[nodiscard]] auto &scale() noexcept {
+        return scale_;
     }
 
     [[nodiscard]] auto &scale() const noexcept {

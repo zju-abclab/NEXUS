@@ -2,6 +2,7 @@
 #include <seal/util/defines.h>
 using namespace std::chrono;
 
+// NOTE: DONE
 void CKKSEvaluator::re_encrypt(Ciphertext &ct)
 {
     auto start = high_resolution_clock::now();
@@ -537,6 +538,7 @@ Ciphertext CKKSEvaluator::invert_sqrt(Ciphertext x, int d_newt, int d_gold)
     return sqrt_inv_sqrt.second;
 }
 
+// NOTE: DONE
 uint64_t CKKSEvaluator::get_modulus(Ciphertext &x, int k)
 {
     const vector<Modulus> &modulus = context->get_context_data(x.parms_id())->parms().coeff_modulus();
