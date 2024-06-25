@@ -345,6 +345,4 @@ ASALocalRun/
 libsealpir.a
 
 /build
-/comile_commands.json
-
-cuda/build
+/compile_commands.json
