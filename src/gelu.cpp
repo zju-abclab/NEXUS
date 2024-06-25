@@ -257,14 +257,13 @@ void GeLUEvaluator::gelu(Ciphertext &x, Ciphertext &res)
     ckks->evaluator->mod_switch_to_inplace(coeff_A[0], Ax.parms_id());
     ckks->evaluator->add_plain_inplace(Ax, coeff_A[0]);
 
-
     Ciphertext s1, s2;
     // // cout << Ax.scale() << " " << Bx.scale() << " " << a1.scale() << endl;
     ckks->evaluator->mod_switch_to_inplace(a1, Ax.parms_id());
     ckks->evaluator->multiply(Ax, a1, s1);
     ckks->evaluator->relinearize_inplace(s1, *ckks->relin_keys);
     ckks->evaluator->rescale_to_next_inplace(s1);
-
+    
     ckks->evaluator->mod_switch_to_inplace(x, a2.parms_id());
     ckks->evaluator->multiply(x, a2, s2);
     ckks->evaluator->relinearize_inplace(s2, *ckks->relin_keys);
