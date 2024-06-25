@@ -12,4 +12,5 @@ interval = [-5, 5]
 x = np.linspace(interval[0], interval[1], 32768)
 y = gelu(x)
 
-np.savetxt("gelu_input_32768.txt", x)
+np.savetxt("data/input/gelu_input_32768.txt", x, fmt='%f',delimiter=' ')
+np.savetxt("data/calibration/gelu_calibration_32768.txt", y, fmt='%f',delimiter=' ')

@@ -181,8 +181,8 @@ void GeLUEvaluator::gelu(Ciphertext &x, Ciphertext &res)
     ckks->evaluator->multiply_plain_inplace(b1, delta);
     ckks->evaluator->rescale_to_next_inplace(b1);
 
-    b0 = ckks->sgn_eval2(b0, 4, 4);
-    b1 = ckks->sgn_eval2(b1, 4, 4);
+    b0 = ckks->sgn_eval2(b0, 3, 3);
+    b1 = ckks->sgn_eval2(b1, 3, 3);
 
     
     Plaintext zero_point_five;
