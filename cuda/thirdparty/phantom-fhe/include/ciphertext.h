@@ -172,11 +172,11 @@ public:
         return coeff_modulus_size_;
     }
 
-    [[nodiscard]] auto &scale() noexcept {
+    [[nodiscard]] auto &scale() const noexcept {
         return scale_;
     }
 
-    [[nodiscard]] auto &scale() const noexcept {
+    [[nodiscard]] auto &scale() noexcept {
         return scale_;
     }
 

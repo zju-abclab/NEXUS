@@ -12,7 +12,7 @@ using namespace phantom::arith;
 using namespace phantom::util;
 using namespace nexus;
 
-size_t N = 1 << 16;
+size_t N = 1ULL << 16;
 double SCALE = pow(2.0, 40);
 
 int main() {
@@ -21,10 +21,11 @@ int main() {
   params.set_poly_modulus_degree(N);
   params.set_coeff_modulus(CoeffModulus::Create(
       N,
-      {58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58}
+      {58, 40, 40, 40, 40, 40, 40, 40, 40, 58}
       // {60, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50,
       //  50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 53}  // 1763-bit
       ));
+  params.set_special_modulus_size(1);
 
   PhantomContext context(params);
 
@@ -66,6 +67,8 @@ int main() {
   ckks_evaluator.encryptor.encrypt(plain_input, cipher_input);
 
   auto timer = Timer();
+  cout << "cipher_input scale: " << cipher_input.scale() << endl;
+  cout << "depth = " << context.get_context_data_from_params_id(cipher_input.params_id()).chain_index() << endl;
   gelu_evaluator.gelu(cipher_input, cipher_output);
   timer.stop();
   cout << N / 2 << " times gelu() takes: " << timer.duration() << " milliseconds" << endl;

@@ -180,6 +180,12 @@ public:
         return context_data_[index];
     }
 
+    [[nodiscard]] const phantom::ContextData &get_context_data_from_params_id(const size_t params_id) const {
+        if (params_id >= context_data_.size())
+            throw std::invalid_argument("params_id is invalid!");
+        return context_data_[coeff_mod_size_ - params_id - 1];
+    }
+
     /**
      * Returns the ContextData corresponding to encryption parameters that are
      * used for keys.

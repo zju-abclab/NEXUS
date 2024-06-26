@@ -74,34 +74,34 @@ class Evaluator {
   void mod_switch_to_next(const PhantomCiphertext &encrypted, PhantomCiphertext &destination);
 
   inline void mod_switch_to_next_inplace(PhantomCiphertext &ct) {
-    PhantomCiphertext dest = ct;
-    mod_switch_to_next(ct, dest);
-    ct = dest;
-    // ::mod_switch_to_next_inplace(*context, ct);
+    // PhantomCiphertext dest = ct;
+    // mod_switch_to_next(ct, dest);
+    // ct = dest;
+    ::mod_switch_to_next_inplace(*context, ct);
   }
 
   inline void mod_switch_to_inplace(PhantomCiphertext &ct, size_t chain_index) {
-    if (ct.chain_index() > chain_index) {
-      throw std::invalid_argument("cannot switch to higher level modulus");
-    }
+    // if (ct.chain_index() > chain_index) {
+    //   throw std::invalid_argument("cannot switch to higher level modulus");
+    // }
 
-    PhantomCiphertext destination = ct;
+    // PhantomCiphertext destination = ct;
 
-    while (destination.chain_index() != chain_index) {
-      mod_switch_to_next_inplace(destination);
-    }
+    // while (destination.chain_index() != chain_index) {
+    //   mod_switch_to_next_inplace(destination);
+    // }
 
-    ct = destination;
-    // ::mod_switch_to_inplace(*context, ct, chain_index);
+    // ct = destination;
+    ::mod_switch_to_inplace(*context, ct, chain_index);
   }
 
   inline void mod_switch_to_inplace(PhantomPlaintext &pt, size_t chain_index) {
     ::mod_switch_to_inplace(*context, pt, chain_index);
   }
 
-  // Rescale generalized as mod switch in PhantomFHE
+  // Rescale
   inline void rescale_to_next_inplace(PhantomCiphertext &ct) {
-    ::mod_switch_to_next_inplace(*context, ct);
+    ::rescale_to_next_inplace(*context, ct);
   }
 
   // Relinearization
@@ -115,9 +115,10 @@ class Evaluator {
   }
 
   inline void multiply(PhantomCiphertext &ct1, PhantomCiphertext &ct2, PhantomCiphertext &dest) {
-    PhantomCiphertext tmp(ct1);
-    ::multiply_inplace(*context, tmp, ct2);
-    dest = tmp;
+    // PhantomCiphertext tmp(ct1);
+    // ::multiply_inplace(*context, tmp, ct2);
+    // dest = tmp;
+    dest = ::multiply(*context, ct1, ct2);
   }
 
   inline void multiply_inplace(PhantomCiphertext &ct1, PhantomCiphertext &ct2) {
@@ -157,6 +158,16 @@ class Evaluator {
   inline void sub(PhantomCiphertext &ct1, PhantomCiphertext &ct2, PhantomCiphertext &dest) {
     dest = ::sub(*context, ct1, ct2);
   }
+
+  // Rotation
+  inline void rotate_vector(PhantomCiphertext &ct, int steps, PhantomGaloisKey &galois_keys, PhantomCiphertext &dest) {
+    dest = ::rotate_vector(*context, ct, steps, galois_keys);
+  }
+
+  // Negation
+  inline void negate(PhantomCiphertext &ct, PhantomCiphertext &dest) {
+    dest = ::negate(*context, ct);
+  }
 };
 
 class Decryptor {
@@ -188,7 +199,12 @@ class CKKSEvaluator {
   uint64_t get_modulus(PhantomCiphertext &x, int k);
   void re_encrypt(PhantomCiphertext &ct);
 
+  PhantomCiphertext init_guess(PhantomCiphertext x);
+  PhantomCiphertext eval_line(PhantomCiphertext x, PhantomPlaintext m, PhantomPlaintext c);
+
   // Evaluation functions
+  PhantomCiphertext newton_iter(PhantomCiphertext x, PhantomCiphertext res, int iter);
+  pair<PhantomCiphertext, PhantomCiphertext> goldschmidt_iter(PhantomCiphertext v, PhantomCiphertext y, int d = 1);
   void eval_odd_deg9_poly(vector<double> &a, PhantomCiphertext &x, PhantomCiphertext &dest);
 
  public:
@@ -231,6 +247,7 @@ class CKKSEvaluator {
 
   // Evaluation functions
   PhantomCiphertext sgn_eval2(PhantomCiphertext x, int d_g, int d_f);
+  PhantomCiphertext invert_sqrt(PhantomCiphertext x, int d_newt = 20, int d_gold = 1);
 
   // Metrics calcuation functions
   double calculate_MAE(vector<double> &y_true, PhantomCiphertext &ct);
