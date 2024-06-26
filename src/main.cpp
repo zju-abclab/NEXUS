@@ -67,13 +67,14 @@ int main()
     */
     double num;
     vector<double> gelu_calibration;
-    ifstream input_file("data/input/gelu_input_32768.txt");
+    ifstream input_file("../data/input/gelu_input_32768.txt");
     while (input_file >> num) {
         input.push_back(num);
     }
     input_file.close();
-    ifstream calibration_file("data/calibration/gelu_calibration_32768.txt");
+    ifstream calibration_file("../data/calibration/gelu_calibration_32768.txt");
     while (calibration_file >> num) {
+        cout << num << endl;
         gelu_calibration.push_back(num);
     }
     calibration_file.close();
