@@ -3,7 +3,35 @@
 #include "utils.cuh"
 
 using namespace phantom::arith;
+using namespace phantom::util;
 using namespace nexus;
+
+void Evaluator::mod_switch_to_next(const PhantomCiphertext &encrypted, PhantomCiphertext &destination) {
+  const cuda_stream_wrapper &stream_wrapper = *global_variables::default_stream;
+  const auto &stream = stream_wrapper.get_stream();
+
+  // Assuming at this point encrypted is already validated.
+  auto next_index_id = context->get_next_index(encrypted.chain_index());
+  auto &next_context_data = context->get_context_data(next_index_id);
+  auto &next_parms = next_context_data.parms();
+
+  // Extract encryption parameters.
+  size_t coeff_mod_size = next_parms.coeff_modulus().size();
+  size_t poly_degree = next_parms.poly_modulus_degree();
+  size_t encrypted_size = encrypted.size();
+
+  // resize and empty the data array
+  destination.resize(*context, next_index_id, encrypted_size, stream);
+
+  auto encrypted_copy = make_cuda_auto_ptr<uint64_t>(encrypted_size * coeff_mod_size * poly_degree, stream);
+  cudaMemcpyAsync(destination.data(), encrypted_copy.get(),
+                  encrypted_size * coeff_mod_size * poly_degree * sizeof(uint64_t),
+                  cudaMemcpyDeviceToDevice, stream);
+
+  destination.set_ntt_form(encrypted.is_ntt_form());
+  destination.scale() = encrypted.scale();
+  destination.set_correction_factor(encrypted.correction_factor());
+}
 
 vector<double> CKKSEvaluator::init_vec_with_value(int N, double init_value) {
   std::vector<double> v(N);
@@ -15,16 +43,16 @@ vector<double> CKKSEvaluator::init_vec_with_value(int N, double init_value) {
   return v;
 }
 
-uint64_t CKKSEvaluator::get_modulus(PhantomCiphertext& x, int k) {
-  const vector<Modulus>& modulus = context->get_context_data(x.params_id()).parms().coeff_modulus();
+uint64_t CKKSEvaluator::get_modulus(PhantomCiphertext &x, int k) {
+  const vector<Modulus> &modulus = context->get_context_data(x.params_id()).parms().coeff_modulus();
   int sz = modulus.size();
   return modulus[sz - k].value();
 }
 
-void CKKSEvaluator::re_encrypt(PhantomCiphertext& ct) {
+void CKKSEvaluator::re_encrypt(PhantomCiphertext &ct) {
   auto timer = Timer();
   while (ct.coeff_modulus_size() > 1) {
-    evaluator->mod_switch_to_next_inplace(ct);
+    evaluator.mod_switch_to_next_inplace(ct);
   }
 
   // vector<seal_byte> data;
@@ -36,10 +64,10 @@ void CKKSEvaluator::re_encrypt(PhantomCiphertext& ct) {
 
   PhantomPlaintext temp;
   vector<double> v;
-  decryptor->decrypt(ct, temp);
-  encoder->decode(temp, v);
-  encoder->encode(v, scale, temp);
-  encryptor->encrypt(temp, ct);
+  decryptor.decrypt(ct, temp);
+  encoder.decode(temp, v);
+  encoder.encode(v, scale, temp);
+  encryptor.encrypt(temp, ct);
 
   // data.resize(ct.save_size(compr_mode_type::zstd));
   // comm += ct.save(data.data(), data.size(), compr_mode_type::zstd);
@@ -47,10 +75,10 @@ void CKKSEvaluator::re_encrypt(PhantomCiphertext& ct) {
   // cout << duration_cast<milliseconds>(end - start).count() / 2 << " milliseconds" << endl;
 
   // cout << "depth = " <<
-  // context->get_context_data(ct.parms_id())->chain_index() << "\n";
+  // context.get_context_data(ct.parms_id()).chain_index() << "\n";
 }
 
-void CKKSEvaluator::eval_odd_deg9_poly(vector<double>& a, PhantomCiphertext& x, PhantomCiphertext& dest) {
+void CKKSEvaluator::eval_odd_deg9_poly(vector<double> &a, PhantomCiphertext &x, PhantomCiphertext &dest) {
   /*
         (polyeval/odd9.h)
         P(x) = a9 x^9 + a7 x^7 + a5 x^5 + a3 x^3 + a1 x
@@ -66,9 +94,9 @@ void CKKSEvaluator::eval_odd_deg9_poly(vector<double>& a, PhantomCiphertext& x, 
 
         ###
 
-        -> Errorless Polynomial Evaluation (3.2. of https://eprint.iacr.org/2020/1203)
+        . Errorless Polynomial Evaluation (3.2. of https://eprint.iacr.org/2020/1203)
         GOAL: evaluate a polynomial exactly so no need to stabilize and lose precision
-        (x at level L and scale D --> P(x) at level L-4 and scale D)
+        (x at level L and scale D -. P(x) at level L-4 and scale D)
         it's possible to do this exactly for polyeval as (x,x2,x3,x6) determine the scale D_L for each involved level L:
         (assume the primes at levels L to L-4 are p, q, r, s)
 
@@ -124,64 +152,70 @@ void CKKSEvaluator::eval_odd_deg9_poly(vector<double>& a, PhantomCiphertext& x, 
   ///////////////////////////////////////////////
   PhantomCiphertext x2, x3, x6;
 
-  evaluator->square(x, x2);
-  evaluator->relinearize_inplace(x2, *relin_keys);
-  evaluator->rescale_to_next_inplace(x2);  // L-1
+  evaluator.square(x, x2);
+  evaluator.relinearize_inplace(x2, *relin_keys);
+  evaluator.rescale_to_next_inplace(x2);  // L-1
 
-  evaluator->mod_switch_to_next_inplace(x);  // L-1
-  evaluator->multiply(x2, x, x3);
-  evaluator->relinearize_inplace(x3, *relin_keys);
-  evaluator->rescale_to_next_inplace(x3);  // L-2
+  evaluator.mod_switch_to_inplace(x, x2.chain_index());  // L-1
+  x.scale() = x2.scale();                               // NEW
+  evaluator.multiply(x2, x, x3);
+  evaluator.relinearize_inplace(x3, *relin_keys);
+  evaluator.rescale_to_next_inplace(x3);  // L-2
 
-  evaluator->square(x3, x6);
-  evaluator->relinearize_inplace(x6, *relin_keys);
-  evaluator->rescale_to_next_inplace(x6);  // L-3
+  evaluator.square(x3, x6);
+  evaluator.relinearize_inplace(x6, *relin_keys);
+  evaluator.rescale_to_next_inplace(x6);  // L-3
 
   PhantomPlaintext a1, a3, a5, a7, a9;
 
   // Build T1
   PhantomCiphertext T1;
   double a5_scale = D / x2.scale() * p / x3.scale() * q;
-  encoder->encode({a[5]}, x2.params_id(), a5_scale, a5);  // L-1
-  evaluator->multiply_plain(x2, a5, T1);
-  evaluator->rescale_to_next_inplace(T1);  // L-2
+  encoder.encode({a[5]}, x2.params_id(), a5_scale, a5);  // L-1
+  x2.scale() = a5.scale();                               // NEW
+  evaluator.multiply_plain(x2, a5, T1);
+  evaluator.rescale_to_next_inplace(T1);  // L-2
 
   // Update: using a_scales[3] is only approx. correct, so we directly use T1.scale()
-  encoder->encode(a[3], T1.params_id(), T1.scale(), a3);  // L-2
+  encoder.encode(a[3], T1.params_id(), T1.scale(), a3);  // L-2
 
-  evaluator->add_plain_inplace(T1, a3);  // L-2
-
-  evaluator->multiply_inplace(T1, x3);
-  evaluator->relinearize_inplace(T1, *relin_keys);
-  evaluator->rescale_to_next_inplace(T1);  // L-3
+  evaluator.add_plain_inplace(T1, a3);  // L-2
+  T1.scale() = x3.scale();              // NEW
+  evaluator.multiply_inplace(T1, x3);
+  evaluator.relinearize_inplace(T1, *relin_keys);
+  evaluator.rescale_to_next_inplace(T1);  // L-3
 
   // Build T2
   PhantomCiphertext T2;
   PhantomPlaintext a9_switched;
   double a9_scale = D / x3.scale() * r / x6.scale() * q;
-  encoder->encode(a[9], x3.params_id(), a9_scale, a9);  // L-2
-  evaluator->multiply_plain(x3, a9, T2);
-  evaluator->rescale_to_next_inplace(T2);  // L-3
+  encoder.encode(a[9], x3.params_id(), a9_scale, a9);  // L-2
+  x3.scale() = a9.scale();                             // NEW
+  evaluator.multiply_plain(x3, a9, T2);
+  evaluator.rescale_to_next_inplace(T2);  // L-3
 
   PhantomCiphertext a7x;
   double a7_scale = T2.scale() / x.scale() * p;
-  encoder->encode(a[7], x.params_id(), a7_scale, a7);  // L-1 (x was modswitched)
-  evaluator->multiply_plain(x, a7, a7x);
-  evaluator->rescale_to_next_inplace(a7x);                // L-2
-  evaluator->mod_switch_to_inplace(a7x, T2.params_id());  // L-3
+  encoder.encode(a[7], x.params_id(), a7_scale, a7);  // L-1 (x was modswitched)
+  x.scale() = a7.scale();                             // NEW
+  evaluator.multiply_plain(x, a7, a7x);
+  evaluator.rescale_to_next_inplace(a7x);                // L-2
+  evaluator.mod_switch_to_inplace(a7x, T2.params_id());  // L-3
 
   double mid_scale = (T2.scale() + a7x.scale()) / 2;
   T2.scale() = a7x.scale() = mid_scale;  // this is the correct scale now, need to set it still to avoid SEAL assert
-  evaluator->add_inplace(T2, a7x);       // L-3
-  evaluator->multiply_inplace(T2, x6);
-  evaluator->relinearize_inplace(T2, *relin_keys);
-  evaluator->rescale_to_next_inplace(T2);  // L-4
+  evaluator.add_inplace(T2, a7x);        // L-3
+  T2.scale() = x6.scale();               // NEW
+  evaluator.multiply_inplace(T2, x6);
+  evaluator.relinearize_inplace(T2, *relin_keys);
+  evaluator.rescale_to_next_inplace(T2);  // L-4
 
   // Build T3
   PhantomCiphertext T3;
-  encoder->encode(a[1], x.params_id(), p, a1);  // L-1 (x was modswitched)
-  evaluator->multiply_plain(x, a1, T3);
-  evaluator->rescale_to_next_inplace(T3);  // L-2
+  encoder.encode(a[1], x.params_id(), p, a1);  // L-1 (x was modswitched)
+  x.scale() = a1.scale();                      // NEW
+  evaluator.multiply_plain(x, a1, T3);
+  evaluator.rescale_to_next_inplace(T3);  // L-2
 
   // T1, T2 and T3 should be on the same scale up to floating point
   // but we still need to set them manually to avoid SEAL assert
@@ -189,10 +223,10 @@ void CKKSEvaluator::eval_odd_deg9_poly(vector<double>& a, PhantomCiphertext& x, 
   T1.scale() = T2.scale() = T3.scale() = mid3_scale;
 
   dest = T2;
-  evaluator->mod_switch_to_inplace(T1, dest.params_id());  // L-4
-  evaluator->add_inplace(dest, T1);
-  evaluator->mod_switch_to_inplace(T3, dest.params_id());  // L-4
-  evaluator->add_inplace(dest, T3);
+  evaluator.mod_switch_to_inplace(T1, dest.params_id());  // L-4
+  evaluator.add_inplace(dest, T1);
+  evaluator.mod_switch_to_inplace(T3, dest.params_id());  // L-4
+  evaluator.add_inplace(dest, T3);
 
   /////////////////////////////////////////
   // it should be ==D but we don't stabilize if it's not, D' != D is ok
@@ -205,7 +239,7 @@ PhantomCiphertext CKKSEvaluator::sgn_eval2(PhantomCiphertext x, int d_g, int d_f
   PhantomCiphertext dest = x;
 
   for (int i = 0; i < d_g; i++) {
-    // cout << "depth: " << context->get_context_data(dest.parms_id())->chain_index() << endl;
+    // cout << "depth: " << context.get_context_data(dest.parms_id()).chain_index() << endl;
     if (context->get_context_data(dest.params_id()).chain_index() < 4) {
       re_encrypt(dest);
     }
@@ -214,10 +248,11 @@ PhantomCiphertext CKKSEvaluator::sgn_eval2(PhantomCiphertext x, int d_g, int d_f
     } else {
       eval_odd_deg9_poly(g4_coeffs, dest, dest);
     }
+    cout << "tick" << endl;
   }
 
   for (int i = 0; i < d_f; i++) {
-    // cout << "depth: " << context->get_context_data(dest.parms_id())->chain_index() << endl;
+    // cout << "depth: " << context.get_context_data(dest.parms_id()).chain_index() << endl;
     if (context->get_context_data(dest.params_id()).chain_index() < 4) {
       re_encrypt(dest);
     }
@@ -233,11 +268,11 @@ PhantomCiphertext CKKSEvaluator::sgn_eval2(PhantomCiphertext x, int d_g, int d_f
   return dest;
 }
 
-double CKKSEvaluator::calculate_MAE(vector<double>& y_true, PhantomCiphertext& ct) {
+double CKKSEvaluator::calculate_MAE(vector<double> &y_true, PhantomCiphertext &ct) {
   PhantomPlaintext temp;
   vector<double> y_pred;
-  decryptor->decrypt(ct, temp);
-  encoder->decode(temp, y_pred);
+  decryptor.decrypt(ct, temp);
+  encoder.decode(temp, y_pred);
 
   double sum_absolute_errors = 0.0;
   for (size_t i = 0; i < y_true.size(); ++i) {

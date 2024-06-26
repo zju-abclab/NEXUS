@@ -21,7 +21,7 @@ int main() {
   params.set_poly_modulus_degree(N);
   params.set_coeff_modulus(CoeffModulus::Create(
       N,
-      {58, 40, 40, 40, 40, 40, 40, 40, 40, 58}
+      {58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58}
       // {60, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50,
       //  50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 53}  // 1763-bit
       ));
@@ -62,17 +62,8 @@ int main() {
   }
   calibration_file.close();
 
-  cout << encoder.slot_count() << endl;
-  cout << input.size() << endl;
-
-  ckks_evaluator.encoder->encode(input, SCALE, plain_input);
-  // encoder.encode(context, input, SCALE, plain_input);
-
-  cout << "1" << endl;
-
-  ckks_evaluator.encryptor->encrypt(plain_input, cipher_input);
-
-  cout << "1" << endl;
+  ckks_evaluator.encoder.encode(input, SCALE, plain_input);
+  ckks_evaluator.encryptor.encrypt(plain_input, cipher_input);
 
   auto timer = Timer();
   gelu_evaluator.gelu(cipher_input, cipher_output);

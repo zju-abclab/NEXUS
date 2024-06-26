@@ -8,10 +8,12 @@ using namespace phantom;
 namespace nexus {
 class Encoder {
  private:
-  PhantomContext *context = nullptr;
-  PhantomCKKSEncoder *encoder = nullptr;
+  PhantomContext *context;
+  PhantomCKKSEncoder *encoder;
 
  public:
+  Encoder() = default;
+
   Encoder(PhantomContext &context, PhantomCKKSEncoder &encoder) {
     this->context = &context;
     this->encoder = &encoder;
@@ -26,14 +28,14 @@ class Encoder {
     encoder->encode(*context, values, scale, plain);
   }
 
-  // Value inputs
+  // Value inputs (fill all slots with that value)
   inline void encode(double value, size_t chain_index, double scale, PhantomPlaintext &plain) {
-    vector<double> values = {value};
+    vector<double> values(encoder->slot_count(), value);
     encoder->encode(*context, values, scale, plain, chain_index);
   }
 
   inline void encode(double value, double scale, PhantomPlaintext &plain) {
-    vector<double> values = {value};
+    vector<double> values(encoder->slot_count(), value);
     encoder->encode(*context, values, scale, plain);
   }
 
@@ -44,10 +46,12 @@ class Encoder {
 
 class Encryptor {
  private:
-  PhantomContext *context = nullptr;
-  PhantomPublicKey *encryptor = nullptr;
+  PhantomContext *context;
+  PhantomPublicKey *encryptor;
 
  public:
+  Encryptor() = default;
+
   Encryptor(PhantomContext &context, PhantomPublicKey &encryptor) {
     this->context = &context;
     this->encryptor = &encryptor;
@@ -60,18 +64,35 @@ class Encryptor {
 
 class Evaluator {
  private:
-  PhantomContext *context = nullptr;
+  PhantomContext *context;
 
  public:
+  Evaluator() = default;
   Evaluator(PhantomContext &context) : context(&context) {}
 
   // Mod switch
+  void mod_switch_to_next(const PhantomCiphertext &encrypted, PhantomCiphertext &destination);
+
   inline void mod_switch_to_next_inplace(PhantomCiphertext &ct) {
-    ::mod_switch_to_next_inplace(*context, ct);
+    PhantomCiphertext dest = ct;
+    mod_switch_to_next(ct, dest);
+    ct = dest;
+    // ::mod_switch_to_next_inplace(*context, ct);
   }
 
   inline void mod_switch_to_inplace(PhantomCiphertext &ct, size_t chain_index) {
-    ::mod_switch_to_inplace(*context, ct, chain_index);
+    if (ct.chain_index() > chain_index) {
+      throw std::invalid_argument("cannot switch to higher level modulus");
+    }
+
+    PhantomCiphertext destination = ct;
+
+    while (destination.chain_index() != chain_index) {
+      mod_switch_to_next_inplace(destination);
+    }
+
+    ct = destination;
+    // ::mod_switch_to_inplace(*context, ct, chain_index);
   }
 
   inline void mod_switch_to_inplace(PhantomPlaintext &pt, size_t chain_index) {
@@ -94,7 +115,9 @@ class Evaluator {
   }
 
   inline void multiply(PhantomCiphertext &ct1, PhantomCiphertext &ct2, PhantomCiphertext &dest) {
-    dest = ::multiply(*context, ct1, ct2);
+    PhantomCiphertext tmp(ct1);
+    ::multiply_inplace(*context, tmp, ct2);
+    dest = tmp;
   }
 
   inline void multiply_inplace(PhantomCiphertext &ct1, PhantomCiphertext &ct2) {
@@ -138,10 +161,11 @@ class Evaluator {
 
 class Decryptor {
  private:
-  PhantomContext *context = nullptr;
-  PhantomSecretKey *decryptor = nullptr;
+  PhantomContext *context;
+  PhantomSecretKey *decryptor;
 
  public:
+  Decryptor() = default;
   Decryptor(PhantomContext &context, PhantomSecretKey &decryptor) {
     this->context = &context;
     this->decryptor = &decryptor;
@@ -168,13 +192,13 @@ class CKKSEvaluator {
   void eval_odd_deg9_poly(vector<double> &a, PhantomCiphertext &x, PhantomCiphertext &dest);
 
  public:
-  PhantomContext *context = nullptr;
-  Encryptor *encryptor = nullptr;
-  Decryptor *decryptor = nullptr;
-  Encoder *encoder = nullptr;
-  Evaluator *evaluator = nullptr;
-  PhantomRelinKey *relin_keys = nullptr;
-  PhantomGaloisKey *galois_keys = nullptr;
+  PhantomContext *context;
+  Encryptor encryptor;
+  Decryptor decryptor;
+  Encoder encoder;
+  Evaluator evaluator;
+  PhantomRelinKey *relin_keys;
+  PhantomGaloisKey *galois_keys;
 
   double scale;
   size_t slot_count;
@@ -189,19 +213,17 @@ class CKKSEvaluator {
     this->scale = scale;
     this->slot_count = encoder.slot_count();
 
-    cout << "slot count: " << slot_count << endl;
-
     Encoder ckks_encoder(context, encoder);
-    this->encoder = &ckks_encoder;
+    this->encoder = ckks_encoder;
 
     Encryptor ckks_encryptor(context, encryptor);
-    this->encryptor = &ckks_encryptor;
+    this->encryptor = ckks_encryptor;
 
     Evaluator ckks_evaluator(context);
-    this->evaluator = &ckks_evaluator;
+    this->evaluator = ckks_evaluator;
 
     Decryptor ckks_decryptor(context, decryptor);
-    this->decryptor = &ckks_decryptor;
+    this->decryptor = ckks_decryptor;
   }
 
   // Helper functions

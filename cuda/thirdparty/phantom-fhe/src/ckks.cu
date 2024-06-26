@@ -100,8 +100,6 @@ void PhantomCKKSEncoder::encode_internal(const PhantomContext &context, const cu
         throw std::invalid_argument("scale out of bounds");
     }
 
-    cout << sparse_slots_ << endl;
-
     if (sparse_slots_ == 0) {
         uint32_t log_sparse_slots = ceil(log2(values_size));
         sparse_slots_ = 1 << log_sparse_slots;

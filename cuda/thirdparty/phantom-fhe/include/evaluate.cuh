@@ -178,6 +178,22 @@ inline void mod_switch_to_inplace(const PhantomContext &context, PhantomCipherte
     }
 }
 
+
+
+void rescale_to_next(const PhantomContext &context, const PhantomCiphertext &encrypted, PhantomCiphertext &destination,
+                     const cudaStream_t &stream = nullptr);
+
+inline void rescale_to_next_inplace(const PhantomContext &context, PhantomCiphertext &encrypted,
+                                    const cudaStream_t &stream = nullptr) {
+    rescale_to_next(context, encrypted, encrypted, stream);
+}
+
+
+
+
+
+
+
 // plaintext
 void mod_switch_to_next_inplace(const PhantomContext &context, PhantomPlaintext &plain,
                                 const phantom::util::cuda_stream_wrapper &stream_wrapper = *phantom::util::global_variables::default_stream);

@@ -1,3 +1,0 @@
-/home/zhangjiawen/helipeng/NEXUS/cuda/build/CMakeFiles/main.dir
-/home/zhangjiawen/helipeng/NEXUS/cuda/build/CMakeFiles/edit_cache.dir
-/home/zhangjiawen/helipeng/NEXUS/cuda/build/CMakeFiles/rebuild_cache.dir
