@@ -1,8 +1,8 @@
 #include <chrono>
+#include <fstream>
 #include <iostream>
 #include <math.h>
 #include <random>
-#include <fstream>
 #include <seal/ciphertext.h>
 #include <seal/plaintext.h>
 #include <seal/seal.h>
@@ -36,9 +36,9 @@ int main()
     keygen.create_public_key(public_key);
 
     Encryptor encryptor(context, public_key);
-    Evaluator evaluator(context);
-    Decryptor decryptor(context, secret_key);
     CKKSEncoder encoder(context);
+    Evaluator evaluator(context, encoder);
+    Decryptor decryptor(context, secret_key);
     RelinKeys relin_keys;
     keygen.create_relin_keys(relin_keys);
     GaloisKeys galois_keys;
@@ -54,7 +54,7 @@ int main()
     GeLUEvaluator gelu_evaluator(ckks_evaluator);
     LNEvaluator ln_evaluator(ckks_evaluator);
     SoftmaxEvaluator softmax_evaluator(ckks_evaluator);
-    
+
     // vector<double> input = {-7, -6, -5, -4, -3, -2, -1, 0};
     vector<double> input;
     Plaintext plain_input;
@@ -82,15 +82,13 @@ int main()
     auto start = high_resolution_clock::now();
     gelu_evaluator.gelu(cipher_input, cipher_output);
     auto end = high_resolution_clock::now();
-    cout << poly_modulus_degree/2 << " times gelu() takes: " << duration_cast<milliseconds>(end - start).count()
-    / 1.0 << " milliseconds" << endl;
+    cout << poly_modulus_degree / 2 << " times gelu() takes: " << duration_cast<milliseconds>(end - start).count() / 1.0 << " milliseconds" << endl;
 
     // auto start = high_resolution_clock::now(); int size = input.size();
     // ln_evaluator.layer_norm(cipher_input, cipher_output, size);
     // auto end = high_resolution_clock::now();
     // cout << poly_modulus_degree/4 << " times LN() takes: " << duration_cast<milliseconds>(end - start).count() / 1.0
-    // << " milliseconds" << endl; 
-
+    // << " milliseconds" << endl;
 
     /*
         Softmax
@@ -104,10 +102,10 @@ int main()
     //      << endl;
     // ckks_evaluator.print_decrypted_ct(cipher_output, 32768);
 
-    cout << "Mean Absolute Error: " <<  ckks_evaluator.calculateMAE(gelu_calibration, cipher_output);
+    cout << "Mean Absolute Error: " << ckks_evaluator.calculateMAE(gelu_calibration, cipher_output);
     // cout << "communication cost: " << ckks_evaluator.comm << " bytes" << endl;
     // cout << "communication round: " << ckks_evaluator.round << endl;
-    //MM_test();
+    // MM_test();
 }
 
 void MM_test()
@@ -126,9 +124,10 @@ void MM_test()
     keygen.create_public_key(public_key);
 
     Encryptor encryptor(context, public_key, secret_key);
-    Evaluator evaluator(context);
-    Decryptor decryptor(context, secret_key);
     CKKSEncoder encoder(context);
+    Evaluator evaluator(context, encoder);
+    Decryptor decryptor(context, secret_key);
+
     RelinKeys relin_keys;
     keygen.create_relin_keys(relin_keys);
     GaloisKeys galois_keys;
