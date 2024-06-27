@@ -1,0 +1,12 @@
+message(STATUS "include ckks_bootstrapping directory")
+
+# Source files in this directory
+set(BOOTSTRAPPING_SOURCE_FILES ${BOOTSTRAPPING_SOURCE_FILES}
+    ${CMAKE_CURRENT_LIST_DIR}/Bootstrapper.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/ModularReducer.cpp
+)
+
+set(BOOTSTRAPPING_SOURCE_FILES ${BOOTSTRAPPING_SOURCE_FILES} PARENT_SCOPE)
+set(BOOTSTRAPPING_HEADER_DIR ${CMAKE_CURRENT_LIST_DIR} PARENT_SCOPE)
+
+

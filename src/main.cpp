@@ -1,8 +1,8 @@
 #include <chrono>
+#include <fstream>
 #include <iostream>
 #include <math.h>
 #include <random>
-#include <fstream>
 #include <seal/ciphertext.h>
 #include <seal/plaintext.h>
 #include <seal/seal.h>
@@ -36,9 +36,9 @@ int main()
     keygen.create_public_key(public_key);
 
     Encryptor encryptor(context, public_key);
-    Evaluator evaluator(context);
-    Decryptor decryptor(context, secret_key);
     CKKSEncoder encoder(context);
+    Evaluator evaluator(context, encoder);
+    Decryptor decryptor(context, secret_key);
     RelinKeys relin_keys;
     keygen.create_relin_keys(relin_keys);
     GaloisKeys galois_keys;
@@ -116,7 +116,7 @@ int main()
     
     // cout << "communication cost: " << ckks_evaluator.comm << " bytes" << endl;
     // cout << "communication round: " << ckks_evaluator.round << endl;
-    //MM_test();
+    // MM_test();
 }
 
 void MM_test()
@@ -135,9 +135,10 @@ void MM_test()
     keygen.create_public_key(public_key);
 
     Encryptor encryptor(context, public_key, secret_key);
-    Evaluator evaluator(context);
-    Decryptor decryptor(context, secret_key);
     CKKSEncoder encoder(context);
+    Evaluator evaluator(context, encoder);
+    Decryptor decryptor(context, secret_key);
+
     RelinKeys relin_keys;
     keygen.create_relin_keys(relin_keys);
     GaloisKeys galois_keys;
