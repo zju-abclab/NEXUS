@@ -119,9 +119,9 @@ void add_inplace(const PhantomContext &context, PhantomCiphertext &encrypted1, c
     if (encrypted1.is_ntt_form() != encrypted2.is_ntt_form()) {
         throw std::invalid_argument("NTT form mismatch");
     }
-    if (!are_same_scale(encrypted1, encrypted2)) {
-        throw std::invalid_argument("scale mismatch");
-    }
+    // if (!are_same_scale(encrypted1, encrypted2)) {
+    //     throw std::invalid_argument("scale mismatch");
+    // }
     if (encrypted1.size() != encrypted2.size()) {
         throw std::invalid_argument("poly number mismatch");
     }
@@ -213,9 +213,9 @@ void add_many(const PhantomContext &context, const vector<PhantomCiphertext> &en
         if (encrypteds[0].is_ntt_form() != encrypteds[i].is_ntt_form()) {
             throw std::invalid_argument("NTT form mismatch");
         }
-        if (!are_same_scale(encrypteds[0], encrypteds[i])) {
-            throw std::invalid_argument("scale mismatch");
-        }
+        // if (!are_same_scale(encrypteds[0], encrypteds[i])) {
+        //     throw std::invalid_argument("scale mismatch");
+        // }
         if (encrypteds[0].size() != encrypteds[i].size()) {
             throw std::invalid_argument("poly number mismatch");
         }
@@ -1038,8 +1038,8 @@ void multiply_inplace(const PhantomContext &context, PhantomCiphertext &encrypte
         throw std::invalid_argument("encrypted1 and encrypted2 parameter mismatch");
     if (encrypted1.is_ntt_form() != encrypted2.is_ntt_form())
         throw std::invalid_argument("NTT form mismatch");
-    if (!are_same_scale(encrypted1, encrypted2))
-        throw std::invalid_argument("scale mismatch");
+    // if (!are_same_scale(encrypted1, encrypted2))
+    //     throw std::invalid_argument("scale mismatch");
     if (encrypted1.size() != encrypted2.size())
         throw std::invalid_argument("poly number mismatch");
 
@@ -1073,8 +1073,8 @@ void multiply_and_relin_inplace(const PhantomContext &context, PhantomCiphertext
         throw std::invalid_argument("encrypted1 and encrypted2 parameter mismatch");
     if (encrypted1.is_ntt_form() != encrypted2.is_ntt_form())
         throw std::invalid_argument("NTT form mismatch");
-    if (!are_same_scale(encrypted1, encrypted2))
-        throw std::invalid_argument("scale mismatch");
+    // if (!are_same_scale(encrypted1, encrypted2))
+    //     throw std::invalid_argument("scale mismatch");
     if (encrypted1.size() != encrypted2.size())
         throw std::invalid_argument("poly number mismatch");
 

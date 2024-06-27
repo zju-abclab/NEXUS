@@ -10,41 +10,18 @@ void GELUEvaluator::gelu(PhantomCiphertext &x, PhantomCiphertext &res) {
 
   ckks->encoder.encode(ckks->init_vec_with_value(ckks->slot_count, -3.5), x.params_id(), x.scale(), p0);
   ckks->encoder.encode(ckks->init_vec_with_value(ckks->slot_count, 3.5), x.params_id(), x.scale(), p1);
-  ckks->encoder.encode(
-      ckks->init_vec_with_value(ckks->slot_count, 1.0 / 8.5), x.params_id(), x.scale(), delta);
+  ckks->encoder.encode(ckks->init_vec_with_value(ckks->slot_count, 1.0 / 8.5), x.params_id(), x.scale(), delta);
 
-  cout << "x scale: " << fixed << x.scale() << endl;
   ckks->evaluator.sub_plain(x, p0, b0);
-  double b0_scale = b0.scale();
-  cout << "b0 scale: " << fixed << b0.scale() << endl;
   ckks->evaluator.multiply_plain_inplace(b0, p1);
-  cout << "b0 scale: " << fixed << b0.scale() << endl;
   ckks->evaluator.rescale_to_next_inplace(b0);
-  cout << "b0 scale: " << fixed << b0.scale() << endl;
-
-  b0.scale() = x.scale();
-
-  cout << "are close: " << are_close(b0_scale, b0.scale()) << endl;
-
-  cout << "depth1 = " << ckks->context->get_context_data_from_params_id(b0.params_id()).chain_index() << endl;
 
   ckks->evaluator.sub_plain(x, p1, b1);
   ckks->evaluator.multiply_plain_inplace(b1, delta);
   ckks->evaluator.rescale_to_next_inplace(b1);
-  cout << "b1 scale: " << b1.scale() << endl;
-
-  b1.scale() = x.scale();
-
-  cout << "depth2 = " << ckks->context->get_context_data_from_params_id(b0.params_id()).chain_index() << endl;
-  cout << "b0 scale: " << b0.scale() << endl;
 
   b0 = ckks->sgn_eval2(b0, 3, 3);
-
-  cout << "depth3 = " << ckks->context->get_context_data_from_params_id(b0.params_id()).chain_index() << endl;
-
   b1 = ckks->sgn_eval2(b1, 3, 3);
-
-  cout << "depth4 = " << ckks->context->get_context_data_from_params_id(b1.params_id()).chain_index() << endl;
 
   PhantomPlaintext zero_point_five;
   ckks->encoder.encode(ckks->init_vec_with_value(ckks->slot_count, 0.5), b1.params_id(), b1.scale(), zero_point_five);

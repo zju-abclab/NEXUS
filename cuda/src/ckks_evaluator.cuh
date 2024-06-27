@@ -21,10 +21,18 @@ class Encoder {
 
   // Vector inputs
   inline void encode(vector<double> values, size_t chain_index, double scale, PhantomPlaintext &plain) {
+    if (values.size() == 1) {
+      encode(values[0], chain_index, scale, plain);
+      return;
+    }
     encoder->encode(*context, values, scale, plain, chain_index);
   }
 
   inline void encode(vector<double> values, double scale, PhantomPlaintext &plain) {
+    if (values.size() == 1) {
+      encode(values[0], scale, plain);
+      return;
+    }
     encoder->encode(*context, values, scale, plain);
   }
 
@@ -71,27 +79,11 @@ class Evaluator {
   Evaluator(PhantomContext &context) : context(&context) {}
 
   // Mod switch
-  void mod_switch_to_next(const PhantomCiphertext &encrypted, PhantomCiphertext &destination);
-
   inline void mod_switch_to_next_inplace(PhantomCiphertext &ct) {
-    // PhantomCiphertext dest = ct;
-    // mod_switch_to_next(ct, dest);
-    // ct = dest;
     ::mod_switch_to_next_inplace(*context, ct);
   }
 
   inline void mod_switch_to_inplace(PhantomCiphertext &ct, size_t chain_index) {
-    // if (ct.chain_index() > chain_index) {
-    //   throw std::invalid_argument("cannot switch to higher level modulus");
-    // }
-
-    // PhantomCiphertext destination = ct;
-
-    // while (destination.chain_index() != chain_index) {
-    //   mod_switch_to_next_inplace(destination);
-    // }
-
-    // ct = destination;
     ::mod_switch_to_inplace(*context, ct, chain_index);
   }
 
@@ -99,7 +91,6 @@ class Evaluator {
     ::mod_switch_to_inplace(*context, pt, chain_index);
   }
 
-  // Rescale
   inline void rescale_to_next_inplace(PhantomCiphertext &ct) {
     ::rescale_to_next_inplace(*context, ct);
   }
@@ -115,10 +106,12 @@ class Evaluator {
   }
 
   inline void multiply(PhantomCiphertext &ct1, PhantomCiphertext &ct2, PhantomCiphertext &dest) {
-    // PhantomCiphertext tmp(ct1);
-    // ::multiply_inplace(*context, tmp, ct2);
-    // dest = tmp;
-    dest = ::multiply(*context, ct1, ct2);
+    if (&ct1 == &dest) {
+      ::multiply_inplace(*context, dest, ct1);
+    } else {
+      dest = ct1;
+      ::multiply_inplace(*context, dest, ct2);
+    }
   }
 
   inline void multiply_inplace(PhantomCiphertext &ct1, PhantomCiphertext &ct2) {
@@ -189,9 +182,14 @@ class Decryptor {
 
 class CKKSEvaluator {
  private:
-  // Sign function g,f coefficients
+  // Sign function coefficients
+  double sgn_factor = 0.5;
+
+  int g4_scale = (1 << 10);
   vector<double> g4_coeffs = {0, 5850, 0, -34974, 0, 97015, 0, -113492, 0, 46623};
   vector<double> g4_coeffs_last;
+
+  int f4_scale = (1 << 7);
   vector<double> f4_coeffs = {0, 315, 0, -420, 0, 378, 0, -180, 0, 35};
   vector<double> f4_coeffs_last;
 
@@ -229,6 +227,7 @@ class CKKSEvaluator {
     this->scale = scale;
     this->slot_count = encoder.slot_count();
 
+    // Instantiate the component classes
     Encoder ckks_encoder(context, encoder);
     this->encoder = ckks_encoder;
 
@@ -240,10 +239,21 @@ class CKKSEvaluator {
 
     Decryptor ckks_decryptor(context, decryptor);
     this->decryptor = ckks_decryptor;
+
+    // Compute sign function coefficients
+    f4_coeffs_last.resize(10, 0);
+    g4_coeffs_last.resize(10, 0);
+    for (int i = 0; i <= 9; i++) {
+      f4_coeffs[i] /= f4_scale;
+      f4_coeffs_last[i] = f4_coeffs[i] * sgn_factor;
+
+      g4_coeffs[i] /= g4_scale;
+      g4_coeffs_last[i] = g4_coeffs[i] * sgn_factor;
+    }
   }
 
   // Helper functions
-  vector<double> init_vec_with_value(int N, double init_value);
+  vector<double> init_vec_with_value(size_t slot_count, double value);
 
   // Evaluation functions
   PhantomCiphertext sgn_eval2(PhantomCiphertext x, int d_g, int d_f);

@@ -170,32 +170,16 @@ void GeLUEvaluator::gelu(Ciphertext &x, Ciphertext &res) {
   ckks->encoder->encode(
       ckks->init_vec_with_value(ckks->slot_count, 1.0 / 8.5), x.parms_id(), x.scale(), delta);
 
-  cout << "x scale: " << fixed << x.scale() << endl;
-
   ckks->evaluator->sub_plain(x, p0, b0);
-  cout << "b0 scale: " << fixed << b0.scale() << endl;
   ckks->evaluator->multiply_plain_inplace(b0, delta);
-  cout << "b0 scale: " << fixed << b0.scale() << endl;
   ckks->evaluator->rescale_to_next_inplace(b0);
-  cout << "b0 scale: " << fixed << b0.scale() << endl;
-
-  cout << "depth = " << ckks->context->get_context_data(b0.parms_id())->chain_index() << endl;
 
   ckks->evaluator->sub_plain(x, p1, b1);
   ckks->evaluator->multiply_plain_inplace(b1, delta);
   ckks->evaluator->rescale_to_next_inplace(b1);
-  cout << "b1 scale: " << b1.scale() << endl;
-
-  cout << "depth = " << ckks->context->get_context_data(b1.parms_id())->chain_index() << endl;
-  cout << "b0 scale: " << b0.scale() << endl;
 
   b0 = ckks->sgn_eval2(b0, 3, 3);
-
-  cout << "depth = " << ckks->context->get_context_data(b0.parms_id())->chain_index() << endl;
-
   b1 = ckks->sgn_eval2(b1, 3, 3);
-
-  cout << "depth = " << ckks->context->get_context_data(b1.parms_id())->chain_index() << endl;
 
   Plaintext zero_point_five;
   ckks->encoder->encode(ckks->init_vec_with_value(ckks->slot_count, 0.5), b1.parms_id(), b1.scale(), zero_point_five);

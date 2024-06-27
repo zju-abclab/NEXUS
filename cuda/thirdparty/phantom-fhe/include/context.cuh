@@ -126,6 +126,8 @@ namespace phantom {
         // Return the index (start from 0) for the parameters, when context chain is generated
         [[nodiscard]] std::size_t chain_index() const noexcept { return chain_index_; }
 
+        [[nodiscard]] std::size_t chain_depth() const noexcept { return total_coeff_modulus_.size() - 1; }
+
         void set_chain_index(const std::size_t chain_index) noexcept { chain_index_ = chain_index; }
     };
 
@@ -178,12 +180,6 @@ public:
         if (index >= context_data_.size())
             throw std::invalid_argument("index is invalid!");
         return context_data_[index];
-    }
-
-    [[nodiscard]] const phantom::ContextData &get_context_data_from_params_id(const size_t params_id) const {
-        if (params_id >= context_data_.size())
-            throw std::invalid_argument("params_id is invalid!");
-        return context_data_[coeff_mod_size_ - params_id - 1];
     }
 
     /**

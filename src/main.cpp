@@ -80,8 +80,6 @@ int main()
     ckks_evaluator.encoder->encode(input, scale, plain_input);
     ckks_evaluator.encryptor->encrypt(plain_input, cipher_input);
     auto start = high_resolution_clock::now();
-    cout << "cipher_input scale: " << cipher_input.scale() << endl;
-    cout << "depth = " << context.get_context_data(cipher_input.parms_id())->chain_index() << endl;
     gelu_evaluator.gelu(cipher_input, cipher_output);
     auto end = high_resolution_clock::now();
     cout << poly_modulus_degree/2 << " times gelu() takes: " << duration_cast<milliseconds>(end - start).count()

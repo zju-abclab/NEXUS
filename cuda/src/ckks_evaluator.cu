@@ -6,14 +6,9 @@ using namespace phantom::arith;
 using namespace phantom::util;
 using namespace nexus;
 
-vector<double> CKKSEvaluator::init_vec_with_value(int N, double init_value) {
-  std::vector<double> v(N);
-
-  for (int i = 0; i < N; ++i) {
-    v[i] = init_value;
-  }
-
-  return v;
+vector<double> CKKSEvaluator::init_vec_with_value(size_t slot_count, double value) {
+  std::vector<double> vec(slot_count, value);
+  return vec;
 }
 
 PhantomCiphertext CKKSEvaluator::init_guess(PhantomCiphertext x) {
@@ -50,13 +45,13 @@ PhantomCiphertext CKKSEvaluator::invert_sqrt(PhantomCiphertext x, int d_newt, in
 }
 
 uint64_t CKKSEvaluator::get_modulus(PhantomCiphertext &x, int k) {
-  const vector<Modulus> &modulus = context->get_context_data_from_params_id(x.params_id()).parms().coeff_modulus();
+  const vector<Modulus> &modulus = context->get_context_data(x.params_id()).parms().coeff_modulus();
   int sz = modulus.size();
   return modulus[sz - k].value();
 }
 
 void CKKSEvaluator::re_encrypt(PhantomCiphertext &ct) {
-  // auto timer = Timer();
+  auto timer = Timer();
   while (ct.coeff_modulus_size() > 1) {
     evaluator.mod_switch_to_next_inplace(ct);
   }
@@ -77,8 +72,9 @@ void CKKSEvaluator::re_encrypt(PhantomCiphertext &ct) {
 
   // data.resize(ct.save_size(compr_mode_type::zstd));
   // comm += ct.save(data.data(), data.size(), compr_mode_type::zstd);
-  // auto end = high_resolution_clock::now();
-  // cout << duration_cast<milliseconds>(end - start).count() / 2 << " milliseconds" << endl;
+
+  timer.stop();
+  cout << timer.duration() << " milliseconds" << endl;
 
   // cout << "depth = " <<
   // context.get_context_data_from_params_id(ct.parms_id()).chain_index() << "\n";
@@ -102,7 +98,7 @@ pair<PhantomCiphertext, PhantomCiphertext> CKKSEvaluator::goldschmidt_iter(Phant
   for (int i = 0; i < d; i++) {
     encoder.encode(0.5, scale, constant);
     // r = 0.5 - xh
-    if (context->get_context_data_from_params_id(x.params_id()).chain_index() < 3) {
+    if (context->get_context_data(x.params_id()).chain_depth() < 3) {
       re_encrypt(x);
       re_encrypt(h);
     }
@@ -147,7 +143,7 @@ pair<PhantomCiphertext, PhantomCiphertext> CKKSEvaluator::goldschmidt_iter(Phant
 
 PhantomCiphertext CKKSEvaluator::newton_iter(PhantomCiphertext x, PhantomCiphertext res, int iter) {
   for (int i = 0; i < iter; i++) {
-    if (context->get_context_data_from_params_id(res.params_id()).chain_index() < 4)
+    if (context->get_context_data(res.params_id()).chain_depth() < 4)
       re_encrypt(res);
     // cout << i << " " << depth(res) << "\n";
     PhantomPlaintext three_half, neg_half;
@@ -169,8 +165,8 @@ PhantomCiphertext CKKSEvaluator::newton_iter(PhantomCiphertext x, PhantomCiphert
     evaluator.mod_switch_to_inplace(neg_half, x.params_id());
     evaluator.multiply_plain(x, neg_half, res_x);
     evaluator.rescale_to_next_inplace(res_x);
-    if (context->get_context_data_from_params_id(res.params_id()).chain_index() <
-        context->get_context_data_from_params_id(res_x.params_id()).chain_index())
+    if (context->get_context_data(res.params_id()).chain_depth() <
+        context->get_context_data(res_x.params_id()).chain_depth())
       evaluator.mod_switch_to_inplace(res_x, res.params_id());
     else
       evaluator.mod_switch_to_inplace(res, res_x.params_id());
@@ -283,7 +279,6 @@ void CKKSEvaluator::eval_odd_deg9_poly(vector<double> &a, PhantomCiphertext &x, 
   evaluator.rescale_to_next_inplace(x2);  // L-1
 
   evaluator.mod_switch_to_next_inplace(x);  // L-1
-  x.scale() = x2.scale();                   // NEW
   evaluator.multiply(x2, x, x3);
   evaluator.relinearize_inplace(x3, *relin_keys);
   evaluator.rescale_to_next_inplace(x3);  // L-2
@@ -297,7 +292,7 @@ void CKKSEvaluator::eval_odd_deg9_poly(vector<double> &a, PhantomCiphertext &x, 
   // Build T1
   PhantomCiphertext T1;
   double a5_scale = D / x2.scale() * p / x3.scale() * q;
-  encoder.encode({a[5]}, x2.params_id(), a5_scale, a5);  // L-1
+  encoder.encode(a[5], x2.params_id(), a5_scale, a5);  // L-1
   evaluator.multiply_plain(x2, a5, T1);
   evaluator.rescale_to_next_inplace(T1);  // L-2
 
@@ -305,7 +300,6 @@ void CKKSEvaluator::eval_odd_deg9_poly(vector<double> &a, PhantomCiphertext &x, 
   encoder.encode(a[3], T1.params_id(), T1.scale(), a3);  // L-2
 
   evaluator.add_plain_inplace(T1, a3);  // L-2
-  x3.scale() = T1.scale();              // NEW
   evaluator.multiply_inplace(T1, x3);
   evaluator.relinearize_inplace(T1, *relin_keys);
   evaluator.rescale_to_next_inplace(T1);  // L-3
@@ -328,7 +322,6 @@ void CKKSEvaluator::eval_odd_deg9_poly(vector<double> &a, PhantomCiphertext &x, 
   double mid_scale = (T2.scale() + a7x.scale()) / 2;
   T2.scale() = a7x.scale() = mid_scale;  // this is the correct scale now, need to set it still to avoid SEAL assert
   evaluator.add_inplace(T2, a7x);        // L-3
-  x6.scale() = T2.scale();               // NEW
   evaluator.multiply_inplace(T2, x6);
   evaluator.relinearize_inplace(T2, *relin_keys);
   evaluator.rescale_to_next_inplace(T2);  // L-4
@@ -361,8 +354,8 @@ PhantomCiphertext CKKSEvaluator::sgn_eval2(PhantomCiphertext x, int d_g, int d_f
   PhantomCiphertext dest = x;
 
   for (int i = 0; i < d_g; i++) {
-    cout << "depth: " << context->get_context_data_from_params_id(dest.params_id()).chain_index() << endl;
-    if (context->get_context_data_from_params_id(dest.params_id()).chain_index() < 4) {
+    // cout << "depth: " << context->get_context_data(dest.params_id()).chain_depth() << endl;
+    if (context->get_context_data(dest.params_id()).chain_depth() < 4) {
       re_encrypt(dest);
     }
     if (i == d_g - 1) {
@@ -370,12 +363,11 @@ PhantomCiphertext CKKSEvaluator::sgn_eval2(PhantomCiphertext x, int d_g, int d_f
     } else {
       eval_odd_deg9_poly(g4_coeffs, dest, dest);
     }
-    cout << "tick" << endl;
   }
 
   for (int i = 0; i < d_f; i++) {
-    cout << "depth: " << context->get_context_data_from_params_id(dest.params_id()).chain_index() << endl;
-    if (context->get_context_data_from_params_id(dest.params_id()).chain_index() < 4) {
+    // cout << "depth: " << context->get_context_data(dest.params_id()).chain_depth() << endl;
+    if (context->get_context_data(dest.params_id()).chain_depth() < 4) {
       re_encrypt(dest);
     }
     if (i == d_f - 1) {
