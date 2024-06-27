@@ -74,9 +74,9 @@ int main()
         coeff_bit_vec.push_back(logp);
     }
 
-    for (int i = 0; i < boot_level; i++) {
-        coeff_bit_vec.push_back(logq);
-    }
+    // for (int i = 0; i < boot_level; i++) {
+    //     coeff_bit_vec.push_back(logq);
+    // }
     coeff_bit_vec.push_back(log_special_prime);
 
     cout << "Setting Parameters" << endl;
