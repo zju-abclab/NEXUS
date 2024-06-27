@@ -461,7 +461,6 @@ Ciphertext CKKSEvaluator::newtonIter(Ciphertext x, Ciphertext res, int iter)
         evaluator->add_inplace(res, res_x);
         // cout << "final\n";
     }
-    re_encrypt(res);
     return res;
 }
 
@@ -472,14 +471,13 @@ pair<Ciphertext, Ciphertext> CKKSEvaluator::goldSchmidtIter(Ciphertext v, Cipher
     encoder->encode(0.5, scale, constant);
 
     // GoldSchmidt's algorithm
-    evaluator->mod_switch_to_inplace(y, v.parms_id());
+    evaluator->mod_switch_to_inplace(v, y.parms_id());
     evaluator->multiply(v, y, x);
     evaluator->relinearize_inplace(x, *relin_keys);
     evaluator->rescale_to_next_inplace(x);
     evaluator->mod_switch_to_inplace(constant, y.parms_id());
     evaluator->multiply_plain(y, constant, h);
     evaluator->rescale_to_next_inplace(h);
-    // cout << "gold\n";
 
     for (int i = 0; i < d; i++) {
         encoder->encode(0.5, scale, constant);
@@ -531,6 +529,7 @@ Ciphertext CKKSEvaluator::invert_sqrt(Ciphertext x, int d_newt, int d_gold)
 {
     Ciphertext res = initGuess(x);
     Ciphertext y = newtonIter(x, res, d_newt);
+    cout << "depth = " << context->get_context_data(y.parms_id())->chain_index() << "\n";
     pair<Ciphertext, Ciphertext> sqrt_inv_sqrt = goldSchmidtIter(x, y, d_gold);
     // printVector(sqrt_inv_sqrt.first, 1);
     // printVector(sqrt_inv_sqrt.second, 1);
