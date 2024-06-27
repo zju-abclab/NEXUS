@@ -1,0 +1,13 @@
+message(STATUS "include comp directory")
+
+# Source files in this directory
+set(COMP_SOURCE_FILES ${COMP_SOURCE_FILES}
+    ${CMAKE_CURRENT_LIST_DIR}/program.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/SEALcomp.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/SEALfunc.cpp
+)
+
+set(COMP_SOURCE_FILES ${COMP_SOURCE_FILES} PARENT_SCOPE)
+set(COMP_HEADER_DIR ${CMAKE_CURRENT_LIST_DIR} PARENT_SCOPE)
+
+

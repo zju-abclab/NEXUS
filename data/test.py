@@ -1,16 +1,10 @@
-import numpy as np
-import matplotlib.pyplot as plt
+from sympy import symbols, Poly
 
-# Define the GELU function
-def gelu(x):
-    return x * 0.5 * (1 + np.tanh(np.sqrt(2 / np.pi) * (x + 0.044715 * x**3)))
+x = symbols('x')
+f = (35/128)*x**9 - (180/128)*x**7 + (378/128)*x**5 - (420/128)*x**3 + (315/128)*x
+g = (46623/1024)*x**9 - (113492/1024)*x**7 + (97015/1024)*x**5 - (34974/1024)*x**3 + (5850/1024)*x
 
-# Define the interval over which to approximate
-interval = [-5, 5]
+h = f.subs(x, f.subs(x, f.subs(x, g.subs(x, g.subs(x, g)))))
 
-# Generate points within the interval
-x = np.linspace(interval[0], interval[1], 32768)
-y = gelu(x)
-
-np.savetxt("data/input/gelu_input_32768.txt", x, fmt='%f',delimiter=' ')
-np.savetxt("data/calibration/gelu_calibration_32768.txt", y, fmt='%f',delimiter=' ')
+# P = Poly(h, x)
+print(h.subs(x, 0.001))

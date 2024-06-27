@@ -23,11 +23,11 @@ private:
     double m1 = -0.5 * k2 * pow(x1, -1.5), c1 = 1.5 * k2 * pow(x1, -0.5);
     double m2 = -0.5 * k2 * pow(x2, -1.5), c2 = 1.5 * k2 * pow(x2, -0.5);
     double sgn_factor = 0.5;
-    vector<double> f4_coeffs = {0, 315, 0, -420, 0, 378, 0, -180, 0, 35};
+    vector<double> f4_coeffs = { 0, 315, 0, -420, 0, 378, 0, -180, 0, 35 };
     vector<double> f4_coeffs_last;
     // should be divided by (1 << 7)
     int f4_scale = (1 << 7);
-    vector<double> g4_coeffs = {0, 5850, 0, -34974, 0, 97015, 0, -113492, 0, 46623};
+    vector<double> g4_coeffs = { 0, 5850, 0, -34974, 0, 97015, 0, -113492, 0, 46623 };
     vector<double> g4_coeffs_last;
     // should be divided by (1 << 10)
     int g4_scale = (1 << 10);
@@ -94,7 +94,7 @@ public:
         }
         f4_coeffs_last.resize(10, 0);
         g4_coeffs_last.resize(10, 0);
-        for (int i = 0; i <=9; i++) {
+        for (int i = 0; i <= 9; i++) {
             f4_coeffs[i] /= f4_scale;
             f4_coeffs_last[i] = f4_coeffs[i] * sgn_factor;
 
@@ -105,12 +105,12 @@ public:
     void re_encrypt(Ciphertext &ct);
     void print_decrypted_ct(Ciphertext &ct, int nums);
     vector<double> init_vec_with_value(int N, double init_value);
-    double calculateMAE(vector<double>& y_true, Ciphertext &ct);
+    double calculateMAE(vector<double> &y_true, Ciphertext &ct);
     vector<double> init_mask(int N, int m);
     uint64_t get_modulus(Ciphertext &x, int k);
     Ciphertext invert_sqrt(Ciphertext x, int d_newt = 20, int d_gold = 1);
     Ciphertext sgn_eval(Ciphertext x, int d_g, int d_f, double fractor);
-    void eval_odd_deg9_poly(vector<double>& a, Ciphertext& x, Ciphertext& dest);
+    void eval_odd_deg9_poly(vector<double> &a, Ciphertext &x, Ciphertext &dest);
     Ciphertext sgn_eval2(Ciphertext x, int d_g, int d_f);
     Ciphertext exp(Ciphertext x);
 };
