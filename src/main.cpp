@@ -104,7 +104,7 @@ int main()
     //      << endl;
     // ckks_evaluator.print_decrypted_ct(cipher_output, 32768);
 
-    cout << "Mean Absolute Error: " <<  ckks_evaluator.calculateMAE(gelu_calibration, cipher_output);
+    cout << "Mean Absolute Error: " <<  ckks_evaluator.calculateMAE(gelu_calibration, cipher_output) << endl;
     // cout << "communication cost: " << ckks_evaluator.comm << " bytes" << endl;
     // cout << "communication round: " << ckks_evaluator.round << endl;
     //MM_test();

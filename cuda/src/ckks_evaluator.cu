@@ -6,6 +6,19 @@ using namespace phantom::arith;
 using namespace phantom::util;
 using namespace nexus;
 
+void CKKSEvaluator::print_decrypted_ct(PhantomCiphertext &ct, int num) {
+  PhantomPlaintext temp;
+  vector<double> v;
+
+  decryptor.decrypt(ct, temp);
+  encoder.decode(temp, v);
+
+  for (int i = 0; i < num; i++) {
+    cout << v[i] << " ";
+  }
+  cout << endl;
+}
+
 vector<double> CKKSEvaluator::init_vec_with_value(size_t slot_count, double value) {
   std::vector<double> vec(slot_count, value);
   return vec;
@@ -385,6 +398,7 @@ PhantomCiphertext CKKSEvaluator::sgn_eval2(PhantomCiphertext x, int d_g, int d_f
 double CKKSEvaluator::calculate_MAE(vector<double> &y_true, PhantomCiphertext &ct) {
   PhantomPlaintext temp;
   vector<double> y_pred;
+
   decryptor.decrypt(ct, temp);
   encoder.decode(temp, y_pred);
 

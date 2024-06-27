@@ -13,7 +13,7 @@ void GELUEvaluator::gelu(PhantomCiphertext &x, PhantomCiphertext &res) {
   ckks->encoder.encode(ckks->init_vec_with_value(ckks->slot_count, 1.0 / 8.5), x.params_id(), x.scale(), delta);
 
   ckks->evaluator.sub_plain(x, p0, b0);
-  ckks->evaluator.multiply_plain_inplace(b0, p1);
+  ckks->evaluator.multiply_plain_inplace(b0, delta);
   ckks->evaluator.rescale_to_next_inplace(b0);
 
   ckks->evaluator.sub_plain(x, p1, b1);

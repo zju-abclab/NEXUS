@@ -102,15 +102,15 @@ class Evaluator {
 
   // Multiplication
   inline void square(PhantomCiphertext &ct, PhantomCiphertext &dest) {
-    dest = ::multiply(*context, ct, ct);
+    multiply(ct, ct, dest);
   }
 
   inline void multiply(PhantomCiphertext &ct1, PhantomCiphertext &ct2, PhantomCiphertext &dest) {
-    if (&ct1 == &dest) {
-      ::multiply_inplace(*context, dest, ct1);
+    if (&ct2 == &dest) {
+      multiply_inplace(dest, ct1);
     } else {
       dest = ct1;
-      ::multiply_inplace(*context, dest, ct2);
+      multiply_inplace(dest, ct2);
     }
   }
 
@@ -119,7 +119,8 @@ class Evaluator {
   }
 
   inline void multiply_plain(PhantomCiphertext &ct, PhantomPlaintext &plain, PhantomCiphertext &dest) {
-    dest = ::multiply_plain(*context, ct, plain);
+    dest = ct;
+    multiply_plain_inplace(dest, plain);
   }
 
   inline void multiply_plain_inplace(PhantomCiphertext &ct, PhantomPlaintext &plain) {
@@ -128,7 +129,8 @@ class Evaluator {
 
   // Addition
   inline void add_plain(PhantomCiphertext &ct, PhantomPlaintext &plain, PhantomCiphertext &dest) {
-    dest = ::add_plain(*context, ct, plain);
+    dest = ct;
+    add_plain_inplace(dest, plain);
   }
 
   inline void add_plain_inplace(PhantomCiphertext &ct, PhantomPlaintext &plain) {
@@ -136,7 +138,12 @@ class Evaluator {
   }
 
   inline void add(PhantomCiphertext &ct1, PhantomCiphertext &ct2, PhantomCiphertext &dest) {
-    dest = ::add(*context, ct1, ct2);
+    if (&ct2 == &dest) {
+      add_inplace(dest, ct1);
+    } else {
+      dest = ct1;
+      add_inplace(dest, ct2);
+    }
   }
 
   inline void add_inplace(PhantomCiphertext &ct1, PhantomCiphertext &ct2) {
@@ -145,21 +152,46 @@ class Evaluator {
 
   // Subtraction
   inline void sub_plain(PhantomCiphertext &ct, PhantomPlaintext &plain, PhantomCiphertext &dest) {
-    dest = ::sub_plain(*context, ct, plain);
+    dest = ct;
+    sub_plain_inplace(dest, plain);
+  }
+
+  inline void sub_plain_inplace(PhantomCiphertext &ct, PhantomPlaintext &plain) {
+    ::sub_plain_inplace(*context, ct, plain);
   }
 
   inline void sub(PhantomCiphertext &ct1, PhantomCiphertext &ct2, PhantomCiphertext &dest) {
-    dest = ::sub(*context, ct1, ct2);
+    if (&ct2 == &dest) {
+      sub_inplace(dest, ct1);
+      negate_inplace(dest);
+    } else {
+      dest = ct1;
+      sub_inplace(dest, ct2);
+    }
+  }
+
+  inline void sub_inplace(PhantomCiphertext &ct1, PhantomCiphertext &ct2) {
+    ::sub_inplace(*context, ct1, ct2);
   }
 
   // Rotation
   inline void rotate_vector(PhantomCiphertext &ct, int steps, PhantomGaloisKey &galois_keys, PhantomCiphertext &dest) {
-    dest = ::rotate_vector(*context, ct, steps, galois_keys);
+    dest = ct;
+    rotate_vector_inplace(dest, steps, galois_keys);
+  }
+
+  inline void rotate_vector_inplace(PhantomCiphertext &ct, int steps, PhantomGaloisKey &galois_keys) {
+    ::rotate_vector_inplace(*context, ct, steps, galois_keys);
   }
 
   // Negation
   inline void negate(PhantomCiphertext &ct, PhantomCiphertext &dest) {
-    dest = ::negate(*context, ct);
+    dest = ct;
+    negate_inplace(dest);
+  }
+
+  inline void negate_inplace(PhantomCiphertext &ct) {
+    ::negate_inplace(*context, ct);
   }
 };
 
@@ -254,6 +286,7 @@ class CKKSEvaluator {
 
   // Helper functions
   vector<double> init_vec_with_value(size_t slot_count, double value);
+  void print_decrypted_ct(PhantomCiphertext &ct, int num);
 
   // Evaluation functions
   PhantomCiphertext sgn_eval2(PhantomCiphertext x, int d_g, int d_f);
