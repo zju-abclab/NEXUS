@@ -182,9 +182,9 @@ Ciphertext CKKSEvaluator::sgn_eval2(Ciphertext x, int d_g, int d_f)
     Ciphertext dest = x;
     for (int i = 0; i < d_g; i++) {
         // cout << "depth: " << context->get_context_data(dest.parms_id())->chain_index() << endl;
-        if (context->get_context_data(dest.parms_id())->chain_index() < 4) {
-            re_encrypt(dest);
-        }
+        // if (context->get_context_data(dest.parms_id())->chain_index() < 4) {
+        //     re_encrypt(dest);
+        // }
         if (i == d_g - 1) {
             eval_odd_deg9_poly(g4_coeffs_last, dest, dest);
         } else {
@@ -194,9 +194,9 @@ Ciphertext CKKSEvaluator::sgn_eval2(Ciphertext x, int d_g, int d_f)
     for (int i = 0; i < d_f; i++) {
         // cout << "depth: " << context->get_context_data(dest.parms_id())->chain_index() << endl;
 
-        if (context->get_context_data(dest.parms_id())->chain_index() < 4) {
-            re_encrypt(dest);
-        }
+        // if (context->get_context_data(dest.parms_id())->chain_index() < 4) {
+        //     re_encrypt(dest);
+        // }
         if (i == d_f - 1) {
             eval_odd_deg9_poly(f4_coeffs_last, dest, dest);
         } else {

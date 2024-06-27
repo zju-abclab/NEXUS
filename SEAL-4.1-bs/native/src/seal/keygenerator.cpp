@@ -2,6 +2,8 @@
 // Licensed under the MIT license.
 
 #include "seal/keygenerator.h"
+#include <algorithm>
+#include "seal/ckks.h"
 #include "seal/randomtostd.h"
 #include "seal/util/common.h"
 #include "seal/util/galois.h"
@@ -11,18 +13,15 @@
 #include "seal/util/rlwe.h"
 #include "seal/util/uintarithsmallmod.h"
 #include "seal/util/uintcore.h"
-#include <algorithm>
 
 using namespace std;
 using namespace seal::util;
 
-namespace seal
-{
+namespace seal {
     KeyGenerator::KeyGenerator(const SEALContext &context) : context_(context)
     {
         // Verify parameters
-        if (!context_.parameters_set())
-        {
+        if (!context_.parameters_set()) {
             throw invalid_argument("encryption parameters are not set correctly");
         }
 
@@ -36,12 +35,10 @@ namespace seal
     KeyGenerator::KeyGenerator(const SEALContext &context, const SecretKey &secret_key) : context_(context)
     {
         // Verify parameters
-        if (!context_.parameters_set())
-        {
+        if (!context_.parameters_set()) {
             throw invalid_argument("encryption parameters are not set correctly");
         }
-        if (!is_valid_for(secret_key, context_))
-        {
+        if (!is_valid_for(secret_key, context_)) {
             throw invalid_argument("secret key is not valid for encryption parameters");
         }
 
@@ -61,9 +58,9 @@ namespace seal
         auto &coeff_modulus = parms.coeff_modulus();
         size_t coeff_count = parms.poly_modulus_degree();
         size_t coeff_modulus_size = coeff_modulus.size();
+        size_t hamming_weight = parms.secret_key_hamming_weight(); // J.-W. Lee: newly added
 
-        if (!is_initialized)
-        {
+        if (!is_initialized) {
             // Initialize secret key.
             secret_key_ = SecretKey();
             sk_generated_ = false;
@@ -71,7 +68,11 @@ namespace seal
 
             // Generate secret key
             RNSIter secret_key(secret_key_.data().data(), coeff_count);
-            sample_poly_ternary(parms.random_generator()->create(), parms, secret_key);
+            if (!hamming_weight)
+                sample_poly_ternary(
+                    parms.random_generator()->create(), parms, secret_key); // J.-W. Lee: Zero hamming weight means the original ternary distribution
+            else
+                sample_poly_sparse_ternary(parms.random_generator()->create(), parms, secret_key); // J.-W. Lee: newly added
 
             // Transform the secret s into NTT representation.
             auto ntt_tables = context_data.small_ntt_tables();
@@ -92,8 +93,7 @@ namespace seal
 
     PublicKey KeyGenerator::generate_pk(bool save_seed) const
     {
-        if (!sk_generated_)
-        {
+        if (!sk_generated_) {
             throw logic_error("cannot generate public key for unspecified secret key");
         }
 
@@ -105,8 +105,7 @@ namespace seal
         size_t coeff_modulus_size = coeff_modulus.size();
 
         // Size check
-        if (!product_fits_in(coeff_count, coeff_modulus_size))
-        {
+        if (!product_fits_in(coeff_count, coeff_modulus_size)) {
             throw logic_error("invalid parameters");
         }
 
@@ -122,12 +121,10 @@ namespace seal
     RelinKeys KeyGenerator::create_relin_keys(size_t count, bool save_seed)
     {
         // Check to see if secret key and public key have been generated
-        if (!sk_generated_)
-        {
+        if (!sk_generated_) {
             throw logic_error("cannot generate relinearization keys for unspecified secret key");
         }
-        if (!count || count > SEAL_CIPHERTEXT_SIZE_MAX - 2)
-        {
+        if (!count || count > SEAL_CIPHERTEXT_SIZE_MAX - 2) {
             throw invalid_argument("invalid count");
         }
 
@@ -138,8 +135,7 @@ namespace seal
         size_t coeff_modulus_size = parms.coeff_modulus().size();
 
         // Size check
-        if (!product_fits_in(coeff_count, coeff_modulus_size))
-        {
+        if (!product_fits_in(coeff_count, coeff_modulus_size)) {
             throw logic_error("invalid parameters");
         }
 
@@ -162,8 +158,7 @@ namespace seal
     GaloisKeys KeyGenerator::create_galois_keys(const vector<uint32_t> &galois_elts, bool save_seed)
     {
         // Check to see if secret key and public key have been generated
-        if (!sk_generated_)
-        {
+        if (!sk_generated_) {
             throw logic_error("cannot generate Galois keys for unspecified secret key");
         }
 
@@ -176,8 +171,7 @@ namespace seal
         size_t coeff_modulus_size = coeff_modulus.size();
 
         // Size check
-        if (!product_fits_in(coeff_count, coeff_modulus_size, size_t(2)))
-        {
+        if (!product_fits_in(coeff_count, coeff_modulus_size, size_t(2))) {
             throw logic_error("invalid parameters");
         }
 
@@ -187,17 +181,14 @@ namespace seal
         // The max number of keys is equal to number of coefficients
         galois_keys.data().resize(coeff_count);
 
-        for (auto galois_elt : galois_elts)
-        {
+        for (auto galois_elt : galois_elts) {
             // Verify coprime conditions.
-            if (!(galois_elt & 1) || (galois_elt >= coeff_count << 1))
-            {
+            if (!(galois_elt & 1) || (galois_elt >= coeff_count << 1)) {
                 throw invalid_argument("Galois element is not valid");
             }
 
             // Do we already have the key?
-            if (galois_keys.has_key(galois_elt))
-            {
+            if (galois_keys.has_key(galois_elt)) {
                 continue;
             }
 
@@ -222,8 +213,7 @@ namespace seal
 
     const SecretKey &KeyGenerator::secret_key() const
     {
-        if (!sk_generated_)
-        {
+        if (!sk_generated_) {
             throw logic_error("secret key has not been generated");
         }
         return secret_key_;
@@ -232,12 +222,10 @@ namespace seal
     void KeyGenerator::compute_secret_key_array(const SEALContext::ContextData &context_data, size_t max_power)
     {
 #ifdef SEAL_DEBUG
-        if (max_power < 1)
-        {
+        if (max_power < 1) {
             throw invalid_argument("max_power must be at least 1");
         }
-        if (!secret_key_array_size_ || !secret_key_array_)
-        {
+        if (!secret_key_array_size_ || !secret_key_array_) {
             throw logic_error("secret_key_array_ is uninitialized");
         }
 #endif
@@ -248,8 +236,7 @@ namespace seal
         size_t coeff_modulus_size = coeff_modulus.size();
 
         // Size check
-        if (!product_fits_in(coeff_count, coeff_modulus_size, max_power))
-        {
+        if (!product_fits_in(coeff_count, coeff_modulus_size, max_power)) {
             throw logic_error("invalid parameters");
         }
 
@@ -258,8 +245,7 @@ namespace seal
         size_t old_size = secret_key_array_size_;
         size_t new_size = max(max_power, old_size);
 
-        if (old_size == new_size)
-        {
+        if (old_size == new_size) {
             return;
         }
 
@@ -288,8 +274,7 @@ namespace seal
         old_size = secret_key_array_size_;
         new_size = max(max_power, secret_key_array_size_);
 
-        if (old_size == new_size)
-        {
+        if (old_size == new_size) {
             return;
         }
 
@@ -300,8 +285,7 @@ namespace seal
 
     void KeyGenerator::generate_one_kswitch_key(ConstRNSIter new_key, vector<PublicKey> &destination, bool save_seed)
     {
-        if (!context_.using_keyswitching())
-        {
+        if (!context_.using_keyswitching()) {
             throw logic_error("keyswitching is not supported by the context");
         }
 
@@ -312,8 +296,7 @@ namespace seal
         auto &key_modulus = key_parms.coeff_modulus();
 
         // Size check
-        if (!product_fits_in(coeff_count, decomp_mod_count))
-        {
+        if (!product_fits_in(coeff_count, decomp_mod_count)) {
             throw logic_error("invalid parameters");
         }
 
@@ -322,8 +305,7 @@ namespace seal
 
         SEAL_ITERATE(iter(new_key, key_modulus, destination, size_t(0)), decomp_mod_count, [&](auto I) {
             SEAL_ALLOCATE_GET_COEFF_ITER(temp, coeff_count, pool_);
-            encrypt_zero_symmetric(
-                secret_key_, context_, key_context_data.parms_id(), true, save_seed, get<2>(I).data());
+            encrypt_zero_symmetric(secret_key_, context_, key_context_data.parms_id(), true, save_seed, get<2>(I).data());
             uint64_t factor = barrett_reduce_64(key_modulus.back().value(), get<1>(I));
             multiply_poly_scalar_coeffmod(get<0>(I), coeff_count, factor, get<1>(I), temp);
 
@@ -333,8 +315,7 @@ namespace seal
         });
     }
 
-    void KeyGenerator::generate_kswitch_keys(
-        ConstPolyIter new_keys, size_t num_keys, KSwitchKeys &destination, bool save_seed)
+    void KeyGenerator::generate_kswitch_keys(ConstPolyIter new_keys, size_t num_keys, KSwitchKeys &destination, bool save_seed)
     {
         size_t coeff_count = context_.key_context_data()->parms().poly_modulus_degree();
         auto &key_context_data = *context_.key_context_data();
@@ -342,23 +323,18 @@ namespace seal
         size_t coeff_modulus_size = key_parms.coeff_modulus().size();
 
         // Size check
-        if (!product_fits_in(coeff_count, coeff_modulus_size, num_keys))
-        {
+        if (!product_fits_in(coeff_count, coeff_modulus_size, num_keys)) {
             throw logic_error("invalid parameters");
         }
 #ifdef SEAL_DEBUG
-        if (new_keys.poly_modulus_degree() != coeff_count)
-        {
+        if (new_keys.poly_modulus_degree() != coeff_count) {
             throw invalid_argument("iterator is incompatible with encryption parameters");
         }
-        if (new_keys.coeff_modulus_size() != coeff_modulus_size)
-        {
+        if (new_keys.coeff_modulus_size() != coeff_modulus_size) {
             throw invalid_argument("iterator is incompatible with encryption parameters");
         }
 #endif
         destination.data().resize(num_keys);
-        SEAL_ITERATE(iter(new_keys, destination.data()), num_keys, [&](auto I) {
-            this->generate_one_kswitch_key(get<0>(I), get<1>(I), save_seed);
-        });
+        SEAL_ITERATE(iter(new_keys, destination.data()), num_keys, [&](auto I) { this->generate_one_kswitch_key(get<0>(I), get<1>(I), save_seed); });
     }
 } // namespace seal

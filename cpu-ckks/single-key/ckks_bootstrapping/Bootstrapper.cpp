@@ -497,7 +497,7 @@ void Bootstrapper::addBootKeys_hoisting(GaloisKeys &gal_keys)
         gal_steps_vector.push_back((1 << i));
     }
     addLeftRotKeys_Linear_to_vector(gal_steps_vector);
-    keygen.create_hoisted_galois_keys(gal_steps_vector, gal_keys);
+    keygen.create_galois_keys(gal_steps_vector, gal_keys);
 }
 
 void Bootstrapper::addBootKeys_one_depth(GaloisKeys &gal_keys)

@@ -37,7 +37,7 @@ int main()
 
     Encryptor encryptor(context, public_key);
     CKKSEncoder encoder(context);
-    Evaluator evaluator(context);
+    Evaluator evaluator(context, encoder);
     Decryptor decryptor(context, secret_key);
     RelinKeys relin_keys;
     keygen.create_relin_keys(relin_keys);
@@ -54,9 +54,9 @@ int main()
     GeLUEvaluator gelu_evaluator(ckks_evaluator);
     LNEvaluator ln_evaluator(ckks_evaluator);
     SoftmaxEvaluator softmax_evaluator(ckks_evaluator);
-    
+
     // vector<double> input = {-0.4, -0.3, -0.2, -0.1, 0.1, 0.2, 0.3, 0.4};
-    
+
     Plaintext plain_input;
     Ciphertext cipher_input;
     Ciphertext cipher_output;
@@ -86,20 +86,18 @@ int main()
     auto start = high_resolution_clock::now();
     gelu_evaluator.gelu(cipher_input, cipher_output);
     auto end = high_resolution_clock::now();
-    cout << poly_modulus_degree/2 << " times gelu() takes: " << duration_cast<milliseconds>(end - start).count()
-    / 1.0 << " milliseconds" << endl;
-    cout << "Mean Absolute Error: " <<  ckks_evaluator.calculateMAE(gelu_calibration, cipher_output) << endl;
+    cout << poly_modulus_degree / 2 << " times gelu() takes: " << duration_cast<milliseconds>(end - start).count() / 1.0 << " milliseconds" << endl;
+    cout << "Mean Absolute Error: " << ckks_evaluator.calculateMAE(gelu_calibration, cipher_output) << endl;
 
     /*
         LayerNorm
     */
-    // auto start = high_resolution_clock::now(); 
+    // auto start = high_resolution_clock::now();
     // int size = input.size();
     // ln_evaluator.layer_norm(cipher_input, cipher_output, size);
     // auto end = high_resolution_clock::now();
     // cout << poly_modulus_degree/4 << " times LN() takes: " << duration_cast<milliseconds>(end - start).count() / 1.0
-    // << " milliseconds" << endl; 
-
+    // << " milliseconds" << endl;
 
     /*
         Softmax
@@ -113,7 +111,7 @@ int main()
     //      << endl;
     // ckks_evaluator.print_decrypted_ct(cipher_output, 8);
     cout << "depth = " << context.get_context_data(cipher_output.parms_id())->chain_index() << "\n";
-    
+
     // cout << "communication cost: " << ckks_evaluator.comm << " bytes" << endl;
     // cout << "communication round: " << ckks_evaluator.round << endl;
     // MM_test();
@@ -136,7 +134,7 @@ void MM_test()
 
     Encryptor encryptor(context, public_key, secret_key);
     CKKSEncoder encoder(context);
-    Evaluator evaluator(context);
+    Evaluator evaluator(context, encoder);
     Decryptor decryptor(context, secret_key);
 
     RelinKeys relin_keys;
