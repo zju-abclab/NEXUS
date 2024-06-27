@@ -105,6 +105,10 @@ class Evaluator {
     multiply(ct, ct, dest);
   }
 
+  inline void square_inplace(PhantomCiphertext &ct) {
+    multiply_inplace(ct, ct);
+  }
+
   inline void multiply(PhantomCiphertext &ct1, PhantomCiphertext &ct2, PhantomCiphertext &dest) {
     if (&ct2 == &dest) {
       multiply_inplace(dest, ct1);
@@ -193,6 +197,16 @@ class Evaluator {
   inline void negate_inplace(PhantomCiphertext &ct) {
     ::negate_inplace(*context, ct);
   }
+
+  // Galois
+  inline void apply_galois(PhantomCiphertext &ct, int step, PhantomGaloisKey &galois_keys, PhantomCiphertext &dest) {
+    dest = ct;
+    apply_galois_inplace(dest, step, galois_keys);
+  }
+
+  inline void apply_galois_inplace(PhantomCiphertext &ct, int step, PhantomGaloisKey &galois_keys) {
+    ::apply_galois_inplace(*context, ct, step, galois_keys);
+  }
 };
 
 class Decryptor {
@@ -227,7 +241,6 @@ class CKKSEvaluator {
 
   // Helper functions
   uint64_t get_modulus(PhantomCiphertext &x, int k);
-  void re_encrypt(PhantomCiphertext &ct);
 
   PhantomCiphertext init_guess(PhantomCiphertext x);
   PhantomCiphertext eval_line(PhantomCiphertext x, PhantomPlaintext m, PhantomPlaintext c);
@@ -245,7 +258,9 @@ class CKKSEvaluator {
   Evaluator evaluator;
   PhantomRelinKey *relin_keys;
   PhantomGaloisKey *galois_keys;
+  std::vector<std::uint32_t> rots;
 
+  size_t degree;
   double scale;
   size_t slot_count;
 
@@ -272,6 +287,11 @@ class CKKSEvaluator {
     Decryptor ckks_decryptor(context, decryptor);
     this->decryptor = ckks_decryptor;
 
+    // Compute rotation steps
+    for (int i = 0; i < uint(std::ceil(log2(degree))); i++) {
+      rots.push_back((degree + exponentiate_uint(2, i)) / exponentiate_uint(2, i));
+    }
+
     // Compute sign function coefficients
     f4_coeffs_last.resize(10, 0);
     g4_coeffs_last.resize(10, 0);
@@ -286,6 +306,7 @@ class CKKSEvaluator {
 
   // Helper functions
   vector<double> init_vec_with_value(size_t slot_count, double value);
+  void re_encrypt(PhantomCiphertext &ct);
   void print_decrypted_ct(PhantomCiphertext &ct, int num);
 
   // Evaluation functions

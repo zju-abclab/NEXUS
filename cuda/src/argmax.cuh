@@ -1,4 +1,7 @@
 #pragma once
+#include <iostream>
+#include <vector>
+
 #include "ckks_evaluator.cuh"
 #include "phantom.h"
 
@@ -7,16 +10,13 @@ using namespace phantom;
 using namespace nexus;
 
 namespace nexus {
-class GELUEvaluator {
+class ArgmaxEvaluator {
  private:
-  int d_g = 2;
-  int d_f = 2;
-
   CKKSEvaluator *ckks = nullptr;
 
  public:
-  GELUEvaluator(CKKSEvaluator &ckks) : ckks(&ckks) {}
+  ArgmaxEvaluator(CKKSEvaluator &ckks) : ckks(&ckks) {}
 
-  void gelu(PhantomCiphertext &x, PhantomCiphertext &res);
+  void argmax(PhantomCiphertext &x, PhantomCiphertext &res, int len);
 };
 }  // namespace nexus

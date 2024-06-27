@@ -21,9 +21,10 @@ int main() {
   params.set_poly_modulus_degree(N);
   params.set_coeff_modulus(CoeffModulus::Create(
       N,
-      {58, 40, 40, 40, 40, 40, 40, 40, 40, 58}
-      // {60, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50,
-      //  50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 53}  // 1763-bit
+      // {58, 40, 40, 40, 40, 40, 40, 40, 40, 58} // df = 3, dg = 3
+      {58, 40, 40, 40, 40, 40, 40, 58}  // df = 2, dg = 2
+      // {58, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50,
+      //  50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 55}  // 1763-bit
       ));
   // params.set_special_modulus_size(1);
 
@@ -69,7 +70,7 @@ int main() {
   auto timer = Timer();
   gelu_evaluator.gelu(cipher_input, cipher_output);
   timer.stop();
-  cout << N / 2 << " times gelu() takes: " << timer.duration() << " milliseconds" << endl;
+  cout << N / 2 << " gelu() takes: " << timer.duration() << " milliseconds" << endl;
 
   cout << "Mean Absolute Error: " << ckks_evaluator.calculate_MAE(gelu_calibration, cipher_output) << endl;
 }

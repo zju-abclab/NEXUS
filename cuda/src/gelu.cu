@@ -20,8 +20,8 @@ void GELUEvaluator::gelu(PhantomCiphertext &x, PhantomCiphertext &res) {
   ckks->evaluator.multiply_plain_inplace(b1, delta);
   ckks->evaluator.rescale_to_next_inplace(b1);
 
-  b0 = ckks->sgn_eval2(b0, 3, 3);
-  b1 = ckks->sgn_eval2(b1, 3, 3);
+  b0 = ckks->sgn_eval2(b0, d_g, d_f);
+  b1 = ckks->sgn_eval2(b1, d_g, d_f);
 
   PhantomPlaintext zero_point_five;
   ckks->encoder.encode(ckks->init_vec_with_value(ckks->slot_count, 0.5), b1.params_id(), b1.scale(), zero_point_five);
@@ -105,20 +105,11 @@ void GELUEvaluator::gelu(PhantomCiphertext &x, PhantomCiphertext &res) {
   ckks->evaluator.multiply(x, a2, s2);
   ckks->evaluator.relinearize_inplace(s2, *ckks->relin_keys);
   ckks->evaluator.rescale_to_next_inplace(s2);
+
   s1.scale() = ckks->scale;
   s2.scale() = ckks->scale;
   ckks->evaluator.mod_switch_to_inplace(s2, s1.params_id());
   ckks->evaluator.add(s1, s2, res);
-}
 
-vector<double> GELUEvaluator::gelu_plain(vector<double> &input) {
-  vector<double> output;
-  output.reserve(input.size());
-
-  for (double x : input) {
-    double gelu_x = 0.5 * x * (1.0 + std::tanh(std::sqrt(2.0 / M_PI) * (x + 0.044715 * x * x * x)));
-    output.push_back(gelu_x);
-  }
-
-  return output;
+  // cout << "Moduli left after GELU: " << res.coeff_modulus_size() << endl;
 }
