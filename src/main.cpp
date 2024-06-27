@@ -27,7 +27,7 @@ int main()
     size_t poly_modulus_degree = 1 << logN;
     double scale = pow(2.0, 40);
     parms.set_poly_modulus_degree(poly_modulus_degree);
-    parms.set_coeff_modulus(CoeffModulus::Create(poly_modulus_degree, { 58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58 }));
+    parms.set_coeff_modulus(CoeffModulus::Create(poly_modulus_degree, { 58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58 }));
     SEALContext context(parms, true, sec_level_type::none);
 
     KeyGenerator keygen(context);
@@ -37,7 +37,7 @@ int main()
 
     Encryptor encryptor(context, public_key);
     CKKSEncoder encoder(context);
-    Evaluator evaluator(context, encoder);
+    Evaluator evaluator(context);
     Decryptor decryptor(context, secret_key);
     RelinKeys relin_keys;
     keygen.create_relin_keys(relin_keys);
@@ -55,50 +55,50 @@ int main()
     LNEvaluator ln_evaluator(ckks_evaluator);
     SoftmaxEvaluator softmax_evaluator(ckks_evaluator);
     
-    vector<double> input = {-0.4, -0.3, -0.2, -0.1, 0.1, 0.2, 0.3, 0.4};
+    // vector<double> input = {-0.4, -0.3, -0.2, -0.1, 0.1, 0.2, 0.3, 0.4};
     
     Plaintext plain_input;
     Ciphertext cipher_input;
     Ciphertext cipher_output;
     vector<double> output;
-    ckks_evaluator.encoder->encode(input, scale, plain_input);
-    ckks_evaluator.encryptor->encrypt(plain_input, cipher_input);
+    // ckks_evaluator.encoder->encode(input, scale, plain_input);
+    // ckks_evaluator.encryptor->encrypt(plain_input, cipher_input);
 
     // cipher_output = ckks_evaluator.sgn_eval2(cipher_input, 3, 3);
     // ckks_evaluator.print_decrypted_ct(cipher_output, 8);
     /*
         GELU
     */
-    // double num;
-    // vector<double> input, gelu_calibration;
-    // ifstream input_file("data/input/gelu_input_32768.txt");
-    // while (input_file >> num) {
-    //     input.push_back(num);
-    // }
-    // input_file.close();
-    // ifstream calibration_file("data/calibration/gelu_calibration_32768.txt");
-    // while (calibration_file >> num) {
-    //     gelu_calibration.push_back(num);
-    // }
-    // calibration_file.close();
-    // ckks_evaluator.encoder->encode(input, scale, plain_input);
-    // ckks_evaluator.encryptor->encrypt(plain_input, cipher_input);
-    // auto start = high_resolution_clock::now();
-    // gelu_evaluator.gelu(cipher_input, cipher_output);
-    // auto end = high_resolution_clock::now();
-    // cout << poly_modulus_degree/2 << " times gelu() takes: " << duration_cast<milliseconds>(end - start).count()
-    // / 1.0 << " milliseconds" << endl;
-    // cout << "Mean Absolute Error: " <<  ckks_evaluator.calculateMAE(gelu_calibration, cipher_output);
+    double num;
+    vector<double> input, gelu_calibration;
+    ifstream input_file("data/input/gelu_input_32768.txt");
+    while (input_file >> num) {
+        input.push_back(num);
+    }
+    input_file.close();
+    ifstream calibration_file("data/calibration/gelu_calibration_32768.txt");
+    while (calibration_file >> num) {
+        gelu_calibration.push_back(num);
+    }
+    calibration_file.close();
+    ckks_evaluator.encoder->encode(input, scale, plain_input);
+    ckks_evaluator.encryptor->encrypt(plain_input, cipher_input);
+    auto start = high_resolution_clock::now();
+    gelu_evaluator.gelu(cipher_input, cipher_output);
+    auto end = high_resolution_clock::now();
+    cout << poly_modulus_degree/2 << " times gelu() takes: " << duration_cast<milliseconds>(end - start).count()
+    / 1.0 << " milliseconds" << endl;
+    cout << "Mean Absolute Error: " <<  ckks_evaluator.calculateMAE(gelu_calibration, cipher_output) << endl;
 
     /*
         LayerNorm
     */
-    auto start = high_resolution_clock::now(); 
-    int size = input.size();
-    ln_evaluator.layer_norm(cipher_input, cipher_output, size);
-    auto end = high_resolution_clock::now();
-    cout << poly_modulus_degree/4 << " times LN() takes: " << duration_cast<milliseconds>(end - start).count() / 1.0
-    << " milliseconds" << endl; 
+    // auto start = high_resolution_clock::now(); 
+    // int size = input.size();
+    // ln_evaluator.layer_norm(cipher_input, cipher_output, size);
+    // auto end = high_resolution_clock::now();
+    // cout << poly_modulus_degree/4 << " times LN() takes: " << duration_cast<milliseconds>(end - start).count() / 1.0
+    // << " milliseconds" << endl; 
 
 
     /*
@@ -111,7 +111,7 @@ int main()
     // cout << poly_modulus_degree / 4
     //      << " times softmax() takes: " << duration_cast<milliseconds>(end - start).count() / 1.0 << " milliseconds"
     //      << endl;
-    ckks_evaluator.print_decrypted_ct(cipher_output, 8);
+    // ckks_evaluator.print_decrypted_ct(cipher_output, 8);
     cout << "depth = " << context.get_context_data(cipher_output.parms_id())->chain_index() << "\n";
     
     // cout << "communication cost: " << ckks_evaluator.comm << " bytes" << endl;
@@ -136,7 +136,7 @@ void MM_test()
 
     Encryptor encryptor(context, public_key, secret_key);
     CKKSEncoder encoder(context);
-    Evaluator evaluator(context, encoder);
+    Evaluator evaluator(context);
     Decryptor decryptor(context, secret_key);
 
     RelinKeys relin_keys;
