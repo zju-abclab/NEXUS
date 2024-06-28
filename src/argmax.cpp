@@ -16,7 +16,7 @@ void ArgmaxEvaluator::argmax(Ciphertext &x, Ciphertext &res, int len) {
         //a = max(a,b)
         ckks->evaluator->add(a, b, a_plus_b);
         ckks->evaluator->sub(a, b, a_minus_b);
-        sign = ckks->sgn_eval2(a_minus_b, 2, 2);
+        sign = ckks->sgn_eval(a_minus_b, 2, 2);
         ckks->encoder->encode(0.5, a.parms_id(), a.scale(), zero_point_five);
         ckks->evaluator->multiply_plain_inplace(a_plus_b, zero_point_five);
         ckks->evaluator->rescale_to_next_inplace(a_plus_b);

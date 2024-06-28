@@ -21,8 +21,8 @@ void GeLUEvaluator::gelu(Ciphertext &x, Ciphertext &res)
     ckks->evaluator->multiply_plain_inplace(b1, delta);
     ckks->evaluator->rescale_to_next_inplace(b1);
 
-    b0 = ckks->sgn_eval2(b0, 2, 2);
-    b1 = ckks->sgn_eval2(b1, 2, 2);
+    b0 = ckks->sgn_eval(b0, 2, 2);
+    b1 = ckks->sgn_eval(b1, 2, 2);
 
     Plaintext zero_point_five;
     ckks->encoder->encode(ckks->init_vec_with_value(ckks->slot_count, 0.5), b1.parms_id(), b1.scale(), zero_point_five);

@@ -121,7 +121,7 @@ int main()
     encoder.encode(sparse, scale, plain);
     encryptor.encrypt(plain, cipher);
 
-    cipher = ckks_evaluator.sgn_eval2(cipher, 2, 2);
+    cipher = ckks_evaluator.sgn_eval(cipher, 2, 2);
 
     // evaluator.square_inplace(cipher);
     // evaluator.relinearize_inplace(cipher, relin_keys);
@@ -270,7 +270,7 @@ int main()
 
         cout << "return cipher level: " << rtn.coeff_modulus_size() << endl;
 
-        ckks_evaluator.sgn_eval2(rtn, 2, 2);
+        ckks_evaluator.sgn_eval(rtn, 2, 2);
 
         decryptor.decrypt(rtn, plain);
         // encoder.decode(plain, after, sparse_slots);
