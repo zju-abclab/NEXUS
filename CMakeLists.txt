@@ -6,7 +6,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 set(CMAKE_BUILD_TYPE RELWITHDEBINFO)
 project(PrivateGPT VERSION 1.0)
 
-find_package(SEAL 3.6 REQUIRED)
+find_package(SEAL 4.1 REQUIRED)
 add_executable(
     main
     ${CMAKE_SOURCE_DIR}/src/main.cpp
