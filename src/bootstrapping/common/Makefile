@@ -57,10 +57,10 @@ RM = /home/zhangjiawen/.local/lib/python3.10/site-packages/cmake/data/bin/cmake 
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/zhangjiawen/Code/secureGPT2
+CMAKE_SOURCE_DIR = /home/zhangjiawen/Code/NEXUS
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/zhangjiawen/Code/secureGPT2
+CMAKE_BINARY_DIR = /home/zhangjiawen/Code/NEXUS
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -87,14 +87,14 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	cd /home/zhangjiawen/Code/secureGPT2 && $(CMAKE_COMMAND) -E cmake_progress_start /home/zhangjiawen/Code/secureGPT2/CMakeFiles /home/zhangjiawen/Code/secureGPT2/cpu-ckks/single-key/ckks_bootstrapping//CMakeFiles/progress.marks
-	cd /home/zhangjiawen/Code/secureGPT2 && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 cpu-ckks/single-key/ckks_bootstrapping/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/zhangjiawen/Code/secureGPT2/CMakeFiles 0
+	cd /home/zhangjiawen/Code/NEXUS && $(CMAKE_COMMAND) -E cmake_progress_start /home/zhangjiawen/Code/NEXUS/CMakeFiles /home/zhangjiawen/Code/NEXUS/src/bootstrapping/common//CMakeFiles/progress.marks
+	cd /home/zhangjiawen/Code/NEXUS && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 src/bootstrapping/common/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/zhangjiawen/Code/NEXUS/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
 clean:
-	cd /home/zhangjiawen/Code/secureGPT2 && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 cpu-ckks/single-key/ckks_bootstrapping/clean
+	cd /home/zhangjiawen/Code/NEXUS && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 src/bootstrapping/common/clean
 .PHONY : clean
 
 # The main clean target
@@ -103,17 +103,17 @@ clean/fast: clean
 
 # Prepare targets for installation.
 preinstall: all
-	cd /home/zhangjiawen/Code/secureGPT2 && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 cpu-ckks/single-key/ckks_bootstrapping/preinstall
+	cd /home/zhangjiawen/Code/NEXUS && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 src/bootstrapping/common/preinstall
 .PHONY : preinstall
 
 # Prepare targets for installation.
 preinstall/fast:
-	cd /home/zhangjiawen/Code/secureGPT2 && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 cpu-ckks/single-key/ckks_bootstrapping/preinstall
+	cd /home/zhangjiawen/Code/NEXUS && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 src/bootstrapping/common/preinstall
 .PHONY : preinstall/fast
 
 # clear depends
 depend:
-	cd /home/zhangjiawen/Code/secureGPT2 && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
+	cd /home/zhangjiawen/Code/NEXUS && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
 .PHONY : depend
 
 # Help Target
@@ -135,6 +135,6 @@ help:
 # No rule that depends on this can have commands that come from listfiles
 # because they might be regenerated.
 cmake_check_build_system:
-	cd /home/zhangjiawen/Code/secureGPT2 && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
+	cd /home/zhangjiawen/Code/NEXUS && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
 .PHONY : cmake_check_build_system
 

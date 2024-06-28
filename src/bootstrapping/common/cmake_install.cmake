@@ -1,4 +1,4 @@
-# Install script for directory: /home/zhangjiawen/Code/secureGPT2/cpu-ckks/single-key/ckks_bootstrapping
+# Install script for directory: /home/zhangjiawen/Code/NEXUS/src/bootstrapping/common
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

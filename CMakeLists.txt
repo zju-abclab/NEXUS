@@ -17,8 +17,8 @@ add_executable(
     ${CMAKE_SOURCE_DIR}/src/matrix_mul.cpp
 )
 
-add_subdirectory(common)
-add_subdirectory(cpu-ckks/single-key/ckks_bootstrapping)
+add_subdirectory(src/bootstrapping/common)
+add_subdirectory(src/bootstrapping)
 
 add_executable(
     bootstrapping
