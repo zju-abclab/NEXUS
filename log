@@ -1,8 +1,0 @@
-make -j && ./bin/main
-[ 14%] Building CXX object CMakeFiles/main.dir/src/matrix_mul.cpp.o
-[ 28%] Building CXX object CMakeFiles/main.dir/src/main.cpp.o
-[ 42%] Linking CXX executable bin/main
-[100%] Built target main
-7.93804 MB
-Terminated
-error: Recipe `run` failed on line 2 with exit code 143
