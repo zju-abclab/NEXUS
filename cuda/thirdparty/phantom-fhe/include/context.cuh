@@ -126,6 +126,7 @@ namespace phantom {
         // Return the index (start from 0) for the parameters, when context chain is generated
         [[nodiscard]] std::size_t chain_index() const noexcept { return chain_index_; }
 
+        // Newly added to provide a method with similar functionality as SEAL's chain_index()
         [[nodiscard]] std::size_t chain_depth() const noexcept { return total_coeff_modulus_.size() - 1; }
 
         void set_chain_index(const std::size_t chain_index) noexcept { chain_index_ = chain_index; }

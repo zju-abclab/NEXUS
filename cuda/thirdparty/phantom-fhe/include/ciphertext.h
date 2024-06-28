@@ -156,6 +156,7 @@ public:
         return parms_id_;
     }
 
+    // Newly added to provide a similar API to SEAL for getting context data
     [[nodiscard]] std::size_t params_id() const noexcept {
         return chain_index_;
     }
@@ -176,6 +177,7 @@ public:
         return scale_;
     }
 
+    // Newly added to make scale easily modifiable
     [[nodiscard]] auto &scale() noexcept {
         return scale_;
     }

@@ -112,6 +112,8 @@ public:
         return slots_;
     }
 
+    // Newly added to provide information about the length of messages
+    // that is allowed to be encoded after the first call to encode
     [[nodiscard]] inline std::size_t message_length() const noexcept {
         if (sparse_slots_ == 0) return slots_;
         return sparse_slots_;
