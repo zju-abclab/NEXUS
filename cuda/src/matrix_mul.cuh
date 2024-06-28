@@ -5,11 +5,10 @@
 #include "ckks_evaluator.cuh"
 #include "phantom.h"
 
+namespace nexus {
 using namespace std;
 using namespace phantom;
-using namespace nexus;
 
-namespace nexus {
 class MMEvaluator {
  private:
   CKKSEvaluator *ckks = nullptr;

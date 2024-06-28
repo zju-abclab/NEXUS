@@ -2,11 +2,10 @@
 #include "ckks_evaluator.cuh"
 #include "phantom.h"
 
+namespace nexus {
 using namespace std;
 using namespace phantom;
-using namespace nexus;
 
-namespace nexus {
 class GELUEvaluator {
  private:
   int d_g = 2;

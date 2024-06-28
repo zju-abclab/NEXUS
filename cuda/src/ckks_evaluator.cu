@@ -26,25 +26,20 @@ vector<double> CKKSEvaluator::init_vec_with_value(size_t slot_count, double valu
 
 PhantomCiphertext CKKSEvaluator::init_guess(PhantomCiphertext x) {
   PhantomPlaintext A, B;
-  // a = 1e-3; b = 750
-  // encoder->encode(-0.00019703, scale, A);
-  // encoder->encode(0.14777278, scale, B);
-
-  // a = 1e-4; b = 1000
   encoder.encode(-1.29054537e-04, scale, A);
   encoder.encode(1.29054537e-01, scale, B);
-
   return eval_line(x, A, B);
 }
 
 PhantomCiphertext CKKSEvaluator::eval_line(PhantomCiphertext x, PhantomPlaintext m, PhantomPlaintext c) {
-  // cout << "line\n";
   evaluator.mod_switch_to_inplace(m, x.params_id());
   evaluator.multiply_plain_inplace(x, m);
   evaluator.rescale_to_next_inplace(x);
+
   evaluator.mod_switch_to_inplace(c, x.params_id());
   x.scale() = scale;
   evaluator.add_plain_inplace(x, c);
+
   return x;
 }
 
@@ -52,8 +47,6 @@ PhantomCiphertext CKKSEvaluator::invert_sqrt(PhantomCiphertext x, int d_newt, in
   PhantomCiphertext res = init_guess(x);
   PhantomCiphertext y = newton_iter(x, res, d_newt);
   pair<PhantomCiphertext, PhantomCiphertext> sqrt_inv_sqrt = goldschmidt_iter(x, y, d_gold);
-  // printVector(sqrt_inv_sqrt.first, 1);
-  // printVector(sqrt_inv_sqrt.second, 1);
   return sqrt_inv_sqrt.second;
 }
 
@@ -90,62 +83,60 @@ void CKKSEvaluator::re_encrypt(PhantomCiphertext &ct) {
   cout << timer.duration() << " milliseconds" << endl;
 
   // cout << "depth = " <<
-  // context.get_context_data_from_params_id(ct.parms_id()).chain_index() << "\n";
+  // context.get_context_data(ct.params_id()).chain_depth() << "\n";
 }
 
 pair<PhantomCiphertext, PhantomCiphertext> CKKSEvaluator::goldschmidt_iter(PhantomCiphertext v, PhantomCiphertext y, int d) {
   PhantomCiphertext x, h, r, temp;
   PhantomPlaintext constant;
+
   encoder.encode(0.5, scale, constant);
 
   // GoldSchmidt's algorithm
-  evaluator.mod_switch_to_inplace(y, v.params_id());
+  evaluator.mod_switch_to_inplace(v, y.params_id());
   evaluator.multiply(v, y, x);
   evaluator.relinearize_inplace(x, *relin_keys);
   evaluator.rescale_to_next_inplace(x);
+
   evaluator.mod_switch_to_inplace(constant, y.params_id());
   evaluator.multiply_plain(y, constant, h);
   evaluator.rescale_to_next_inplace(h);
-  // cout << "gold\n";
 
   for (int i = 0; i < d; i++) {
     encoder.encode(0.5, scale, constant);
-    // r = 0.5 - xh
-    if (context->get_context_data(x.params_id()).chain_depth() < 3) {
-      re_encrypt(x);
-      re_encrypt(h);
-    }
+
     evaluator.multiply(x, h, r);
     evaluator.relinearize_inplace(r, *relin_keys);
     evaluator.rescale_to_next_inplace(r);
+
     r.scale() = scale;
     evaluator.negate(r, temp);
     evaluator.mod_switch_to_inplace(constant, temp.params_id());
     evaluator.add_plain(temp, constant, r);
-    // cout << "r\n";
 
     // x = x + x*r
     evaluator.mod_switch_to_inplace(x, r.params_id());
     evaluator.multiply(x, r, temp);
     evaluator.relinearize_inplace(temp, *relin_keys);
     evaluator.rescale_to_next_inplace(temp);
+
     x.scale() = scale;
     temp.scale() = scale;
     evaluator.mod_switch_to_inplace(x, temp.params_id());
     evaluator.add_inplace(x, temp);
-    // cout << "x\n";
 
     // h = h + h*r
     evaluator.mod_switch_to_inplace(h, r.params_id());
     evaluator.multiply(h, r, temp);
     evaluator.relinearize_inplace(temp, *relin_keys);
     evaluator.rescale_to_next_inplace(temp);
+
     h.scale() = scale;
     temp.scale() = scale;
     evaluator.mod_switch_to_inplace(h, temp.params_id());
     evaluator.add_inplace(h, temp);
-    // cout << "h\n";
   }
+
   encoder.encode(2.0, scale, constant);
   evaluator.mod_switch_to_inplace(constant, h.params_id());
   evaluator.multiply_plain_inplace(h, constant);
@@ -156,10 +147,8 @@ pair<PhantomCiphertext, PhantomCiphertext> CKKSEvaluator::goldschmidt_iter(Phant
 
 PhantomCiphertext CKKSEvaluator::newton_iter(PhantomCiphertext x, PhantomCiphertext res, int iter) {
   for (int i = 0; i < iter; i++) {
-    if (context->get_context_data(res.params_id()).chain_depth() < 4)
-      re_encrypt(res);
-    // cout << i << " " << depth(res) << "\n";
     PhantomPlaintext three_half, neg_half;
+
     encoder.encode(1.5, scale, three_half);
     encoder.encode(-0.5, scale, neg_half);
 
@@ -168,16 +157,13 @@ PhantomCiphertext CKKSEvaluator::newton_iter(PhantomCiphertext x, PhantomCiphert
     evaluator.square(res, res_sq);
     evaluator.relinearize_inplace(res_sq, *relin_keys);
     evaluator.rescale_to_next_inplace(res_sq);
-    // printVector(res_sq);
-    // evaluator->negate_inplace(res_sq);
-    // printVector(res_sq, 3);
-    // cout << "square\n";
 
     //-0.5*x*b
     PhantomCiphertext res_x;
     evaluator.mod_switch_to_inplace(neg_half, x.params_id());
     evaluator.multiply_plain(x, neg_half, res_x);
     evaluator.rescale_to_next_inplace(res_x);
+
     if (context->get_context_data(res.params_id()).chain_depth() <
         context->get_context_data(res_x.params_id()).chain_depth())
       evaluator.mod_switch_to_inplace(res_x, res.params_id());
@@ -187,29 +173,25 @@ PhantomCiphertext CKKSEvaluator::newton_iter(PhantomCiphertext x, PhantomCiphert
     evaluator.multiply_inplace(res_x, res);
     evaluator.relinearize_inplace(res_x, *relin_keys);
     evaluator.rescale_to_next_inplace(res_x);
-    // cout << "negate\n";
 
     //-0.5*b*x^3
     evaluator.mod_switch_to_inplace(res_sq, res_x.params_id());
     evaluator.multiply_inplace(res_x, res_sq);
     evaluator.relinearize_inplace(res_x, *relin_keys);
     evaluator.rescale_to_next_inplace(res_x);
-    // cout << "res_x\n";
-    // printVector(res_x, 3);
+
     // 1.5*x
     evaluator.mod_switch_to_inplace(three_half, res.params_id());
     evaluator.multiply_plain_inplace(res, three_half);
     evaluator.rescale_to_next_inplace(res);
-    // cout << "constant\n";
 
     //-0.5*b*x^3 + 1.5*x
     evaluator.mod_switch_to_inplace(res, res_x.params_id());
     res_x.scale() = scale;
     res.scale() = scale;
     evaluator.add_inplace(res, res_x);
-    // cout << "final\n";
   }
-  re_encrypt(res);
+
   return res;
 }
 
@@ -363,14 +345,10 @@ void CKKSEvaluator::eval_odd_deg9_poly(vector<double> &a, PhantomCiphertext &x, 
   // cout << "Poly eval took " << duration_cast<milliseconds>(time_end - time_start).count() << " ms" << endl;
 }
 
-PhantomCiphertext CKKSEvaluator::sgn_eval2(PhantomCiphertext x, int d_g, int d_f) {
+PhantomCiphertext CKKSEvaluator::sgn_eval(PhantomCiphertext x, int d_g, int d_f) {
   PhantomCiphertext dest = x;
 
   for (int i = 0; i < d_g; i++) {
-    // cout << "depth: " << context->get_context_data(dest.params_id()).chain_depth() << endl;
-    if (context->get_context_data(dest.params_id()).chain_depth() < 4) {
-      re_encrypt(dest);
-    }
     if (i == d_g - 1) {
       eval_odd_deg9_poly(g4_coeffs_last, dest, dest);
     } else {
@@ -379,10 +357,6 @@ PhantomCiphertext CKKSEvaluator::sgn_eval2(PhantomCiphertext x, int d_g, int d_f
   }
 
   for (int i = 0; i < d_f; i++) {
-    // cout << "depth: " << context->get_context_data(dest.params_id()).chain_depth() << endl;
-    if (context->get_context_data(dest.params_id()).chain_depth() < 4) {
-      re_encrypt(dest);
-    }
     if (i == d_f - 1) {
       eval_odd_deg9_poly(f4_coeffs_last, dest, dest);
     } else {
@@ -390,12 +364,10 @@ PhantomCiphertext CKKSEvaluator::sgn_eval2(PhantomCiphertext x, int d_g, int d_f
     }
   }
 
-  // re_encrypt(x);
-
   return dest;
 }
 
-double CKKSEvaluator::calculate_MAE(vector<double> &y_true, PhantomCiphertext &ct) {
+double CKKSEvaluator::calculate_MAE(vector<double> &y_true, PhantomCiphertext &ct, int N) {
   PhantomPlaintext temp;
   vector<double> y_pred;
 
@@ -403,9 +375,57 @@ double CKKSEvaluator::calculate_MAE(vector<double> &y_true, PhantomCiphertext &c
   encoder.decode(temp, y_pred);
 
   double sum_absolute_errors = 0.0;
-  for (size_t i = 0; i < y_true.size(); ++i) {
+  for (size_t i = 0; i < N; ++i) {
     sum_absolute_errors += abs(y_true[i] - y_pred[i]);
   }
 
-  return sum_absolute_errors / y_true.size();
+  return sum_absolute_errors / N;
+}
+
+PhantomCiphertext CKKSEvaluator::exp(PhantomCiphertext x) {
+  PhantomPlaintext one, inverse_128;
+
+  encoder.encode(0.0078125, x.params_id(), x.scale(), inverse_128);
+  evaluator.multiply_plain_inplace(x, inverse_128);
+  evaluator.rescale_to_next_inplace(x);
+
+  encoder.encode(1.0, x.params_id(), x.scale(), one);
+  evaluator.add_plain_inplace(x, one);
+
+  // x^128
+  for (int i = 0; i < log2(128); i++) {
+    evaluator.square(x, x);
+    evaluator.relinearize_inplace(x, *relin_keys);
+    evaluator.rescale_to_next_inplace(x);
+  }
+
+  return x;
+}
+
+PhantomCiphertext CKKSEvaluator::inverse(PhantomCiphertext x, int iter) {
+  PhantomCiphertext y, tmp, res;
+  PhantomPlaintext one;
+
+  encoder.encode(1.0, x.params_id(), x.scale(), one);
+  evaluator.sub_plain(x, one, y);
+  evaluator.negate_inplace(y);
+  evaluator.add_plain(y, one, tmp);
+
+  res = tmp;
+
+  for (int i = 0; i < iter; i++) {
+    evaluator.square_inplace(y);
+    evaluator.relinearize_inplace(y, *relin_keys);
+    evaluator.rescale_to_next_inplace(y);
+
+    encoder.encode(1.0, y.params_id(), y.scale(), one);
+    evaluator.add_plain(y, one, tmp);
+
+    evaluator.mod_switch_to_inplace(res, tmp.params_id());
+    evaluator.multiply_inplace(res, tmp);
+    evaluator.relinearize_inplace(res, *relin_keys);
+    evaluator.rescale_to_next_inplace(res);
+  }
+
+  return res;
 }

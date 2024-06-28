@@ -112,6 +112,11 @@ public:
         return slots_;
     }
 
+    [[nodiscard]] inline std::size_t message_length() const noexcept {
+        if (sparse_slots_ == 0) return slots_;
+        return sparse_slots_;
+    }
+
     auto &gpu_ckks_msg_vec() {
         return *gpu_ckks_msg_vec_;
     }

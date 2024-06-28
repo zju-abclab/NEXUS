@@ -333,13 +333,10 @@ ASALocalRun/
 *.vscode
 
 # CMake files.
-*/CMakeFiles/
-/CMakeCache.txt
-/CMakeFiles/
-/Makefile
-/cmake_install.cmake
-*/Makefile
-*/*.cmake
+CMakeFiles
+CMakeCache.txt
+Makefile
+*.cmake
 
 # Built targets.
 libsealpir.a

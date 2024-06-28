@@ -2,10 +2,10 @@
 #include <chrono>
 #include <iostream>
 
+namespace nexus {
 using namespace std;
 using namespace std::chrono;
 
-namespace nexus {
 class Timer {
  private:
   std::chrono::_V2::system_clock::time_point start;

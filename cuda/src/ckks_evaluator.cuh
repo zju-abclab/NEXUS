@@ -1,11 +1,11 @@
 #pragma once
-
 #include "phantom.h"
 
+namespace nexus {
 using namespace std;
 using namespace phantom;
+using namespace phantom::arith;
 
-namespace nexus {
 class Encoder {
  private:
   PhantomContext *context;
@@ -38,12 +38,12 @@ class Encoder {
 
   // Value inputs (fill all slots with that value)
   inline void encode(double value, size_t chain_index, double scale, PhantomPlaintext &plain) {
-    vector<double> values(encoder->slot_count(), value);
+    vector<double> values(encoder->message_length(), value);
     encoder->encode(*context, values, scale, plain, chain_index);
   }
 
   inline void encode(double value, double scale, PhantomPlaintext &plain) {
-    vector<double> values(encoder->slot_count(), value);
+    vector<double> values(encoder->message_length(), value);
     encoder->encode(*context, values, scale, plain);
   }
 
@@ -310,10 +310,12 @@ class CKKSEvaluator {
   void print_decrypted_ct(PhantomCiphertext &ct, int num);
 
   // Evaluation functions
-  PhantomCiphertext sgn_eval2(PhantomCiphertext x, int d_g, int d_f);
+  PhantomCiphertext sgn_eval(PhantomCiphertext x, int d_g, int d_f);
   PhantomCiphertext invert_sqrt(PhantomCiphertext x, int d_newt = 20, int d_gold = 1);
+  PhantomCiphertext exp(PhantomCiphertext x);
+  PhantomCiphertext inverse(PhantomCiphertext x, int iter = 4);
 
   // Metrics calcuation functions
-  double calculate_MAE(vector<double> &y_true, PhantomCiphertext &ct);
+  double calculate_MAE(vector<double> &y_true, PhantomCiphertext &ct, int N);
 };
 }  // namespace nexus

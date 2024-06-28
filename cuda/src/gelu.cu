@@ -20,8 +20,8 @@ void GELUEvaluator::gelu(PhantomCiphertext &x, PhantomCiphertext &res) {
   ckks->evaluator.multiply_plain_inplace(b1, delta);
   ckks->evaluator.rescale_to_next_inplace(b1);
 
-  b0 = ckks->sgn_eval2(b0, d_g, d_f);
-  b1 = ckks->sgn_eval2(b1, d_g, d_f);
+  b0 = ckks->sgn_eval(b0, d_g, d_f);
+  b1 = ckks->sgn_eval(b1, d_g, d_f);
 
   PhantomPlaintext zero_point_five;
   ckks->encoder.encode(ckks->init_vec_with_value(ckks->slot_count, 0.5), b1.params_id(), b1.scale(), zero_point_five);

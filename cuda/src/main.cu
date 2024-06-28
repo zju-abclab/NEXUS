@@ -3,7 +3,9 @@
 
 #include "ckks_evaluator.cuh"
 #include "gelu.cuh"
+#include "layer_norm.cuh"
 #include "phantom.h"
+#include "softmax.cuh"
 #include "utils.cuh"
 
 using namespace std;
@@ -15,17 +17,19 @@ using namespace nexus;
 size_t N = 1ULL << 16;
 double SCALE = pow(2.0, 40);
 
+string TEST_TARGET = "SoftMax";
+vector<int> COEFF_MODULI = {58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58}
+// {58, 40, 40, 40, 40, 40, 40, 40, 40, 58} // df = 3, dg = 3
+// {58, 40, 40, 40, 40, 40, 40, 58}  // df = 2, dg = 2
+// {58, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50,
+//  50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 55}  // 1763-bit
+;
+
 int main() {
   EncryptionParameters params(scheme_type::ckks);
 
   params.set_poly_modulus_degree(N);
-  params.set_coeff_modulus(CoeffModulus::Create(
-      N,
-      // {58, 40, 40, 40, 40, 40, 40, 40, 40, 58} // df = 3, dg = 3
-      {58, 40, 40, 40, 40, 40, 40, 58}  // df = 2, dg = 2
-      // {58, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50,
-      //  50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 55}  // 1763-bit
-      ));
+  params.set_coeff_modulus(CoeffModulus::Create(N, COEFF_MODULI));
   // params.set_special_modulus_size(1);
 
   PhantomContext context(params);
@@ -38,7 +42,6 @@ int main() {
   PhantomCKKSEncoder encoder(context);
 
   CKKSEvaluator ckks_evaluator(context, public_key, secret_key, encoder, relin_keys, galois_keys, SCALE);
-  GELUEvaluator gelu_evaluator(ckks_evaluator);
 
   vector<double> input;
   PhantomPlaintext plain_input;
@@ -49,28 +52,93 @@ int main() {
   /*
     GELU
   */
-  double num;
+  if (TEST_TARGET == "GELU") {
+    GELUEvaluator gelu_evaluator(ckks_evaluator);
 
-  vector<double> gelu_calibration;
-  ifstream input_file("../data/input/gelu_input_32768.txt");
-  while (input_file >> num) {
-    input.push_back(num);
+    double num;
+    vector<double> gelu_calibration;
+    ifstream input_file("../../data/input/gelu_input_32768.txt");
+    while (input_file >> num) {
+      input.push_back(num);
+    }
+    input_file.close();
+
+    ifstream calibration_file("../../data/calibration/gelu_calibration_32768.txt");
+    while (calibration_file >> num) {
+      gelu_calibration.push_back(num);
+    }
+    calibration_file.close();
+
+    ckks_evaluator.encoder.encode(input, SCALE, plain_input);
+    ckks_evaluator.encryptor.encrypt(plain_input, cipher_input);
+
+    auto timer = Timer();
+    gelu_evaluator.gelu(cipher_input, cipher_output);
+    timer.stop();
+    cout << "[GELU] 32768 takes: " << timer.duration() << " milliseconds" << endl;
+
+    cout << "Mean Absolute Error: " << ckks_evaluator.calculate_MAE(gelu_calibration, cipher_output, N / 2) << endl;
   }
-  input_file.close();
 
-  ifstream calibration_file("../data/calibration/gelu_calibration_32768.txt");
-  while (calibration_file >> num) {
-    gelu_calibration.push_back(num);
+  /*
+    LayerNorm
+  */
+  if (TEST_TARGET == "LayerNorm") {
+    LNEvaluator ln_evaluator(ckks_evaluator);
+
+    double num;
+    vector<double> input, layernorm_calibration;
+    ifstream input_file("../../data/input/layernorm_input_16_768.txt");
+    while (input_file >> num) {
+      input.push_back(num);
+    }
+    input_file.close();
+
+    ifstream calibration_file("../../data/calibration/layernorm_calibration_16_768.txt");
+    while (calibration_file >> num) {
+      layernorm_calibration.push_back(num);
+    }
+    calibration_file.close();
+
+    ckks_evaluator.encoder.encode(input, SCALE, plain_input);
+    ckks_evaluator.encryptor.encrypt(plain_input, cipher_input);
+
+    auto timer = Timer();
+    ln_evaluator.layer_norm(cipher_input, cipher_output, 1024);
+    timer.stop();
+
+    cout << "[LayerNorm] 16 x 768 takes: " << timer.duration() << " milliseconds" << endl;
+    cout << "Mean Absolute Error: " << ckks_evaluator.calculate_MAE(layernorm_calibration, cipher_output, 768) << endl;
   }
-  calibration_file.close();
 
-  ckks_evaluator.encoder.encode(input, SCALE, plain_input);
-  ckks_evaluator.encryptor.encrypt(plain_input, cipher_input);
+  /*
+    Softmax
+  */
+  if (TEST_TARGET == "SoftMax") {
+    SoftmaxEvaluator softmax_evaluator(ckks_evaluator);
 
-  auto timer = Timer();
-  gelu_evaluator.gelu(cipher_input, cipher_output);
-  timer.stop();
-  cout << N / 2 << " gelu() takes: " << timer.duration() << " milliseconds" << endl;
+    double num;
+    vector<double> input, softmax_calibration;
+    ifstream input_file("../../data/input/softmax_input_128_128.txt");
+    while (input_file >> num) {
+      input.push_back(num);
+    }
+    input_file.close();
 
-  cout << "Mean Absolute Error: " << ckks_evaluator.calculate_MAE(gelu_calibration, cipher_output) << endl;
+    ifstream calibration_file("../../data/calibration/softmax_calibration_128_128.txt");
+    while (calibration_file >> num) {
+      softmax_calibration.push_back(num);
+    }
+    calibration_file.close();
+
+    ckks_evaluator.encoder.encode(input, SCALE, plain_input);
+    ckks_evaluator.encryptor.encrypt(plain_input, cipher_input);
+
+    auto timer = Timer();
+    softmax_evaluator.softmax(cipher_input, cipher_output, 128);
+    timer.stop();
+
+    cout << "[Softmax] 128 x 128 takes: " << timer.duration() << " milliseconds" << endl;
+    cout << "Mean Absolute Error: " << ckks_evaluator.calculate_MAE(softmax_calibration, cipher_output, 128) << endl;
+  }
 }

@@ -16,7 +16,7 @@ void ArgmaxEvaluator::argmax(PhantomCiphertext &x, PhantomCiphertext &res, int l
     ckks->evaluator.add(a, b, a_plus_b);
     ckks->evaluator.sub(a, b, a_minus_b);
 
-    sign = ckks->sgn_eval2(a_minus_b, 2, 2);
+    sign = ckks->sgn_eval(a_minus_b, 2, 2);
 
     ckks->encoder.encode(0.5, a.params_id(), a.scale(), zero_point_five);
     ckks->evaluator.multiply_plain_inplace(a_plus_b, zero_point_five);
@@ -39,7 +39,7 @@ void ArgmaxEvaluator::argmax(PhantomCiphertext &x, PhantomCiphertext &res, int l
   ckks->evaluator.mod_switch_to_inplace(x, a.params_id());
   ckks->evaluator.sub(x, a, res);
 
-  res = ckks->sgn_eval2(res, 2, 2);  // NEW
+  res = ckks->sgn_eval(res, 2, 2);  // NEW
 
   ckks->encoder.encode(1.0, res.params_id(), res.scale(), one);
   ckks->evaluator.add_plain_inplace(res, one);
