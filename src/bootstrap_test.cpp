@@ -14,7 +14,6 @@
 // #include "ScaleInvEvaluator.h"
 #include <chrono>
 #include <random>
-#include <seal/modulus.h>
 
 using namespace std;
 using namespace NTL;
@@ -74,9 +73,9 @@ int main()
         coeff_bit_vec.push_back(logp);
     }
 
-    // for (int i = 0; i < boot_level; i++) {
-    //     coeff_bit_vec.push_back(logq);
-    // }
+    for (int i = 0; i < boot_level; i++) {
+        coeff_bit_vec.push_back(logq);
+    }
     coeff_bit_vec.push_back(log_special_prime);
 
     cout << "Setting Parameters" << endl;
@@ -106,35 +105,7 @@ int main()
     Decryptor decryptor(context, secret_key);
     size_t slot_count = encoder.slot_count();
 
-    vector<double> sparse(sparse_slots);
-    vector<double> input(slot_count);
-    vector<double> before(slot_count);
-    vector<double> after(slot_count);
-
-    random_real(sparse, sparse_slots);
-
-    Plaintext plain;
-    Ciphertext cipher;
-
-    CKKSEvaluator ckks_evaluator(context, encryptor, decryptor, encoder, evaluator, scale, relin_keys, gal_keys);
-
-    encoder.encode(sparse, scale, plain);
-    encryptor.encrypt(plain, cipher);
-
-    cipher = ckks_evaluator.sgn_eval(cipher, 2, 2);
-
-    // evaluator.square_inplace(cipher);
-    // evaluator.relinearize_inplace(cipher, relin_keys);
-    // evaluator.mod_reduce_to_next_inplace(cipher);
-
-    decryptor.decrypt(cipher, plain);
-    encoder.decode(plain, after);
-
-    for (auto i = 0; i < 10; i++) {
-        cout << i << " " << sparse[i] << "<---->" << after[i] << endl;
-    }
-
-    /* Bootstrapper bootstrapper(
+    Bootstrapper bootstrapper(
         loge,
         logn,
         logN - 1,
@@ -270,7 +241,7 @@ int main()
 
         cout << "return cipher level: " << rtn.coeff_modulus_size() << endl;
 
-        ckks_evaluator.sgn_eval(rtn, 2, 2);
+        rtn = ckks_evaluator.sgn_eval(rtn, 2, 2);
 
         decryptor.decrypt(rtn, plain);
         // encoder.decode(plain, after, sparse_slots);
@@ -311,5 +282,5 @@ int main()
     cout << " mean error: " << tot_err << endl;
     // file.close();
 
-    return 0; */
+    return 0;
 }
