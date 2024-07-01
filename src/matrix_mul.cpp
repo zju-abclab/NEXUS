@@ -1,18 +1,66 @@
 #include "matrix_mul.h"
 #include <cmath>
+#include <fstream>
+#include <iostream>
 #include <seal/ciphertext.h>
 #include <seal/plaintext.h>
 #include <seal/util/defines.h>
 #include <seal/valcheck.h>
+#include <sstream>
+#include <string>
 #include <vector>
+#include "seal/util/polyarithsmallmod.h"
 
 using namespace std;
 using namespace seal;
 using namespace std::chrono;
 using namespace seal::util;
 
-vector<Ciphertext> MMEvaluator::expand_ciphertext(
-    const Ciphertext &encrypted, uint32_t m, GaloisKeys &galkey, vector<uint32_t> &galois_elts)
+std::vector<std::vector<double>> MMEvaluator::transposeMatrix(const std::vector<std::vector<double>> &matrix)
+{
+    if (matrix.empty()) {
+        return {};
+    }
+    int rows = matrix.size();
+    int cols = matrix[0].size();
+    std::vector<std::vector<double>> transposedMatrix(cols, std::vector<double>(rows));
+
+    for (int i = 0; i < rows; ++i) {
+        for (int j = 0; j < cols; ++j) {
+            transposedMatrix[j][i] = matrix[i][j];
+        }
+    }
+
+    return transposedMatrix;
+}
+
+std::vector<std::vector<double>> MMEvaluator::readMatrix(const std::string &filename, int rows, int cols)
+{
+    std::vector<std::vector<double>> matrix(rows, std::vector<double>(cols));
+    std::ifstream file(filename);
+
+    if (!file.is_open()) {
+        std::cerr << "无法打开文件: " << filename << std::endl;
+        return matrix;
+    }
+
+    std::string line;
+    for (int i = 0; i < rows; ++i) {
+        if (std::getline(file, line)) {
+            std::istringstream iss(line);
+            for (int j = 0; j < cols; ++j) {
+                if (!(iss >> matrix[i][j])) {
+                    std::cerr << "读取数据时出错: " << filename << " (行: " << i << ", 列: " << j << ")" << std::endl;
+                }
+            }
+        }
+    }
+
+    file.close();
+    return matrix;
+}
+
+vector<Ciphertext> MMEvaluator::expand_ciphertext(const Ciphertext &encrypted, uint32_t m, GaloisKeys &galkey, vector<uint32_t> &galois_elts)
 {
     uint32_t logm = ceil(log2(m));
     Plaintext two("2");
@@ -42,19 +90,38 @@ vector<Ciphertext> MMEvaluator::expand_ciphertext(
 
 void MMEvaluator::multiply_power_of_X(Ciphertext &encrypted, Ciphertext &destination, int index)
 {
-    string s = "";
+    // string s = "";
+    // destination = encrypted;
+    // while (index >= ckks->N - 1) {
+    //     s = "1x^" + to_string(ckks->N - 1);
+    //     Plaintext p(s);
+    //     ckks->evaluator->multiply_plain(destination, p, destination);
+    //     index -= ckks->N - 1;
+    // }
+
+    // s = "1x^" + to_string(index);
+
+    // Plaintext p(s);
+    // ckks->evaluator->multiply_plain(destination, p, destination);
+    auto context = *ckks->context;
+    auto context_data = context.get_context_data(context.first_parms_id());
+    auto param = context_data->parms();
+
+    ckks->evaluator->transform_from_ntt_inplace(encrypted);
+    auto coeff_mod_count = param.coeff_modulus().size() - 1;
+    auto coeff_count = ckks->degree;
+    auto encrypted_count = encrypted.size();
+
     destination = encrypted;
-    while (index >= ckks->N - 1) {
-        s = "1x^" + to_string(ckks->N - 1);
-        Plaintext p(s);
-        ckks->evaluator->multiply_plain(destination, p, destination);
-        index -= ckks->N - 1;
+
+    for (int i = 0; i < encrypted_count; i++) {
+        for (int j = 0; j < coeff_mod_count; j++) {
+            negacyclic_shift_poly_coeffmod(
+                encrypted.data(i) + (j * coeff_count), coeff_count, index, param.coeff_modulus()[j], destination.data(i) + (j * coeff_count));
+        }
     }
-
-    s = "1x^" + to_string(index);
-
-    Plaintext p(s);
-    ckks->evaluator->multiply_plain(destination, p, destination);
+    ckks->evaluator->transform_to_ntt_inplace(encrypted);
+    ckks->evaluator->transform_to_ntt_inplace(destination);
 }
 
 void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &y, vector<Ciphertext> &res)
@@ -70,7 +137,7 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
     }
 
     vector<Ciphertext> b_compressed_cts;
-    for (int i = 0; i < 768 * 768 / ckks->degree; i++) {
+    for (int i = 0; i < 768 * 64 / ckks->degree; i++) {
         Plaintext pt;
         Ciphertext ct;
         expandEncode(y[i], ct);
@@ -90,16 +157,13 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
     vector<Ciphertext> b_expanded_cts;
 
     for (auto i = 0; i < b_compressed_cts.size(); i++) {
-        vector<Ciphertext> temp_cts =
-            expand_ciphertext(b_compressed_cts[i], ckks->degree, *ckks->galois_keys, ckks->rots);
+        vector<Ciphertext> temp_cts = expand_ciphertext(b_compressed_cts[i], ckks->degree, *ckks->galois_keys, ckks->rots);
         // cout << "expanding..." << endl;
-        b_expanded_cts.insert(
-            b_expanded_cts.end(), make_move_iterator(temp_cts.begin()), make_move_iterator(temp_cts.end()));
+        b_expanded_cts.insert(b_expanded_cts.end(), make_move_iterator(temp_cts.begin()), make_move_iterator(temp_cts.end()));
     }
 
     time_end = high_resolution_clock::now();
-    cout << "expanding time: " << duration_cast<std::chrono::seconds>(time_end - time_start).count() << " seconds"
-         << endl;
+    cout << "expanding time: " << duration_cast<std::chrono::seconds>(time_end - time_start).count() << " seconds" << endl;
 
     Plaintext pt;
     Ciphertext zero;
@@ -109,7 +173,7 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
     time_start = high_resolution_clock::now();
     Ciphertext temp;
 
-    for (int i = 0; i < 768; i++) {
+    for (int i = 0; i < 64; i++) {
         Ciphertext res_col_ct = zero;
         vector<Ciphertext> temp_cts(768);
         for (int j = 0; j < 768; j++) {
@@ -162,8 +226,7 @@ void MMEvaluator::expandEncode(vector<double> &val, Ciphertext &ct)
         auto coeffu = static_cast<std::uint64_t>(std::fabs(coeffd));
         if (is_negative) {
             for (std::size_t j = 0; j < 2; j++) {
-                p[i + (j * poly_modulus_degree)] = util::negate_uint_mod(
-                    util::barrett_reduce_64(coeffu, param.coeff_modulus()[j]), param.coeff_modulus()[j]);
+                p[i + (j * poly_modulus_degree)] = util::negate_uint_mod(util::barrett_reduce_64(coeffu, param.coeff_modulus()[j]), param.coeff_modulus()[j]);
             }
         } else {
             for (std::size_t j = 0; j < 2; j++) {
