@@ -8,9 +8,9 @@ void GELUEvaluator::gelu(PhantomCiphertext &x, PhantomCiphertext &res) {
   PhantomPlaintext p0, p1, delta;
   vector<double> dest;
 
-  ckks->encoder.encode(ckks->init_vec_with_value(ckks->slot_count, -3.5), x.params_id(), x.scale(), p0);
-  ckks->encoder.encode(ckks->init_vec_with_value(ckks->slot_count, 3.5), x.params_id(), x.scale(), p1);
-  ckks->encoder.encode(ckks->init_vec_with_value(ckks->slot_count, 1.0 / 8.5), x.params_id(), x.scale(), delta);
+  ckks->encoder.encode(ckks->init_vec_with_value(-3.5), x.params_id(), x.scale(), p0);
+  ckks->encoder.encode(ckks->init_vec_with_value(3.5), x.params_id(), x.scale(), p1);
+  ckks->encoder.encode(ckks->init_vec_with_value(1.0 / 8.5), x.params_id(), x.scale(), delta);
 
   ckks->evaluator.sub_plain(x, p0, b0);
   ckks->evaluator.multiply_plain_inplace(b0, delta);
@@ -24,7 +24,7 @@ void GELUEvaluator::gelu(PhantomCiphertext &x, PhantomCiphertext &res) {
   b1 = ckks->sgn_eval(b1, d_g, d_f);
 
   PhantomPlaintext zero_point_five;
-  ckks->encoder.encode(ckks->init_vec_with_value(ckks->slot_count, 0.5), b1.params_id(), b1.scale(), zero_point_five);
+  ckks->encoder.encode(ckks->init_vec_with_value(0.5), b1.params_id(), b1.scale(), zero_point_five);
   PhantomCiphertext a0, a1, a2;
 
   ckks->evaluator.sub(b0, b1, a1);                     // a1 = b0 - b1

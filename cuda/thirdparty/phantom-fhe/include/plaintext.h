@@ -63,6 +63,10 @@ public:
         return scale_;
     }
 
+    [[nodiscard]] auto &scale() noexcept {
+        return scale_;
+    }
+
     [[nodiscard]] auto data() const noexcept {
         return data_.get();
     }

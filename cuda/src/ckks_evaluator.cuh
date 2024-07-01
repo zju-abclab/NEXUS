@@ -19,6 +19,8 @@ class Encoder {
     this->encoder = &encoder;
   }
 
+  inline size_t message_length() { return encoder->message_length(); }
+
   // Vector inputs
   inline void encode(vector<double> values, size_t chain_index, double scale, PhantomPlaintext &plain) {
     if (values.size() == 1) {
@@ -152,6 +154,10 @@ class Evaluator {
 
   inline void add_inplace(PhantomCiphertext &ct1, PhantomCiphertext &ct2) {
     ::add_inplace(*context, ct1, ct2);
+  }
+
+  inline void add_many(vector<PhantomCiphertext> &cts, PhantomCiphertext &dest) {
+    ::add_many(*context, cts, dest);
   }
 
   // Subtraction
@@ -305,7 +311,9 @@ class CKKSEvaluator {
   }
 
   // Helper functions
-  vector<double> init_vec_with_value(size_t slot_count, double value);
+  vector<double> init_vec_with_value(double value);
+  PhantomPlaintext init_plain_power_of_x(size_t exponent);
+
   void re_encrypt(PhantomCiphertext &ct);
   void print_decrypted_ct(PhantomCiphertext &ct, int num);
 
@@ -314,6 +322,8 @@ class CKKSEvaluator {
   PhantomCiphertext invert_sqrt(PhantomCiphertext x, int d_newt = 20, int d_gold = 1);
   PhantomCiphertext exp(PhantomCiphertext x);
   PhantomCiphertext inverse(PhantomCiphertext x, int iter = 4);
+
+  void multiply_power_of_x(PhantomCiphertext &encrypted, PhantomCiphertext &destination, int index);
 
   // Metrics calcuation functions
   double calculate_MAE(vector<double> &y_true, PhantomCiphertext &ct, int N);

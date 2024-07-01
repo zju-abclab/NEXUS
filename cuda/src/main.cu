@@ -17,7 +17,7 @@ using namespace nexus;
 size_t N = 1ULL << 16;
 double SCALE = pow(2.0, 40);
 
-string TEST_TARGET = "SoftMax";
+string TEST_TARGET = "";
 vector<int> COEFF_MODULI = {58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58}
 // {58, 40, 40, 40, 40, 40, 40, 40, 40, 58} // df = 3, dg = 3
 // {58, 40, 40, 40, 40, 40, 40, 58}  // df = 2, dg = 2
@@ -47,6 +47,7 @@ int main() {
   PhantomPlaintext plain_input;
   PhantomCiphertext cipher_input;
   PhantomCiphertext cipher_output;
+  PhantomPlaintext plain_output;
   vector<double> output;
 
   /*
@@ -141,4 +142,20 @@ int main() {
     cout << "[Softmax] 128 x 128 takes: " << timer.duration() << " milliseconds" << endl;
     cout << "Mean Absolute Error: " << ckks_evaluator.calculate_MAE(softmax_calibration, cipher_output, 128) << endl;
   }
+
+  input = {1.0, 2.0, 3.0, 4.0, 5.0};
+  ckks_evaluator.encoder.encode(input, SCALE, plain_input);
+  ckks_evaluator.encryptor.encrypt(plain_input, cipher_input);
+
+  ckks_evaluator.multiply_power_of_x(cipher_input, cipher_output, 2);
+
+  ckks_evaluator.decryptor.decrypt(cipher_output, plain_output);
+  ckks_evaluator.encoder.decode(plain_output, output);
+
+  for (auto i = 0; i < output.size(); i++) {
+    if (i < 5) {
+      cout << output[i] << " ";
+    }
+  }
+  cout << endl;
 }

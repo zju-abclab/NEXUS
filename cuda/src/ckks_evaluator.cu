@@ -19,9 +19,19 @@ void CKKSEvaluator::print_decrypted_ct(PhantomCiphertext &ct, int num) {
   cout << endl;
 }
 
-vector<double> CKKSEvaluator::init_vec_with_value(size_t slot_count, double value) {
-  std::vector<double> vec(slot_count, value);
+vector<double> CKKSEvaluator::init_vec_with_value(double value) {
+  std::vector<double> vec(encoder.message_length(), value);
   return vec;
+}
+
+PhantomPlaintext CKKSEvaluator::init_plain_power_of_x(size_t exponent) {
+  PhantomPlaintext plain_power_of_x;
+
+  vector<double> vec = init_vec_with_value(0.0);
+  vec[exponent] = 1.0;
+
+  encoder.encode(vec, scale, plain_power_of_x);
+  return plain_power_of_x;
 }
 
 PhantomCiphertext CKKSEvaluator::init_guess(PhantomCiphertext x) {
@@ -428,4 +438,17 @@ PhantomCiphertext CKKSEvaluator::inverse(PhantomCiphertext x, int iter) {
   }
 
   return res;
+}
+
+void CKKSEvaluator::multiply_power_of_x(PhantomCiphertext &encrypted, PhantomCiphertext &destination, int index) {
+  destination = encrypted;
+
+  while (index >= degree - 1) {
+    PhantomPlaintext p = init_plain_power_of_x(degree - 1);
+    evaluator.multiply_plain(destination, p, destination);
+    index -= degree - 1;
+  }
+
+  PhantomPlaintext p = init_plain_power_of_x(index);
+  evaluator.multiply_plain(destination, p, destination);
 }
