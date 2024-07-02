@@ -22,12 +22,15 @@ void MM_test();
 
 int main()
 {
+    MM_test();
+    exit(0);
+
     EncryptionParameters parms(scheme_type::ckks);
     long logN = 16;
     size_t poly_modulus_degree = 1 << logN;
     double scale = pow(2.0, 40);
     parms.set_poly_modulus_degree(poly_modulus_degree);
-    parms.set_coeff_modulus(CoeffModulus::Create(poly_modulus_degree, {58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58 }));
+    parms.set_coeff_modulus(CoeffModulus::Create(poly_modulus_degree, { 58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58 }));
 
     SEALContext context(parms, true, sec_level_type::none);
 
@@ -55,7 +58,6 @@ int main()
     Ciphertext cipher_input;
     Ciphertext cipher_output;
     vector<double> output;
-
 
     /*
         GELU
@@ -103,7 +105,6 @@ int main()
     // cout << "[LayerNorm] 16 x 768 takes: " << duration_cast<milliseconds>(end - start).count() << " milliseconds" << endl;
     // cout << "Mean Absolute Error: " << ckks_evaluator.calculateMAE(layernorm_calibration, cipher_output, 768) << endl;
 
-
     /*
         Softmax
     */
@@ -126,7 +127,6 @@ int main()
     auto end = high_resolution_clock::now();
     cout << "[Softmax] 128 x 128 takes: " << duration_cast<milliseconds>(end - start).count() << " milliseconds" << endl;
     cout << "Mean Absolute Error: " << ckks_evaluator.calculateMAE(softmax_calibration, cipher_output, 128) << endl;
-
 }
 
 void MM_test()
@@ -163,18 +163,27 @@ void MM_test()
 
     MMEvaluator mme(ckks_evaluator);
 
-    vector<vector<double>> X(768);
-    vector<vector<double>> Y(72, vector<double>(poly_modulus_degree, 0.0));
-    for (auto i = 0; i < 768; i++) {
-        vector<double> val(poly_modulus_degree / 2);
-        for (auto j = 0; j < poly_modulus_degree / 2; j++) {
-            val[j] = 10.0 * 2.0 * (1.0 * rand() / RAND_MAX - 0.5);
-        }
-        X[i] = val;
-    }
+    std::vector<std::vector<double>> matrix_4096x768 = mme.readMatrix("../data/input/matrix_4096x768.txt", 4096, 768);
+
+    std::vector<std::vector<double>> matrix_768x64 = mme.readMatrix("../data/input/matrix_768x64.txt", 768, 64);
+
     vector<Ciphertext> res;
 
-    mme.matrix_mul(X, Y, res);
+    auto matrix_4096x768_T = mme.transposeMatrix(matrix_4096x768);
+    auto matrix_768x64_T = mme.transposeMatrix(matrix_768x64);
+
+    std::vector<std::vector<double>> row_pack;
+
+    std::vector<double> row_ct(4096, 0.0);
+    for (auto i = 0; i < 64 * 768; i++) {
+        int row = i / 768;
+        int col = i % 768;
+        row_ct[i % 4096] = matrix_768x64_T[row][col];
+        if (i % 4096 == 4095) {
+            row_pack.push_back(row_ct);
+        }
+    }
+    mme.matrix_mul(matrix_4096x768_T, row_pack, res);
 
     // for (auto i = 0; i < 10; i++) {
     //     printf("%+.10lf\n", -3.5153774 * X[0][i]);
