@@ -4,8 +4,7 @@
 class MMEvaluator {
 private:
     /* data */
-    vector<Ciphertext> expand_ciphertext(
-        const Ciphertext &encrypted, uint32_t m, GaloisKeys &galkey, vector<uint32_t> &galois_elts);
+    vector<Ciphertext> expand_ciphertext(const Ciphertext &encrypted, uint32_t m, GaloisKeys &galkey, vector<uint32_t> &galois_elts);
 
     void multiply_power_of_X(Ciphertext &encrypted, Ciphertext &destination, int index);
 
@@ -19,4 +18,8 @@ public:
     }
 
     void matrix_mul(vector<vector<double>> &x, vector<vector<double>> &y, vector<Ciphertext> &res);
+
+    std::vector<std::vector<double>> readMatrix(const std::string &filename, int rows, int cols);
+
+    std::vector<std::vector<double>> transposeMatrix(const std::vector<std::vector<double>> &matrix);
 };

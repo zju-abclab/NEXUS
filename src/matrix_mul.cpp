@@ -1,15 +1,64 @@
 #include "matrix_mul.h"
 #include <cmath>
+#include <fstream>
+#include <iostream>
 #include <seal/ciphertext.h>
 #include <seal/plaintext.h>
 #include <seal/util/defines.h>
 #include <seal/valcheck.h>
+#include <sstream>
+#include <string>
 #include <vector>
+#include "seal/util/polyarithsmallmod.h"
 
 using namespace std;
 using namespace seal;
 using namespace std::chrono;
 using namespace seal::util;
+
+std::vector<std::vector<double>> MMEvaluator::transposeMatrix(const std::vector<std::vector<double>> &matrix)
+{
+    if (matrix.empty()) {
+        return {};
+    }
+    int rows = matrix.size();
+    int cols = matrix[0].size();
+    std::vector<std::vector<double>> transposedMatrix(cols, std::vector<double>(rows));
+
+    for (int i = 0; i < rows; ++i) {
+        for (int j = 0; j < cols; ++j) {
+            transposedMatrix[j][i] = matrix[i][j];
+        }
+    }
+
+    return transposedMatrix;
+}
+
+std::vector<std::vector<double>> MMEvaluator::readMatrix(const std::string &filename, int rows, int cols)
+{
+    std::vector<std::vector<double>> matrix(rows, std::vector<double>(cols));
+    std::ifstream file(filename);
+
+    if (!file.is_open()) {
+        std::cerr << "无法打开文件: " << filename << std::endl;
+        return matrix;
+    }
+
+    std::string line;
+    for (int i = 0; i < rows; ++i) {
+        if (std::getline(file, line)) {
+            std::istringstream iss(line);
+            for (int j = 0; j < cols; ++j) {
+                if (!(iss >> matrix[i][j])) {
+                    std::cerr << "读取数据时出错: " << filename << " (行: " << i << ", 列: " << j << ")" << std::endl;
+                }
+            }
+        }
+    }
+
+    file.close();
+    return matrix;
+}
 
 vector<Ciphertext> MMEvaluator::expand_ciphertext(
     const Ciphertext &encrypted, uint32_t m, GaloisKeys &galkey, vector<uint32_t> &galois_elts)
@@ -42,23 +91,72 @@ vector<Ciphertext> MMEvaluator::expand_ciphertext(
 
 void MMEvaluator::multiply_power_of_X(Ciphertext &encrypted, Ciphertext &destination, int index)
 {
-    string s = "";
+    // string s = "";
+    // destination = encrypted;
+    // while (index >= ckks->N - 1) {
+    //     s = "1x^" + to_string(ckks->N - 1);
+    //     Plaintext p(s);
+    //     ckks->evaluator->multiply_plain(destination, p, destination);
+    //     index -= ckks->N - 1;
+    // }
+
+    // s = "1x^" + to_string(index);
+
+    // Plaintext p(s);
+    // ckks->evaluator->multiply_plain(destination, p, destination);
+    auto context = *ckks->context;
+    auto context_data = context.get_context_data(context.first_parms_id());
+    auto param = context_data->parms();
+
+    ckks->evaluator->transform_from_ntt_inplace(encrypted);
+    auto coeff_mod_count = param.coeff_modulus().size();
+    auto coeff_count = ckks->degree;
+    auto encrypted_count = encrypted.size();
+
     destination = encrypted;
-    while (index >= ckks->N - 1) {
-        s = "1x^" + to_string(ckks->N - 1);
-        Plaintext p(s);
-        ckks->evaluator->multiply_plain(destination, p, destination);
-        index -= ckks->N - 1;
+
+    for (int i = 0; i < encrypted_count; i++) {
+        for (int j = 0; j < coeff_mod_count; j++) {
+            negacyclic_shift_poly_coeffmod(
+                encrypted.data(i) + (j * coeff_count),
+                coeff_count,
+                index,
+                param.coeff_modulus()[j],
+                destination.data(i) + (j * coeff_count));
+        }
     }
-
-    s = "1x^" + to_string(index);
-
-    Plaintext p(s);
-    ckks->evaluator->multiply_plain(destination, p, destination);
+    ckks->evaluator->transform_to_ntt_inplace(encrypted);
+    ckks->evaluator->transform_to_ntt_inplace(destination);
 }
 
 void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &y, vector<Ciphertext> &res)
 {
+    // vector<double> vec_x(4096,1.0);
+    // vec_x[1]=2.0;
+    // Plaintext ptx_x;
+    // Ciphertext ctx;
+    // ckks->encoder->encode(vec_x,ckks->scale,ptx_x);
+    // ckks->encryptor->encrypt(ptx_x,ctx);
+
+    // vec_x[0]=1.0;
+
+    // expandEncode(vec_x,ctx);
+
+    // auto tmp  = expand_ciphertext(ctx, ckks->degree, *ckks->galois_keys, ckks->rots);
+
+    // for(auto i=0;i<10;i++){
+    //     auto ct = tmp[i];
+    //     Plaintext pt_tmp;
+    //     ckks->decryptor->decrypt(ct,pt_tmp);
+    //     vector<double> res_t;
+    //     ckks->encoder->decode(pt_tmp,res_t);
+    //     for(auto j=0;j<5;j++){
+    //         std::cout<<res_t[j]<<" ";
+    //     }
+    //     std::cout<<std::endl;
+    // }
+
+    // exit(0);
     chrono::high_resolution_clock::time_point time_start, time_end;
 
     vector<Plaintext> a_pts;
@@ -70,7 +168,7 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
     }
 
     vector<Ciphertext> b_compressed_cts;
-    for (int i = 0; i < 768 * 768 / ckks->degree; i++) {
+    for (int i = 0; i < 768 * 64 / ckks->degree; i++) {
         Plaintext pt;
         Ciphertext ct;
         expandEncode(y[i], ct);
@@ -109,7 +207,7 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
     time_start = high_resolution_clock::now();
     Ciphertext temp;
 
-    for (int i = 0; i < 768; i++) {
+    for (int i = 0; i < 64; i++) {
         Ciphertext res_col_ct = zero;
         vector<Ciphertext> temp_cts(768);
         for (int j = 0; j < 768; j++) {
@@ -153,9 +251,9 @@ void MMEvaluator::expandEncode(vector<double> &val, Ciphertext &ct)
 
     Plaintext p(poly_modulus_degree * 2);
 
-    for (auto i = 0; i < poly_modulus_degree; i++) {
-        val[i] = 10.0 * 2.0 * (1.0 * rand() / RAND_MAX - 0.5);
-    }
+    // for (auto i = 0; i < poly_modulus_degree; i++) {
+    //     val[i] = 10.0 * 2.0 * (1.0 * rand() / RAND_MAX - 0.5);
+    // }
     for (auto i = 0; i < poly_modulus_degree; i++) {
         auto coeffd = std::round(val[i] * 10000000000);
         bool is_negative = std::signbit(coeffd);
