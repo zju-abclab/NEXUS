@@ -1,4 +1,6 @@
 #pragma once
+#include <complex>
+
 #include "phantom.h"
 
 namespace nexus {
@@ -21,7 +23,7 @@ class Encoder {
 
   inline size_t message_length() { return encoder->message_length(); }
 
-  // Vector inputs
+  // Vector (of doubles or complexes) inputs
   inline void encode(vector<double> values, size_t chain_index, double scale, PhantomPlaintext &plain) {
     if (values.size() == 1) {
       encode(values[0], chain_index, scale, plain);
@@ -38,6 +40,14 @@ class Encoder {
     encoder->encode(*context, values, scale, plain);
   }
 
+  inline void encode(vector<complex<double>> complex_values, double scale, PhantomPlaintext &plain) {
+    if (complex_values.size() == 1) {
+      encode(complex_values[0], scale, plain);
+      return;
+    }
+    encoder->encode(*context, complex_values, scale, plain);
+  }
+
   // Value inputs (fill all slots with that value)
   inline void encode(double value, size_t chain_index, double scale, PhantomPlaintext &plain) {
     vector<double> values(encoder->message_length(), value);
@@ -47,6 +57,11 @@ class Encoder {
   inline void encode(double value, double scale, PhantomPlaintext &plain) {
     vector<double> values(encoder->message_length(), value);
     encoder->encode(*context, values, scale, plain);
+  }
+
+  inline void encode(complex<double> complex_value, double scale, PhantomPlaintext &plain) {
+    vector<complex<double>> complex_values(encoder->message_length(), complex_value);
+    encoder->encode(*context, complex_values, scale, plain);
   }
 
   inline void decode(PhantomPlaintext &plain, vector<double> &values) {
@@ -75,10 +90,14 @@ class Encryptor {
 class Evaluator {
  private:
   PhantomContext *context;
+  PhantomCKKSEncoder *encoder;
 
  public:
   Evaluator() = default;
-  Evaluator(PhantomContext &context) : context(&context) {}
+  Evaluator(PhantomContext &context, PhantomCKKSEncoder &encoder) {
+    this->context = &context;
+    this->encoder = &encoder;
+  }
 
   // Mod switch
   inline void mod_switch_to_next_inplace(PhantomCiphertext &ct) {
@@ -98,7 +117,7 @@ class Evaluator {
   }
 
   // Relinearization
-  inline void relinearize_inplace(PhantomCiphertext &ct, PhantomRelinKey &relin_keys) {
+  inline void relinearize_inplace(PhantomCiphertext &ct, const PhantomRelinKey &relin_keys) {
     ::relinearize_inplace(*context, ct, relin_keys);
   }
 
@@ -111,7 +130,7 @@ class Evaluator {
     multiply_inplace(ct, ct);
   }
 
-  inline void multiply(PhantomCiphertext &ct1, PhantomCiphertext &ct2, PhantomCiphertext &dest) {
+  inline void multiply(PhantomCiphertext &ct1, const PhantomCiphertext &ct2, PhantomCiphertext &dest) {
     if (&ct2 == &dest) {
       multiply_inplace(dest, ct1);
     } else {
@@ -120,7 +139,7 @@ class Evaluator {
     }
   }
 
-  inline void multiply_inplace(PhantomCiphertext &ct1, PhantomCiphertext &ct2) {
+  inline void multiply_inplace(PhantomCiphertext &ct1, const PhantomCiphertext &ct2) {
     ::multiply_inplace(*context, ct1, ct2);
   }
 
@@ -143,7 +162,7 @@ class Evaluator {
     ::add_plain_inplace(*context, ct, plain);
   }
 
-  inline void add(PhantomCiphertext &ct1, PhantomCiphertext &ct2, PhantomCiphertext &dest) {
+  inline void add(PhantomCiphertext &ct1, const PhantomCiphertext &ct2, PhantomCiphertext &dest) {
     if (&ct2 == &dest) {
       add_inplace(dest, ct1);
     } else {
@@ -152,7 +171,7 @@ class Evaluator {
     }
   }
 
-  inline void add_inplace(PhantomCiphertext &ct1, PhantomCiphertext &ct2) {
+  inline void add_inplace(PhantomCiphertext &ct1, const PhantomCiphertext &ct2) {
     ::add_inplace(*context, ct1, ct2);
   }
 
@@ -170,7 +189,7 @@ class Evaluator {
     ::sub_plain_inplace(*context, ct, plain);
   }
 
-  inline void sub(PhantomCiphertext &ct1, PhantomCiphertext &ct2, PhantomCiphertext &dest) {
+  inline void sub(PhantomCiphertext &ct1, const PhantomCiphertext &ct2, PhantomCiphertext &dest) {
     if (&ct2 == &dest) {
       sub_inplace(dest, ct1);
       negate_inplace(dest);
@@ -180,7 +199,7 @@ class Evaluator {
     }
   }
 
-  inline void sub_inplace(PhantomCiphertext &ct1, PhantomCiphertext &ct2) {
+  inline void sub_inplace(PhantomCiphertext &ct1, const PhantomCiphertext &ct2) {
     ::sub_inplace(*context, ct1, ct2);
   }
 
@@ -213,6 +232,96 @@ class Evaluator {
   inline void apply_galois_inplace(PhantomCiphertext &ct, int step, PhantomGaloisKey &galois_keys) {
     ::apply_galois_inplace(*context, ct, step, galois_keys);
   }
+
+  // Bootstrapping
+  inline void multiply_const(const PhantomCiphertext &ct, double value, PhantomCiphertext &dest) {
+    dest = ct;
+    multiply_const_inplace(dest, value);
+  }
+
+  inline void multiply_const_inplace(PhantomCiphertext &ct, double value) {
+    PhantomPlaintext const_plain;
+
+    vector<double> values(encoder->message_length(), value);
+    encoder->encode(*context, values, ct.scale(), const_plain);
+    mod_switch_to_inplace(const_plain, ct.params_id());
+    multiply_plain_inplace(ct, const_plain);
+  }
+
+  inline void add_const(PhantomCiphertext &ct, double value, PhantomCiphertext &dest) {
+    dest = ct;
+    add_const_inplace(dest, value);
+  }
+
+  inline void add_const_inplace(PhantomCiphertext &ct, double value) {
+    PhantomPlaintext const_plain;
+
+    vector<double> values(encoder->message_length(), value);
+    encoder->encode(*context, values, ct.scale(), const_plain);
+    mod_switch_to_inplace(const_plain, ct.params_id());
+    add_plain_inplace(ct, const_plain);
+  }
+
+  inline void add_reduced_error(const PhantomCiphertext &ct1, const PhantomCiphertext &ct2, PhantomCiphertext &dest) {
+    if (&ct1 == &dest) {
+      add_inplace_reduced_error(dest, ct1);
+    } else {
+      dest = ct1;
+      add_inplace_reduced_error(dest, ct2);
+    }
+  }
+
+  void add_inplace_reduced_error(PhantomCiphertext &ct1, const PhantomCiphertext &ct2);
+
+  inline void sub_reduced_error(const PhantomCiphertext &ct1, const PhantomCiphertext &ct2, PhantomCiphertext &dest) {
+    if (&ct1 == &dest) {
+      sub_inplace_reduced_error(dest, ct1);
+    } else {
+      dest = ct1;
+      sub_inplace_reduced_error(dest, ct2);
+    }
+  }
+
+  void sub_inplace_reduced_error(PhantomCiphertext &ct1, const PhantomCiphertext &ct2);
+
+  inline void multiply_reduced_error(const PhantomCiphertext &ct1, const PhantomCiphertext &ct2, const PhantomRelinKey &relin_keys, PhantomCiphertext &dest) {
+    if (&ct2 == &dest) {
+      multiply_inplace_reduced_error(dest, ct1, relin_keys);
+    } else {
+      dest = ct1;
+      multiply_inplace_reduced_error(dest, ct2, relin_keys);
+    }
+  }
+
+  void multiply_inplace_reduced_error(PhantomCiphertext &ct1, const PhantomCiphertext &ct2, const PhantomRelinKey &relin_keys);
+
+  inline void double_inplace(PhantomCiphertext &ct) const {
+    ::add_inplace(*context, ct, ct);
+  }
+
+  template <typename T, typename = std::enable_if_t<std::is_same<std::remove_cv_t<T>, double>::value || std::is_same<std::remove_cv_t<T>, std::complex<double>>::value>>
+  inline void multiply_vector_reduced_error(PhantomCiphertext &ct, const std::vector<T> &value, PhantomCiphertext &dest) {
+    dest = ct;
+    multiply_vector_inplace_reduced_error(dest, value);
+  }
+
+  template <typename T, typename = std::enable_if_t<std::is_same<std::remove_cv_t<T>, double>::value || std::is_same<std::remove_cv_t<T>, std::complex<double>>::value>>
+  inline void multiply_vector_inplace_reduced_error(PhantomCiphertext &ct, const std::vector<T> &value) {
+    PhantomPlaintext plain;
+
+    encoder->encode(value, ct.scale(), plain);
+    mod_switch_to_inplace(plain, ct.params_id());
+    multiply_plain_inplace(ct, plain);
+  }
+
+  inline void complex_conjugate(PhantomCiphertext &ct, const PhantomGaloisKey &galois_keys, PhantomCiphertext &dest) {
+    dest = ct;
+    complex_conjugate_inplace(dest, galois_keys);
+  }
+
+  inline void complex_conjugate_inplace(PhantomCiphertext &ct, const PhantomGaloisKey &galois_keys) {
+    ::complex_conjugate_inplace(*context, ct, galois_keys);
+  }
 };
 
 class Decryptor {
@@ -229,6 +338,10 @@ class Decryptor {
 
   inline void decrypt(PhantomCiphertext &ct, PhantomPlaintext &plain) {
     decryptor->decrypt(*context, ct, plain);
+  }
+
+  inline void create_galois_keys_from_steps(vector<int> &steps, PhantomGaloisKey &galois_keys) {
+    galois_keys = decryptor->create_galois_keys_from_steps(*context, steps);
   }
 };
 
@@ -287,7 +400,7 @@ class CKKSEvaluator {
     Encryptor ckks_encryptor(context, encryptor);
     this->encryptor = ckks_encryptor;
 
-    Evaluator ckks_evaluator(context);
+    Evaluator ckks_evaluator(context, encoder);
     this->evaluator = ckks_evaluator;
 
     Decryptor ckks_decryptor(context, decryptor);

@@ -38,7 +38,33 @@ include_directories(thirdparty/phantom-fhe/include)
 
 # NexusCUDA
 file(GLOB_RECURSE NEXUS_CUDA_SOURCE_FILES CONFIGURE_DEPENDS
-  "src/*.cu"
+  "src/main.cu"
+  "src/gelu.cu"
+  "src/softmax.cu"
+  "src/layer_norm.cu"
+  # "src/matrix_mul.cu"
+  "src/ckks_evaluator.cu"
   "thirdparty/phantom-fhe/src/*.cu"
 )
 add_executable(main ${NEXUS_CUDA_SOURCE_FILES})
+
+# NexusCUDA Boostrapping
+# include_directories(
+#   /usr/local/include
+#   /usr/local/include/NTL
+#   src/bootstrapping/commmon
+#   src/bootstrapping
+# )
+
+# file(GLOB_RECURSE NEXUS_CUDA_BOOTSTRAPING_SOURCE_FILES CONFIGURE_DEPENDS
+#   "src/boostrap_test.cu"
+#   "src/bootstrapping/*.cu"
+#   "src/gelu.cu"
+#   "src/softmax.cu"
+#   "src/layer_norm.cu"
+#   "src/matrix_mul.cu"
+#   "src/ckks_evaluator.cu"
+#   "thirdparty/phantom-fhe/src/*.cu"
+# )
+
+# add_executable(bootstrapping ${NEXUS_CUDA_BOOTSTRAPING_SOURCE_FILES})

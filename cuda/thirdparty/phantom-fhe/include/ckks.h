@@ -6,6 +6,7 @@
 #include "plaintext.h"
 #include "rns.cuh"
 
+#include <complex>
 #include <cuComplex.h>
 
 class PhantomCKKSEncoder {
@@ -34,6 +35,18 @@ private:
         std::vector<cuDoubleComplex> input(values_size);
         for (size_t i = 0; i < values_size; i++) {
             input[i] = make_cuDoubleComplex(values[i], 0.0);
+        }
+        encode_internal(context, input.data(), values_size, chain_index, scale, destination, stream);
+    }
+
+    inline void encode_internal(const PhantomContext &context,
+                                const std::complex<double> *values, size_t values_size,
+                                size_t chain_index, double scale,
+                                PhantomPlaintext &destination,
+                                const cudaStream_t &stream) {
+        std::vector<cuDoubleComplex> input(values_size);
+        for (size_t i = 0; i < values_size; i++) {
+            input[i] = make_cuDoubleComplex(values[i].real(), values[i].imag());
         }
         encode_internal(context, input.data(), values_size, chain_index, scale, destination, stream);
     }

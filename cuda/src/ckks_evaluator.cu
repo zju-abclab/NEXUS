@@ -452,3 +452,117 @@ void CKKSEvaluator::multiply_power_of_x(PhantomCiphertext &encrypted, PhantomCip
   PhantomPlaintext p = init_plain_power_of_x(index);
   evaluator.multiply_plain(destination, p, destination);
 }
+
+void Evaluator::add_inplace_reduced_error(PhantomCiphertext &encrypted1, const PhantomCiphertext &encrypted2) {
+  size_t encrypted1_coeff_modulus_size = encrypted1.coeff_modulus_size();
+  size_t encrypted2_coeff_modulus_size = encrypted2.coeff_modulus_size();
+
+  if (encrypted1_coeff_modulus_size == encrypted2_coeff_modulus_size) {
+    encrypted1.scale() = encrypted2.scale();
+    add_inplace(encrypted1, encrypted2);
+    return;
+  } else if (encrypted1_coeff_modulus_size < encrypted2_coeff_modulus_size) {
+    auto &context_data = context->get_context_data(encrypted2.params_id());
+    auto &parms = context_data.parms();
+    auto modulus = parms.coeff_modulus();
+    PhantomCiphertext encrypted2_adjusted;
+
+    double scale_adjust = encrypted1.scale() * static_cast<double>(modulus[encrypted2_coeff_modulus_size - 1].value()) / (encrypted2.scale() * encrypted2.scale());
+    multiply_const(encrypted2, scale_adjust, encrypted2_adjusted);
+    encrypted2_adjusted.scale() = encrypted1.scale() * static_cast<double>(modulus[encrypted2_coeff_modulus_size - 1].value());
+    rescale_to_next_inplace(encrypted2_adjusted);
+    mod_switch_to_inplace(encrypted2_adjusted, encrypted1.params_id());
+    encrypted1.scale() = encrypted2_adjusted.scale();
+    add_inplace(encrypted1, encrypted2_adjusted);
+  } else {
+    auto &context_data = context->get_context_data(encrypted1.params_id());
+    auto &parms = context_data.parms();
+    auto modulus = parms.coeff_modulus();
+    PhantomCiphertext encrypted1_adjusted;
+
+    double scale_adjust = encrypted2.scale() * static_cast<double>(modulus[encrypted1_coeff_modulus_size - 1].value()) / (encrypted1.scale() * encrypted1.scale());
+    multiply_const(encrypted1, scale_adjust, encrypted1_adjusted);
+    encrypted1_adjusted.scale() = encrypted2.scale() * static_cast<double>(modulus[encrypted1_coeff_modulus_size - 1].value());
+    rescale_to_next_inplace(encrypted1_adjusted);
+    mod_switch_to_inplace(encrypted1_adjusted, encrypted2.params_id());
+    encrypted1_adjusted.scale() = encrypted2.scale();
+    add(encrypted1_adjusted, encrypted2, encrypted1);
+  }
+}
+
+void Evaluator::sub_inplace_reduced_error(PhantomCiphertext &encrypted1, const PhantomCiphertext &encrypted2) {
+  size_t encrypted1_coeff_modulus_size = encrypted1.coeff_modulus_size();
+  size_t encrypted2_coeff_modulus_size = encrypted2.coeff_modulus_size();
+
+  if (encrypted1_coeff_modulus_size == encrypted2_coeff_modulus_size) {
+    encrypted1.scale() = encrypted2.scale();
+    sub_inplace(encrypted1, encrypted2);
+    return;
+  } else if (encrypted1_coeff_modulus_size < encrypted2_coeff_modulus_size) {
+    auto &context_data = context->get_context_data(encrypted2.params_id());
+    auto &parms = context_data.parms();
+    auto modulus = parms.coeff_modulus();
+    PhantomCiphertext encrypted2_adjusted;
+
+    double scale_adjust = encrypted1.scale() * static_cast<double>(modulus[encrypted2_coeff_modulus_size - 1].value()) / (encrypted2.scale() * encrypted2.scale());
+    multiply_const(encrypted2, scale_adjust, encrypted2_adjusted);
+    encrypted2_adjusted.scale() = encrypted1.scale() * static_cast<double>(modulus[encrypted2_coeff_modulus_size - 1].value());
+    rescale_to_next_inplace(encrypted2_adjusted);
+    mod_switch_to_inplace(encrypted2_adjusted, encrypted1.params_id());
+    encrypted1.scale() = encrypted2_adjusted.scale();
+    sub_inplace(encrypted1, encrypted2_adjusted);
+  } else {
+    auto &context_data = context->get_context_data(encrypted1.params_id());
+    auto &parms = context_data.parms();
+    auto modulus = parms.coeff_modulus();
+    PhantomCiphertext encrypted1_adjusted;
+
+    double scale_adjust = encrypted2.scale() * static_cast<double>(modulus[encrypted1_coeff_modulus_size - 1].value()) / (encrypted1.scale() * encrypted1.scale());
+    multiply_const(encrypted1, scale_adjust, encrypted1_adjusted);
+    encrypted1_adjusted.scale() = encrypted2.scale() * static_cast<double>(modulus[encrypted1_coeff_modulus_size - 1].value());
+    rescale_to_next_inplace(encrypted1_adjusted);
+    mod_switch_to_inplace(encrypted1_adjusted, encrypted2.params_id());
+    encrypted1_adjusted.scale() = encrypted2.scale();
+    sub(encrypted1_adjusted, encrypted2, encrypted1);
+  }
+}
+
+void Evaluator::multiply_inplace_reduced_error(PhantomCiphertext &encrypted1, const PhantomCiphertext &encrypted2, const PhantomRelinKey &relin_keys) {
+  size_t encrypted1_coeff_modulus_size = encrypted1.coeff_modulus_size();
+  size_t encrypted2_coeff_modulus_size = encrypted2.coeff_modulus_size();
+
+  if (encrypted1_coeff_modulus_size == encrypted2_coeff_modulus_size) {
+    encrypted1.scale() = encrypted2.scale();
+    multiply_inplace(encrypted1, encrypted2);
+    relinearize_inplace(encrypted1, relin_keys);
+    return;
+  } else if (encrypted1_coeff_modulus_size < encrypted2_coeff_modulus_size) {
+    auto &context_data = context->get_context_data(encrypted2.params_id());
+    auto &parms = context_data.parms();
+    auto modulus = parms.coeff_modulus();
+    PhantomCiphertext encrypted2_adjusted;
+
+    double scale_adjust = encrypted1.scale() * static_cast<double>(modulus[encrypted2_coeff_modulus_size - 1].value()) / (encrypted2.scale() * encrypted2.scale());
+    multiply_const(encrypted2, scale_adjust, encrypted2_adjusted);
+    encrypted2_adjusted.scale() = encrypted1.scale() * static_cast<double>(modulus[encrypted2_coeff_modulus_size - 1].value());
+    rescale_to_next_inplace(encrypted2_adjusted);
+    mod_switch_to_inplace(encrypted2_adjusted, encrypted1.params_id());
+    encrypted1.scale() = encrypted2_adjusted.scale();
+    multiply_inplace(encrypted1, encrypted2_adjusted);
+  } else {
+    auto &context_data = context->get_context_data(encrypted1.params_id());
+    auto &parms = context_data.parms();
+    auto modulus = parms.coeff_modulus();
+    PhantomCiphertext encrypted1_adjusted;
+
+    double scale_adjust = encrypted2.scale() * static_cast<double>(modulus[encrypted1_coeff_modulus_size - 1].value()) / (encrypted1.scale() * encrypted1.scale());
+    multiply_const(encrypted1, scale_adjust, encrypted1_adjusted);
+    encrypted1_adjusted.scale() = encrypted2.scale() * static_cast<double>(modulus[encrypted1_coeff_modulus_size - 1].value());
+    rescale_to_next_inplace(encrypted1_adjusted);
+    mod_switch_to_inplace(encrypted1_adjusted, encrypted2.params_id());
+    encrypted1_adjusted.scale() = encrypted2.scale();
+    multiply(encrypted1_adjusted, encrypted2, encrypted1);
+  }
+
+  relinearize_inplace(encrypted1, relin_keys);
+}

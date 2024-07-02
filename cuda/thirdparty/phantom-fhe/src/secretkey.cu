@@ -369,6 +369,14 @@ void PhantomSecretKey::gen_secretkey(const PhantomContext &context, const cudaSt
             secret_key_array_.get(), prng_seed_error.get(), base_rns,
             poly_degree, coeff_mod_size);
 
+    // TODO: remove this
+    uint64_t *sk_arr = new uint64_t[poly_degree * coeff_mod_size];
+    cudaMemcpy(sk_arr, secret_key_array_.get(), poly_degree * coeff_mod_size * sizeof(uint64_t), cudaMemcpyDeviceToHost);
+
+    for(auto i = 0; i < secret_key_array_.get_n(); i++){
+        if(i < 20) std::cout << sk_arr[i] << " ";
+    }
+
     // Compute the NTT form of secret key and
     // save secret_key to the first coeff_mod_size * N elements of secret_key_array
     nwt_2d_radix8_forward_inplace(secret_key_array_.get(), context.gpu_rns_tables(), coeff_mod_size, 0, s);
@@ -432,6 +440,47 @@ PhantomGaloisKey PhantomSecretKey::create_galois_keys(const PhantomContext &cont
 
     // get galois_elts
     auto &galois_elts = key_galois_tool->galois_elts();
+
+    auto rotated_secret_key = make_cuda_auto_ptr<uint64_t>(key_mod_size * poly_degree, s);
+    auto secret_key = secret_key_array_.get();
+
+    auto relin_key_num = galois_elts.size();
+    galois_keys.relin_keys_.resize(relin_key_num);
+
+    for (size_t galois_elt_idx{0}; galois_elt_idx < relin_key_num; galois_elt_idx++) {
+        auto galois_elt = galois_elts[galois_elt_idx];
+
+        // Verify coprime conditions.
+        if (!(galois_elt & 1) || (galois_elt >= poly_degree << 1)) {
+            throw invalid_argument("Galois element is not valid");
+        }
+        // Rotate secret key for each coeff_modulus
+        key_galois_tool->apply_galois_ntt(secret_key, key_mod_size, galois_elt_idx, rotated_secret_key.get(),
+                                          s);
+        PhantomRelinKey relin_key;
+        generate_one_kswitch_key(context, rotated_secret_key.get(), relin_key, s);
+        galois_keys.relin_keys_[galois_elt_idx] = std::move(relin_key);
+    }
+    galois_keys.gen_flag_ = true;
+
+    return galois_keys;
+}
+
+PhantomGaloisKey PhantomSecretKey::create_galois_keys_from_steps(const PhantomContext &context, const std::vector<int> &steps) const {
+    PhantomGaloisKey galois_keys;
+
+    // Extract encryption parameters.
+    auto &key_context_data = context.get_context_data(0);
+    auto &key_parms = key_context_data.parms();
+    auto &key_modulus = key_parms.coeff_modulus();
+    auto &key_galois_tool = context.key_galois_tool_;
+    auto poly_degree = key_parms.poly_modulus_degree();
+    auto key_mod_size = key_modulus.size();
+
+    const auto &s = phantom::util::global_variables::default_stream->get_stream();
+
+    // get galois_elts
+    auto galois_elts = key_galois_tool->get_elts_from_steps(steps);
 
     auto rotated_secret_key = make_cuda_auto_ptr<uint64_t>(key_mod_size * poly_degree, s);
     auto secret_key = secret_key_array_.get();

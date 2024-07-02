@@ -270,7 +270,7 @@ namespace phantom::arith {
 
     constexpr int nibbles_per_uint64 = bytes_per_uint64 * nibbles_per_byte;
 
-    [[nodiscard]] inline constexpr int hamming_weight(unsigned char value) {
+    [[nodiscard]] inline constexpr int _weight(unsigned char value) {
         int t = static_cast<int>(value);
         t -= (t >> 1) & 0x55;
         t = (t & 0x33) + ((t >> 2) & 0x33);

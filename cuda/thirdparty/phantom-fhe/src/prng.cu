@@ -1,3 +1,4 @@
+#include <inttypes.h>
 #include <random>
 #include <cstring>
 #include "prng.cuh"

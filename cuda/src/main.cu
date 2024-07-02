@@ -143,19 +143,19 @@ int main() {
     cout << "Mean Absolute Error: " << ckks_evaluator.calculate_MAE(softmax_calibration, cipher_output, 128) << endl;
   }
 
-  input = {1.0, 2.0, 3.0, 4.0, 5.0};
-  ckks_evaluator.encoder.encode(input, SCALE, plain_input);
-  ckks_evaluator.encryptor.encrypt(plain_input, cipher_input);
+  // input = {1.0, 2.0, 3.0, 4.0, 5.0};
+  // ckks_evaluator.encoder.encode(input, SCALE, plain_input);
+  // ckks_evaluator.encryptor.encrypt(plain_input, cipher_input);
 
-  ckks_evaluator.multiply_power_of_x(cipher_input, cipher_output, 2);
+  // ckks_evaluator.multiply_power_of_x(cipher_input, cipher_output, 2);
 
-  ckks_evaluator.decryptor.decrypt(cipher_output, plain_output);
-  ckks_evaluator.encoder.decode(plain_output, output);
+  // ckks_evaluator.decryptor.decrypt(cipher_output, plain_output);
+  // ckks_evaluator.encoder.decode(plain_output, output);
 
-  for (auto i = 0; i < output.size(); i++) {
-    if (i < 5) {
-      cout << output[i] << " ";
-    }
-  }
-  cout << endl;
+  // for (auto i = 0; i < output.size(); i++) {
+  //   if (i < 5) {
+  //     cout << output[i] << " ";
+  //   }
+  // }
+  // cout << endl;
 }

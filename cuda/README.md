@@ -16,3 +16,10 @@ make
 ```
 
 This should produce a binary file `bin/main` under `build` directory.
+
+<br>
+
+## TO-DO
+- Generate secret key with specified hamming weight
+- `Bootstrapper::modraise_inplace`
+- Matrix Mul
