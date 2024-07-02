@@ -60,7 +60,8 @@ std::vector<std::vector<double>> MMEvaluator::readMatrix(const std::string &file
     return matrix;
 }
 
-vector<Ciphertext> MMEvaluator::expand_ciphertext(const Ciphertext &encrypted, uint32_t m, GaloisKeys &galkey, vector<uint32_t> &galois_elts)
+vector<Ciphertext> MMEvaluator::expand_ciphertext(
+    const Ciphertext &encrypted, uint32_t m, GaloisKeys &galkey, vector<uint32_t> &galois_elts)
 {
     uint32_t logm = ceil(log2(m));
     Plaintext two("2");
@@ -108,7 +109,7 @@ void MMEvaluator::multiply_power_of_X(Ciphertext &encrypted, Ciphertext &destina
     auto param = context_data->parms();
 
     ckks->evaluator->transform_from_ntt_inplace(encrypted);
-    auto coeff_mod_count = param.coeff_modulus().size() - 1;
+    auto coeff_mod_count = param.coeff_modulus().size();
     auto coeff_count = ckks->degree;
     auto encrypted_count = encrypted.size();
 
@@ -117,7 +118,11 @@ void MMEvaluator::multiply_power_of_X(Ciphertext &encrypted, Ciphertext &destina
     for (int i = 0; i < encrypted_count; i++) {
         for (int j = 0; j < coeff_mod_count; j++) {
             negacyclic_shift_poly_coeffmod(
-                encrypted.data(i) + (j * coeff_count), coeff_count, index, param.coeff_modulus()[j], destination.data(i) + (j * coeff_count));
+                encrypted.data(i) + (j * coeff_count),
+                coeff_count,
+                index,
+                param.coeff_modulus()[j],
+                destination.data(i) + (j * coeff_count));
         }
     }
     ckks->evaluator->transform_to_ntt_inplace(encrypted);
@@ -126,6 +131,32 @@ void MMEvaluator::multiply_power_of_X(Ciphertext &encrypted, Ciphertext &destina
 
 void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &y, vector<Ciphertext> &res)
 {
+    // vector<double> vec_x(4096,1.0);
+    // vec_x[1]=2.0;
+    // Plaintext ptx_x;
+    // Ciphertext ctx;
+    // ckks->encoder->encode(vec_x,ckks->scale,ptx_x);
+    // ckks->encryptor->encrypt(ptx_x,ctx);
+
+    // vec_x[0]=1.0;
+
+    // expandEncode(vec_x,ctx);
+
+    // auto tmp  = expand_ciphertext(ctx, ckks->degree, *ckks->galois_keys, ckks->rots);
+
+    // for(auto i=0;i<10;i++){
+    //     auto ct = tmp[i];
+    //     Plaintext pt_tmp;
+    //     ckks->decryptor->decrypt(ct,pt_tmp);
+    //     vector<double> res_t;
+    //     ckks->encoder->decode(pt_tmp,res_t);
+    //     for(auto j=0;j<5;j++){
+    //         std::cout<<res_t[j]<<" ";
+    //     }
+    //     std::cout<<std::endl;
+    // }
+
+    // exit(0);
     chrono::high_resolution_clock::time_point time_start, time_end;
 
     vector<Plaintext> a_pts;
@@ -157,13 +188,16 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
     vector<Ciphertext> b_expanded_cts;
 
     for (auto i = 0; i < b_compressed_cts.size(); i++) {
-        vector<Ciphertext> temp_cts = expand_ciphertext(b_compressed_cts[i], ckks->degree, *ckks->galois_keys, ckks->rots);
+        vector<Ciphertext> temp_cts =
+            expand_ciphertext(b_compressed_cts[i], ckks->degree, *ckks->galois_keys, ckks->rots);
         // cout << "expanding..." << endl;
-        b_expanded_cts.insert(b_expanded_cts.end(), make_move_iterator(temp_cts.begin()), make_move_iterator(temp_cts.end()));
+        b_expanded_cts.insert(
+            b_expanded_cts.end(), make_move_iterator(temp_cts.begin()), make_move_iterator(temp_cts.end()));
     }
 
     time_end = high_resolution_clock::now();
-    cout << "expanding time: " << duration_cast<std::chrono::seconds>(time_end - time_start).count() << " seconds" << endl;
+    cout << "expanding time: " << duration_cast<std::chrono::seconds>(time_end - time_start).count() << " seconds"
+         << endl;
 
     Plaintext pt;
     Ciphertext zero;
@@ -217,16 +251,17 @@ void MMEvaluator::expandEncode(vector<double> &val, Ciphertext &ct)
 
     Plaintext p(poly_modulus_degree * 2);
 
-    for (auto i = 0; i < poly_modulus_degree; i++) {
-        val[i] = 10.0 * 2.0 * (1.0 * rand() / RAND_MAX - 0.5);
-    }
+    // for (auto i = 0; i < poly_modulus_degree; i++) {
+    //     val[i] = 10.0 * 2.0 * (1.0 * rand() / RAND_MAX - 0.5);
+    // }
     for (auto i = 0; i < poly_modulus_degree; i++) {
         auto coeffd = std::round(val[i] * 10000000000);
         bool is_negative = std::signbit(coeffd);
         auto coeffu = static_cast<std::uint64_t>(std::fabs(coeffd));
         if (is_negative) {
             for (std::size_t j = 0; j < 2; j++) {
-                p[i + (j * poly_modulus_degree)] = util::negate_uint_mod(util::barrett_reduce_64(coeffu, param.coeff_modulus()[j]), param.coeff_modulus()[j]);
+                p[i + (j * poly_modulus_degree)] = util::negate_uint_mod(
+                    util::barrett_reduce_64(coeffu, param.coeff_modulus()[j]), param.coeff_modulus()[j]);
             }
         } else {
             for (std::size_t j = 0; j < 2; j++) {

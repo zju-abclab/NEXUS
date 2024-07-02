@@ -22,15 +22,13 @@ void MM_test();
 
 int main()
 {
-    MM_test();
-    exit(0);
-
     EncryptionParameters parms(scheme_type::ckks);
     long logN = 16;
     size_t poly_modulus_degree = 1 << logN;
     double scale = pow(2.0, 40);
     parms.set_poly_modulus_degree(poly_modulus_degree);
-    parms.set_coeff_modulus(CoeffModulus::Create(poly_modulus_degree, { 58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58 }));
+    parms.set_coeff_modulus(CoeffModulus::Create(
+        poly_modulus_degree, { 58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58 }));
 
     SEALContext context(parms, true, sec_level_type::none);
 
@@ -49,7 +47,8 @@ int main()
 
     // std::vector<std::uint32_t> rots;
     // for (int i = 0; i < 12; i++) {
-    //     rots.push_back((poly_modulus_degree + exponentiate_uint(2, i)) / exponentiate_uint(2, i));
+    //     rots.push_back((poly_modulus_degree + exponentiate_uint(2, i)) /
+    //     exponentiate_uint(2, i));
     // }
     // keygen.create_galois_keys(rots, galois_keys);
     keygen.create_galois_keys(galois_keys);
@@ -84,8 +83,10 @@ int main()
     // auto start = high_resolution_clock::now();
     // gelu_evaluator.gelu(cipher_input, cipher_output);
     // auto end = high_resolution_clock::now();
-    // cout << "[GELU] 32768 takes:" << duration_cast<milliseconds>(end - start).count() << " milliseconds" << endl;
-    // cout << "Mean Absolute Error: " << ckks_evaluator.calculateMAE(gelu_calibration, cipher_output, poly_modulus_degree/2) << endl;
+    // cout << "[GELU] 32768 takes:" << duration_cast<milliseconds>(end -
+    // start).count() << " milliseconds" << endl; cout << "Mean Absolute Error: "
+    // << ckks_evaluator.calculateMAE(gelu_calibration, cipher_output,
+    // poly_modulus_degree/2) << endl;
 
     /*
         LayerNorm
@@ -97,7 +98,8 @@ int main()
     //     input.push_back(num);
     // }
     // input_file.close();
-    // ifstream calibration_file("data/calibration/layernorm_calibration_16_768.txt");
+    // ifstream
+    // calibration_file("data/calibration/layernorm_calibration_16_768.txt");
     // while (calibration_file >> num) {
     //     layernorm_calibration.push_back(num);
     // }
@@ -107,8 +109,10 @@ int main()
     // auto start = high_resolution_clock::now();
     // ln_evaluator.layer_norm(cipher_input, cipher_output, 1024);
     // auto end = high_resolution_clock::now();
-    // cout << "[LayerNorm] 16 x 768 takes: " << duration_cast<milliseconds>(end - start).count() << " milliseconds" << endl;
-    // cout << "Mean Absolute Error: " << ckks_evaluator.calculateMAE(layernorm_calibration, cipher_output, 768) << endl;
+    // cout << "[LayerNorm] 16 x 768 takes: " << duration_cast<milliseconds>(end -
+    // start).count() << " milliseconds" << endl; cout << "Mean Absolute Error: "
+    // << ckks_evaluator.calculateMAE(layernorm_calibration, cipher_output, 768)
+    // << endl;
 
     /*
         Softmax
@@ -130,7 +134,8 @@ int main()
     auto start = high_resolution_clock::now();
     softmax_evaluator.softmax(cipher_input, cipher_output, 128);
     auto end = high_resolution_clock::now();
-    cout << "[Softmax] 128 x 128 takes: " << duration_cast<milliseconds>(end - start).count() << " milliseconds" << endl;
+    cout << "[Softmax] 128 x 128 takes: " << duration_cast<milliseconds>(end - start).count() << " milliseconds"
+         << endl;
     cout << "Mean Absolute Error: " << ckks_evaluator.calculateMAE(softmax_calibration, cipher_output, 128) << endl;
 }
 
@@ -190,15 +195,22 @@ void MM_test()
     }
     mme.matrix_mul(matrix_4096x768_T, row_pack, res);
 
-    // for (auto i = 0; i < 10; i++) {
-    //     printf("%+.10lf\n", -3.5153774 * X[0][i]);
-    // }
+    std::vector<std::vector<double>> matrix_4096x64 = mme.readMatrix("../data/calibration/result_matrix.txt", 4096, 64);
+    auto matrix_4096x64_T = mme.transposeMatrix(matrix_4096x64);
 
-    Plaintext res_pt;
-    vector<double> mm_res;
-    ckks_evaluator.decryptor->decrypt(res[0], res_pt);
-    ckks_evaluator.encoder->decode(res_pt, mm_res);
-    for (auto i = 0; i < 10; i++) {
-        printf("%+.10lf\n", mm_res[i]);
+    double average_err = 0.0;
+
+    // err of the first col
+    for (auto col = 0; col < 1; col++) {
+        Plaintext res_pt;
+        vector<double> mm_res;
+        ckks_evaluator.decryptor->decrypt(res[col], res_pt);
+        ckks_evaluator.encoder->decode(res_pt, mm_res);
+        for (auto i = 0; i < 4096; i++) {
+            average_err += fabs(mm_res[i] / 2.0 - matrix_4096x64_T[col][i]);
+            printf("%+.10lf %+.10lf\n", mm_res[i] / 2.0, matrix_4096x64_T[col][i]);
+        }
     }
+
+    std::cout << "average_err: " << average_err / 4096.0 << std::endl;
 }
