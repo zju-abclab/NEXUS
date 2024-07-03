@@ -45,12 +45,6 @@ int main()
     keygen.create_relin_keys(relin_keys);
     GaloisKeys galois_keys;
 
-    // std::vector<std::uint32_t> rots;
-    // for (int i = 0; i < 12; i++) {
-    //     rots.push_back((poly_modulus_degree + exponentiate_uint(2, i)) /
-    //     exponentiate_uint(2, i));
-    // }
-    // keygen.create_galois_keys(rots, galois_keys);
     keygen.create_galois_keys(galois_keys);
 
     CKKSEvaluator ckks_evaluator(context, encryptor, decryptor, encoder, evaluator, scale, relin_keys, galois_keys);
