@@ -38,36 +38,26 @@ np.savetxt("data/calibration/softmax_calibration_128_128.txt", y, fmt="%f", deli
 
 
 def generate_matrices():
-    # 设置随机种子以便于复现
     np.random.seed(42)
-
-    # 生成128x768的矩阵，元素在-5到5之间
-    matrix_4096x768 = np.random.uniform(-5, 5, (128 * 32, 768))
-
-    # 生成768x64的矩阵，元素在-5到5之间
-    matrix_768x64 = np.random.uniform(-5, 5, (768, 64))
+    matrix_4096x768 = np.random.uniform(-1, 1, (128 * 32, 768))
+    matrix_768x64 = np.random.uniform(-1, 1, (768, 64))
 
     return matrix_4096x768, matrix_768x64
 
 
 def save_matrix_to_txt(matrix, filename):
-    # 将矩阵写入txt文件
     np.savetxt(filename, matrix, fmt="%.4f", delimiter=" ")
 
 
 def multiply_matrices(matrix1, matrix2):
-    # 计算矩阵乘积
     return np.dot(matrix1, matrix2)
 
 
-# 调用函数生成矩阵
+
 matrix_4096x768, matrix_768x64 = generate_matrices()
 result_matrix = multiply_matrices(matrix_4096x768, matrix_768x64)
 
 
-# 将矩阵写入txt文件
-save_matrix_to_txt(matrix_4096x768, "data/input/matrix_4096x768.txt")
-save_matrix_to_txt(matrix_768x64, "data/input/matrix_768x64.txt")
-
-# 将结果矩阵写入txt文件
-save_matrix_to_txt(result_matrix, "data/calibration/result_matrix.txt")
+save_matrix_to_txt(matrix_4096x768, "data/input/matrixmul_input_m_128_n_768_k_64_batch_128.txt")
+save_matrix_to_txt(matrix_768x64, "data/input/matrix_input_n_768_k_64.txt")
+save_matrix_to_txt(result_matrix, "data/calibration/matrix_output_m_128_k_64_batch_128.txt")

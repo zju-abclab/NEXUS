@@ -22,6 +22,11 @@ void MM_test();
 
 int main()
 {
+
+    MM_test();
+    exit(0);
+
+
     EncryptionParameters parms(scheme_type::ckks);
     long logN = 16;
     size_t poly_modulus_degree = 1 << logN;
@@ -167,9 +172,9 @@ void MM_test()
 
     MMEvaluator mme(ckks_evaluator);
 
-    std::vector<std::vector<double>> matrix_4096x768 = mme.readMatrix("../data/input/matrix_4096x768.txt", 4096, 768);
+    std::vector<std::vector<double>> matrix_4096x768 = mme.readMatrix("data/input/matrixmul_input_m_128_n_768_k_64_batch_128.txt", 4096, 768);
 
-    std::vector<std::vector<double>> matrix_768x64 = mme.readMatrix("../data/input/matrix_768x64.txt", 768, 64);
+    std::vector<std::vector<double>> matrix_768x64 = mme.readMatrix("data/input/matrix_input_n_768_k_64.txt", 768, 64);
 
     vector<Ciphertext> res;
 
@@ -189,22 +194,21 @@ void MM_test()
     }
     mme.matrix_mul(matrix_4096x768_T, row_pack, res);
 
-    std::vector<std::vector<double>> matrix_4096x64 = mme.readMatrix("../data/calibration/result_matrix.txt", 4096, 64);
+    std::vector<std::vector<double>> matrix_4096x64 = mme.readMatrix("data/calibration/matrix_output_m_128_k_64_batch_128.txt", 4096, 64);
     auto matrix_4096x64_T = mme.transposeMatrix(matrix_4096x64);
 
     double average_err = 0.0;
 
     // err of the first col
-    for (auto col = 0; col < 1; col++) {
+    for (auto col = 0; col < 64; col++) {
         Plaintext res_pt;
         vector<double> mm_res;
         ckks_evaluator.decryptor->decrypt(res[col], res_pt);
         ckks_evaluator.encoder->decode(res_pt, mm_res);
         for (auto i = 0; i < 4096; i++) {
             average_err += fabs(mm_res[i] / 2.0 - matrix_4096x64_T[col][i]);
-            printf("%+.10lf %+.10lf\n", mm_res[i] / 2.0, matrix_4096x64_T[col][i]);
         }
     }
 
-    std::cout << "average_err: " << average_err / 4096.0 << std::endl;
+    std::cout << "average_err: " << average_err / 4096 / 64 << std::endl;
 }
