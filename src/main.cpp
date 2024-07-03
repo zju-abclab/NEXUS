@@ -200,15 +200,13 @@ void MM_test()
     double average_err = 0.0;
 
     // err of the first col
-    for (auto col = 0; col < 64; col++) {
-        Plaintext res_pt;
-        vector<double> mm_res;
-        ckks_evaluator.decryptor->decrypt(res[col], res_pt);
-        ckks_evaluator.encoder->decode(res_pt, mm_res);
-        for (auto i = 0; i < 4096; i++) {
-            average_err += fabs(mm_res[i] / 2.0 - matrix_4096x64_T[col][i]);
-        }
+    Plaintext res_pt;
+    vector<double> mm_res;
+    ckks_evaluator.decryptor->decrypt(res[0], res_pt);
+    ckks_evaluator.encoder->decode(res_pt, mm_res);
+    for (auto i = 0; i < 4096; i++) {
+        average_err += fabs(mm_res[i] / 2.0 - matrix_4096x64_T[0][i]);
+        printf("%+.10lf %+.10lf\n", mm_res[i] / 2.0, matrix_4096x64_T[0][i]);
     }
-
-    std::cout << "average_err: " << average_err / 4096 / 64 << std::endl;
+    std::cout << "average_err: " << average_err / 4096.0 << std::endl;
 }
