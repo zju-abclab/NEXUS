@@ -40,7 +40,7 @@ std::vector<std::vector<double>> MMEvaluator::readMatrix(const std::string &file
     std::ifstream file(filename);
 
     if (!file.is_open()) {
-        std::cerr << "无法打开文件: " << filename << std::endl;
+        std::cerr << "Can not open file: " << filename << std::endl;
         return matrix;
     }
 
@@ -50,7 +50,7 @@ std::vector<std::vector<double>> MMEvaluator::readMatrix(const std::string &file
             std::istringstream iss(line);
             for (int j = 0; j < cols; ++j) {
                 if (!(iss >> matrix[i][j])) {
-                    std::cerr << "读取数据时出错: " << filename << " (行: " << i << ", 列: " << j << ")" << std::endl;
+                    std::cerr << "read error: " << filename << " (row: " << i << ", column: " << j << ")" << std::endl;
                 }
             }
         }
