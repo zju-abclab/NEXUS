@@ -30,7 +30,7 @@ int main() {
 
   params.set_poly_modulus_degree(N);
   params.set_coeff_modulus(CoeffModulus::Create(N, COEFF_MODULI));
-  // params.set_special_modulus_size(1);
+  // params.set_secret_key_hamming_weight(192);
 
   PhantomContext context(params);
 

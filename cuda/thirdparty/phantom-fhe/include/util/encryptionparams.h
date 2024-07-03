@@ -208,6 +208,10 @@ namespace phantom {
             return special_modulus_size_;
         }
 
+        [[nodiscard]] inline std::size_t secret_key_hamming_weight() const noexcept {
+            return secret_key_hamming_weight_;
+        }
+
         [[nodiscard]] inline auto galois_elts() const noexcept {
             return galois_elts_;
         }
