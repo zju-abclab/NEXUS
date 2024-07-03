@@ -2941,15 +2941,15 @@ void Bootstrapper::modraise_inplace(PhantomCiphertext &cipher) {
     throw invalid_argument("Ciphertexts in non-NTT form are supported only!");
   }
 
-  const auto n = ckks->degree;
+  // const auto n = ckks->degree;
   auto &rns_tool = ckks->context->get_context_data(cipher.chain_index()).gpu_rns_tool();
   const auto &key_context_data = ckks->context->key_context_data();
   const auto &key_parms = key_context_data.parms();
   const auto scheme = key_parms.scheme();
-  const size_t size_P = key_parms.special_modulus_size();
-  const size_t size_Ql = rns_tool.base_Ql().size();
-  const size_t size_QlP = size_Ql + size_P;
-  const size_t beta = rns_tool.v_base_part_Ql_to_compl_part_QlP_conv().size();
+  // const size_t size_P = key_parms.special_modulus_size();
+  // const size_t size_Ql = rns_tool.base_Ql().size();
+  // const size_t size_QlP = size_Ql + size_P;
+  // const size_t beta = rns_tool.v_base_part_Ql_to_compl_part_QlP_conv().size();
 
   const auto &stream = (*phantom::util::global_variables::default_stream).get_stream();
 

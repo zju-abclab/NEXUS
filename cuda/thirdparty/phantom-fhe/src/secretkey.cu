@@ -422,6 +422,9 @@ void PhantomSecretKey::gen_secretkey(const PhantomContext &context, const cudaSt
 
     // Newly added: adjust the hamming weight of the secret key if necessary
     if (auto sk_hamming_weight = context.key_context_data().parms().secret_key_hamming_weight()) {
+			// Make device has finished previous kernels
+      cudaDeviceSynchronize();
+
       // Copy sk data from device to host
       uint64_t *sk_arr_non_ntt = new uint64_t[poly_degree * coeff_mod_size];
       cudaMemcpy(sk_arr_non_ntt, secret_key_array_.get(), poly_degree * coeff_mod_size * sizeof(uint64_t), cudaMemcpyDeviceToHost);

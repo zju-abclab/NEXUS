@@ -309,7 +309,7 @@ class Evaluator {
   inline void multiply_vector_inplace_reduced_error(PhantomCiphertext &ct, const std::vector<T> &value) {
     PhantomPlaintext plain;
 
-    encoder->encode(value, ct.scale(), plain);
+    encoder->encode(*context, value, ct.scale(), plain);
     mod_switch_to_inplace(plain, ct.params_id());
     multiply_plain_inplace(ct, plain);
   }

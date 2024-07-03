@@ -464,7 +464,7 @@ namespace phantom::arith {
 
             // Clip the maximum shift to determine only the integer
             // (as opposed to fractional) bits.
-            uint32_t numerator_shift = min(denominator_bits - numerator_bits, remaining_shifts);
+            uint32_t numerator_shift = umin(denominator_bits - numerator_bits, remaining_shifts);
 
             // Shift and update numerator.
             // This may be faster; first set to zero and then update if needed
