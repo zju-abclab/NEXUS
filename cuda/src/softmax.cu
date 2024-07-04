@@ -35,4 +35,6 @@ void SoftmaxEvaluator::softmax(PhantomCiphertext &x, PhantomCiphertext &res, int
   ckks->evaluator.multiply(res, exp_x, res);
   ckks->evaluator.relinearize_inplace(res, *ckks->relin_keys);
   ckks->evaluator.rescale_to_next_inplace(res);
+
+  cout << "Moduli left after SoftMax: " << res.coeff_modulus_size() << endl;
 }

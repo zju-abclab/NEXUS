@@ -539,7 +539,7 @@ void Bootstrapper::genorigcoeff() {
       blockcount = blockcount >> 1;
       current_theta = theta_0 * (1 << (new_logn - 1 - i));
       current_power = 1;
-      current_zeta = polar(1.0, current_theta * current_power);
+      current_zeta = std::polar(1.0, current_theta * current_power);
       for (int j = 0; j < blocklen / 2; j++) {
         for (int k = 0; k < blockcount; k++) {
           orig_coeffvec[u][i][1][k * blocklen + j] = 1;
@@ -552,7 +552,7 @@ void Bootstrapper::genorigcoeff() {
           orig_coeffvec[u][i][2][k * blocklen + j + blocklen / 2] = 0;  // index 0 -> 2
         }
         current_power = (5 * current_power) % (1 << (i + 3));
-        current_zeta = polar(1.0, current_theta * current_power);
+        current_zeta = std::polar(1.0, current_theta * current_power);
       }
     }
 
@@ -573,7 +573,7 @@ void Bootstrapper::genorigcoeff() {
     for (int i = 0; i < new_logn; i++) {
       current_theta = theta_0 * (1 << i);
       current_power = 1;
-      current_zeta = polar(1.0, current_theta * current_power);
+      current_zeta = std::polar(1.0, current_theta * current_power);
       for (int j = 0; j < blocklen / 2; j++) {
         for (int k = 0; k < blockcount; k++) {
           orig_invcoeffvec[u][i][1][k * blocklen + j] = 0.5;
@@ -586,7 +586,7 @@ void Bootstrapper::genorigcoeff() {
           orig_invcoeffvec[u][i][2][k * blocklen + j + blocklen / 2] = 0;
         }
         current_power = (5 * current_power) % (1 << ((new_logn - 1 - i) + 3));
-        current_zeta = polar(1.0, current_theta * current_power);
+        current_zeta = std::polar(1.0, current_theta * current_power);
       }
       blocklen = blocklen >> 1;
       blockcount = blockcount << 1;

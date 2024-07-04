@@ -222,6 +222,8 @@ public:
 
     [[nodiscard]] PhantomGaloisKey create_galois_keys(const PhantomContext &context) const;
 
+    [[nodiscard]] PhantomGaloisKey create_galois_keys_from_elts(const PhantomContext &context,const std::vector<uint32_t> &elts) const;
+
     [[nodiscard]] PhantomGaloisKey create_galois_keys_from_steps(const PhantomContext &context, const std::vector<int> &steps) const; 
 
     /** Symmetric encryption, the plaintext and ciphertext are in NTT form

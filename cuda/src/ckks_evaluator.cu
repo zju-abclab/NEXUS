@@ -440,19 +440,6 @@ PhantomCiphertext CKKSEvaluator::inverse(PhantomCiphertext x, int iter) {
   return res;
 }
 
-void CKKSEvaluator::multiply_power_of_x(PhantomCiphertext &encrypted, PhantomCiphertext &destination, int index) {
-  destination = encrypted;
-
-  while (index >= degree - 1) {
-    PhantomPlaintext p = init_plain_power_of_x(degree - 1);
-    evaluator.multiply_plain(destination, p, destination);
-    index -= degree - 1;
-  }
-
-  PhantomPlaintext p = init_plain_power_of_x(index);
-  evaluator.multiply_plain(destination, p, destination);
-}
-
 void Evaluator::add_inplace_reduced_error(PhantomCiphertext &encrypted1, const PhantomCiphertext &encrypted2) {
   size_t encrypted1_coeff_modulus_size = encrypted1.coeff_modulus_size();
   size_t encrypted2_coeff_modulus_size = encrypted2.coeff_modulus_size();

@@ -96,7 +96,7 @@ void GELUEvaluator::gelu(PhantomCiphertext &x, PhantomCiphertext &res) {
 
   PhantomCiphertext s1, s2;
   // // cout << Ax.scale() << " " << Bx.scale() << " " << a1.scale() << endl;
-  ckks->evaluator.mod_switch_to_inplace(a1, Ax.params_id());
+  ckks->evaluator.mod_switch_to_inplace(Ax, a1.params_id());
   ckks->evaluator.multiply(Ax, a1, s1);
   ckks->evaluator.relinearize_inplace(s1, *ckks->relin_keys);
   ckks->evaluator.rescale_to_next_inplace(s1);

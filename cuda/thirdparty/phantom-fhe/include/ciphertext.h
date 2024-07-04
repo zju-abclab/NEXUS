@@ -190,6 +190,10 @@ public:
         return data_.get();
     }
 
+    [[nodiscard]] auto data(size_t poly_index) const {
+        return data_.get() + poly_index * (poly_modulus_degree_ * coeff_modulus_size_);
+    }
+
     [[nodiscard]] auto &data_ptr() {
         return data_;
     }

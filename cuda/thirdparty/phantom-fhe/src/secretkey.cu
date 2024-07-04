@@ -422,8 +422,10 @@ void PhantomSecretKey::gen_secretkey(const PhantomContext &context, const cudaSt
 
     // Newly added: adjust the hamming weight of the secret key if necessary
     if (auto sk_hamming_weight = context.key_context_data().parms().secret_key_hamming_weight()) {
+			std::cout << "Generating secret key with hamming weight: " << sk_hamming_weight << std::endl;
+
 			// Make device has finished previous kernels
-      cudaDeviceSynchronize();
+      cudaStreamSynchronize(s);
 
       // Copy sk data from device to host
       uint64_t *sk_arr_non_ntt = new uint64_t[poly_degree * coeff_mod_size];
@@ -504,6 +506,47 @@ PhantomGaloisKey PhantomSecretKey::create_galois_keys(const PhantomContext &cont
 
     // get galois_elts
     auto &galois_elts = key_galois_tool->galois_elts();
+
+    auto rotated_secret_key = make_cuda_auto_ptr<uint64_t>(key_mod_size * poly_degree, s);
+    auto secret_key = secret_key_array_.get();
+
+    auto relin_key_num = galois_elts.size();
+    galois_keys.relin_keys_.resize(relin_key_num);
+
+    for (size_t galois_elt_idx{0}; galois_elt_idx < relin_key_num; galois_elt_idx++) {
+        auto galois_elt = galois_elts[galois_elt_idx];
+
+        // Verify coprime conditions.
+        if (!(galois_elt & 1) || (galois_elt >= poly_degree << 1)) {
+            throw invalid_argument("Galois element is not valid");
+        }
+        // Rotate secret key for each coeff_modulus
+        key_galois_tool->apply_galois_ntt(secret_key, key_mod_size, galois_elt_idx, rotated_secret_key.get(),
+                                          s);
+        PhantomRelinKey relin_key;
+        generate_one_kswitch_key(context, rotated_secret_key.get(), relin_key, s);
+        galois_keys.relin_keys_[galois_elt_idx] = std::move(relin_key);
+    }
+    galois_keys.gen_flag_ = true;
+
+    return galois_keys;
+}
+
+PhantomGaloisKey PhantomSecretKey::create_galois_keys_from_elts(const PhantomContext &context, const std::vector<uint32_t> &elts) const {
+    PhantomGaloisKey galois_keys;
+
+    // Extract encryption parameters.
+    auto &key_context_data = context.get_context_data(0);
+    auto &key_parms = key_context_data.parms();
+    auto &key_modulus = key_parms.coeff_modulus();
+    auto &key_galois_tool = context.key_galois_tool_;
+    auto poly_degree = key_parms.poly_modulus_degree();
+    auto key_mod_size = key_modulus.size();
+
+    const auto &s = phantom::util::global_variables::default_stream->get_stream();
+
+    // get galois_elts
+    auto &galois_elts = elts;
 
     auto rotated_secret_key = make_cuda_auto_ptr<uint64_t>(key_mod_size * poly_degree, s);
     auto secret_key = secret_key_array_.get();

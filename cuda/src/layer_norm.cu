@@ -31,4 +31,6 @@ void LNEvaluator::layer_norm(PhantomCiphertext &a, PhantomCiphertext &y, int len
   ckks->evaluator.multiply(y, a, y);
   ckks->evaluator.relinearize_inplace(y, *ckks->relin_keys);
   ckks->evaluator.rescale_to_next_inplace(y);
+
+  // cout << "Moduli left after LayerNorm: " << y.coeff_modulus_size() << endl;
 }

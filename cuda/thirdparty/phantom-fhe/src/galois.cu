@@ -41,6 +41,8 @@ apply_galois_permutation(uint64_t *dst, const uint64_t *src, const DModulus *mod
 
 [[nodiscard]] std::uint32_t PhantomGaloisTool::get_elt_from_step(int step) const {
     auto n = static_cast<uint32_t>(coeff_count_);
+
+    std::cout << n << std::endl;
     uint32_t m32 = n * 2;
     auto m = static_cast<uint64_t>(m32);
 
@@ -51,6 +53,8 @@ apply_galois_permutation(uint64_t *dst, const uint64_t *src, const DModulus *mod
         // is to the left; when steps is negative, it is to the right.
         bool sign = step < 0;
         auto pos_step = static_cast<uint32_t>(abs(step));
+
+        cout << pos_step << endl;
 
         if (pos_step >= (n >> 1)) {
             throw invalid_argument("step count too large");

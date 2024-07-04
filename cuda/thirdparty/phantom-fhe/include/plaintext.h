@@ -70,6 +70,10 @@ public:
     [[nodiscard]] auto data() const noexcept {
         return data_.get();
     }
+    
+    [[nodiscard]] auto data(size_t coeff_index) noexcept {
+        return data_.get() + coeff_index;
+    }
 
     [[nodiscard]] auto &data_ptr() noexcept {
         return data_;

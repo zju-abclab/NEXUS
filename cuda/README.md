@@ -20,5 +20,8 @@ This should produce a binary file `bin/main` under `build` directory.
 <br>
 
 ## TO-DO
-- `Bootstrapper::modraise_inplace`
-- Matrix Mul
+- Bootstrapping
+  - `Bootstrapper::modraise_inplace`
+- Matrix Multiplication
+  - `transform_from_ntt_inplace` (see `moddown_from_NTT`)
+  - `transform_to_ntt_inplace`

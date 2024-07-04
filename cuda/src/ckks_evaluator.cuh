@@ -1,12 +1,13 @@
 #pragma once
 #include <complex>
 
+#include "kernels.cuh"
 #include "phantom.h"
 
 namespace nexus {
 using namespace std;
 using namespace phantom;
-using namespace phantom::arith;
+using namespace phantom::util;
 
 class Encoder {
  private:
@@ -29,6 +30,7 @@ class Encoder {
       encode(values[0], chain_index, scale, plain);
       return;
     }
+    values.resize(encoder->message_length(), 0.0);
     encoder->encode(*context, values, scale, plain, chain_index);
   }
 
@@ -37,6 +39,7 @@ class Encoder {
       encode(values[0], scale, plain);
       return;
     }
+    values.resize(encoder->message_length(), 0.0);
     encoder->encode(*context, values, scale, plain);
   }
 
@@ -45,6 +48,7 @@ class Encoder {
       encode(complex_values[0], scale, plain);
       return;
     }
+    complex_values.resize(encoder->message_length(), 0.0 + 0.0i);
     encoder->encode(*context, complex_values, scale, plain);
   }
 
@@ -233,6 +237,91 @@ class Evaluator {
     ::apply_galois_inplace(*context, ct, step, galois_keys);
   }
 
+  // Matrix Multiplication
+  inline void transform_from_ntt(const PhantomCiphertext &ct, PhantomCiphertext &dest) {
+    dest = ct;
+    transform_from_ntt_inplace(dest);
+    cudaStreamSynchronize(phantom::util::global_variables::default_stream->get_stream());
+  }
+
+  inline void transform_from_ntt_inplace(PhantomCiphertext &ct) {
+    auto &context_data = context->get_context_data(ct.chain_index());
+    auto &parms = context_data.parms();
+    auto &coeff_modulus = parms.coeff_modulus();
+    const size_t coeff_modulus_size = coeff_modulus.size();
+
+    const auto &stream = phantom::util::global_variables::default_stream->get_stream();
+
+    nwt_2d_radix8_backward_inplace(ct.data(), context->gpu_rns_tables(), coeff_modulus_size, 0, stream);
+
+    ct.set_ntt_form(false);
+    cudaStreamSynchronize(stream);
+  }
+
+  inline void transform_to_ntt(const PhantomCiphertext &ct, PhantomCiphertext &dest) {
+    dest = ct;
+    transform_to_ntt_inplace(dest);
+    cudaStreamSynchronize(phantom::util::global_variables::default_stream->get_stream());
+  }
+
+  inline void transform_to_ntt_inplace(PhantomCiphertext &ct) {
+    auto &context_data = context->get_context_data(ct.chain_index());
+    auto &parms = context_data.parms();
+    auto &coeff_modulus = parms.coeff_modulus();
+    const size_t coeff_modulus_size = coeff_modulus.size();
+
+    const auto &stream = phantom::util::global_variables::default_stream->get_stream();
+
+    nwt_2d_radix8_forward_inplace(ct.data(), context->gpu_rns_tables(), coeff_modulus_size, 0, stream);
+
+    ct.set_ntt_form(true);
+    cudaStreamSynchronize(stream);
+  }
+
+  inline void negacyclic_shift_poly_coeffmod(const std::uint64_t *poly, size_t coeff_count, size_t shift, const Modulus &modulus, std::uint64_t *result) {
+    int block_size = blockDimGlb.x;
+    int num_blocks = coeff_count / block_size;
+
+    // cout << block_size << endl;
+
+    // if (shift == 0) {
+    //   set_uint(poly, coeff_count, result);
+    //   return;
+    // }
+
+    // uint64_t index_raw = shift;
+    // uint64_t coeff_count_mod_mask = static_cast<uint64_t>(coeff_count) - 1;
+    // for (size_t i = 0; i < coeff_count; i++, poly++, index_raw++) {
+    //   uint64_t index = index_raw & coeff_count_mod_mask;
+    //   if (!(index_raw & static_cast<uint64_t>(coeff_count)) || !*poly) {
+    //     *(result + index) = *poly;
+    //   } else {
+    //     *(result + index) = modulus.value() - *poly;
+    //   }
+    // }
+
+    negacyclic_shift_poly_coeffmod_kernel<<<num_blocks, block_size>>>(poly, coeff_count, shift, modulus.value(), result);
+    cudaStreamSynchronize(phantom::util::global_variables::default_stream->get_stream());
+  }
+
+  // {
+  //   if (shift == 0) {
+  //     set_uint(poly, coeff_count, result);
+  //     return;
+  //   }
+
+  //   uint64_t index_raw = shift;
+  //   uint64_t coeff_count_mod_mask = static_cast<uint64_t>(coeff_count) - 1;
+  //   for (size_t i = 0; i < coeff_count; i++, poly++, index_raw++) {
+  //     uint64_t index = index_raw & coeff_count_mod_mask;
+  //     if (!(index_raw & static_cast<uint64_t>(coeff_count)) || !*poly) {
+  //       result[index] = *poly;
+  //     } else {
+  //       result[index] = modulus.value() - *poly;
+  //     }
+  //   }
+  // }
+
   // Bootstrapping
   inline void multiply_const(const PhantomCiphertext &ct, double value, PhantomCiphertext &dest) {
     dest = ct;
@@ -392,6 +481,7 @@ class CKKSEvaluator {
 
     this->scale = scale;
     this->slot_count = encoder.slot_count();
+    this->degree = this->slot_count * 2;
 
     // Instantiate the component classes
     Encoder ckks_encoder(context, encoder);
@@ -436,9 +526,8 @@ class CKKSEvaluator {
   PhantomCiphertext exp(PhantomCiphertext x);
   PhantomCiphertext inverse(PhantomCiphertext x, int iter = 4);
 
-  void multiply_power_of_x(PhantomCiphertext &encrypted, PhantomCiphertext &destination, int index);
-
   // Metrics calcuation functions
   double calculate_MAE(vector<double> &y_true, PhantomCiphertext &ct, int N);
 };
+
 }  // namespace nexus

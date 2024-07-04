@@ -42,7 +42,8 @@ file(GLOB_RECURSE NEXUS_CUDA_SOURCE_FILES CONFIGURE_DEPENDS
   "src/gelu.cu"
   "src/softmax.cu"
   "src/layer_norm.cu"
-  # "src/matrix_mul.cu"
+  "src/matrix_mul.cu"
+  "src/kernels.cu"
   "src/ckks_evaluator.cu"
   "thirdparty/phantom-fhe/src/*.cu"
 )
@@ -62,7 +63,8 @@ file(GLOB_RECURSE NEXUS_CUDA_BOOTSTRAPING_SOURCE_FILES CONFIGURE_DEPENDS
   "src/gelu.cu"
   "src/softmax.cu"
   "src/layer_norm.cu"
-  # "src/matrix_mul.cu"
+  "src/matrix_mul.cu"
+  "src/kernels.cu"
   "src/ckks_evaluator.cu"
   "thirdparty/phantom-fhe/src/*.cu"
 )
