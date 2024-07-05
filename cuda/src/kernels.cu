@@ -9,7 +9,7 @@ __global__ void negacyclic_shift_poly_coeffmod_kernel(
     uint64_t coeff_count_mod_mask = static_cast<uint64_t>(coeff_count) - 1;
     uint64_t index = index_raw & coeff_count_mod_mask;
 
-    if (!(index_raw & static_cast<uint64_t>(coeff_count)) || !d_poly[i]) {
+    if (!(index_raw & static_cast<uint64_t>(coeff_count)) || !*(d_poly + i)) {
       *(d_result + index) = *(d_poly + i);
     } else {
       *(d_result + index) = modulus_value - *(d_poly + i);

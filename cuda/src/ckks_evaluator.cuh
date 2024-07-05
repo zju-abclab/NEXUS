@@ -249,10 +249,18 @@ class Evaluator {
     auto &parms = context_data.parms();
     auto &coeff_modulus = parms.coeff_modulus();
     const size_t coeff_modulus_size = coeff_modulus.size();
+    auto &rns_tool = context_data.gpu_rns_tool();
 
     const auto &stream = phantom::util::global_variables::default_stream->get_stream();
 
-    nwt_2d_radix8_backward_inplace(ct.data(), context->gpu_rns_tables(), coeff_modulus_size, 0, stream);
+    for (size_t i = 0; i < ct.size(); i++) {
+      nwt_2d_radix8_backward_inplace(
+          ct.data() + i * ct.poly_modulus_degree() * ct.coeff_modulus_size(),
+          context->gpu_rns_tables(), coeff_modulus_size, 0, stream);
+      rns_tool.base_Ql().compose_array(ct.data() + i * ct.poly_modulus_degree() * ct.coeff_modulus_size(),
+                                       ct.data() + i * ct.poly_modulus_degree() * ct.coeff_modulus_size(),
+                                       ct.poly_modulus_degree(), 1, stream);
+    }
 
     ct.set_ntt_form(false);
     cudaStreamSynchronize(stream);
@@ -272,7 +280,11 @@ class Evaluator {
 
     const auto &stream = phantom::util::global_variables::default_stream->get_stream();
 
-    nwt_2d_radix8_forward_inplace(ct.data(), context->gpu_rns_tables(), coeff_modulus_size, 0, stream);
+    for (size_t i = 0; i < ct.size(); i++) {
+      nwt_2d_radix8_forward_inplace(
+          ct.data() + i * ct.poly_modulus_degree() * ct.coeff_modulus_size(),
+          context->gpu_rns_tables(), coeff_modulus_size, 0, stream);
+    }
 
     ct.set_ntt_form(true);
     cudaStreamSynchronize(stream);

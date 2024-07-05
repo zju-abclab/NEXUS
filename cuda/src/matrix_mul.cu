@@ -55,27 +55,17 @@ void MMEvaluator::multiply_power_of_x(PhantomCiphertext &encrypted, PhantomCiphe
   auto coeff_count = ckks->degree;
   auto encrypted_count = encrypted.size();
 
-  // // After NTT
-  // auto encrypted_data_1 = new uint64_t[encrypted_count * coeff_count * encrypted.coeff_modulus_size()];
-  // cudaMemcpy(encrypted_data_1, encrypted.data(), encrypted_count * coeff_count * coeff_mod_count * sizeof(uint64_t), cudaMemcpyDeviceToHost);
-
-  // for (auto i = 0; i < 7; i++) {
-  //   cout << fixed << setprecision(5) << encrypted_data_1[i] << ", ";
-  // }
-  // cout << endl;
-
   ckks->evaluator.transform_from_ntt_inplace(encrypted);
 
   destination = encrypted;
 
-  // auto encrypted_data = new uint64_t[encrypted_count * coeff_count * encrypted.coeff_modulus_size()];
   // auto destination_data = new uint64_t[encrypted_count * coeff_count * destination.coeff_modulus_size()];
-
-  // // cudaMemcpy(encrypted_data, encrypted.data(), encrypted_count * coeff_count * coeff_mod_count * sizeof(uint64_t), cudaMemcpyDeviceToHost);
   // cudaMemcpy(destination_data, destination.data(), encrypted_count * coeff_count * coeff_mod_count * sizeof(uint64_t), cudaMemcpyDeviceToHost);
-
-  // // Before NTT
-  // for (auto i = 0; i < 7; i++) {
+  // for (auto i = 0; i < 4; i++) {
+  //   cout << fixed << setprecision(5) << destination_data[i] << ", ";
+  // }
+  // cout << "..., ";
+  // for (auto i = coeff_count - 4; i < coeff_count; i++) {
   //   cout << fixed << setprecision(5) << destination_data[i] << ", ";
   // }
   // cout << endl;
@@ -91,18 +81,14 @@ void MMEvaluator::multiply_power_of_x(PhantomCiphertext &encrypted, PhantomCiphe
     }
   }
 
-  // // After NTT
   // auto destination_data_2 = new uint64_t[encrypted_count * coeff_count * encrypted.coeff_modulus_size()];
-  // auto encrypted_data_2 = new uint64_t[encrypted_count * coeff_count * encrypted.coeff_modulus_size()];
   // cudaMemcpy(destination_data_2, destination.data(), encrypted_count * coeff_count * coeff_mod_count * sizeof(uint64_t), cudaMemcpyDeviceToHost);
-  // cudaMemcpy(encrypted_data_2, encrypted.data(), encrypted_count * coeff_count * coeff_mod_count * sizeof(uint64_t), cudaMemcpyDeviceToHost);
-
-  // for (auto i = 0; i < coeff_mod_count; i++) {
-  //   cout << fixed << setprecision(5) << destination_data_2[i * coeff_count] << ", ";
+  // for (auto i = 0; i < 4; i++) {
+  //   cout << fixed << setprecision(5) << destination_data_2[i] << ", ";
   // }
-  // cout << endl;
-  // for (auto i = 0; i < coeff_mod_count; i++) {
-  //   cout << fixed << setprecision(5) << encrypted_data_2[i * coeff_count + coeff_count - 1] << ", ";
+  // cout << "..., ";
+  // for (auto i = coeff_count - 4; i < coeff_count; i++) {
+  //   cout << fixed << setprecision(5) << destination_data_2[i] << ", ";
   // }
   // cout << endl;
 
@@ -157,20 +143,10 @@ void MMEvaluator::expand_encode(vector<double> &val, PhantomCiphertext &ct) {
   PhantomPlaintext p;
   p.resize(coeff_modulus_size, poly_modulus_degree * 2, stream);
 
-  // int block_size = blockDimGlb.x;
-  // int num_blocks = (poly_modulus_degree + block_size - 1) / block_size;
-
-  // auto gpu_val = make_cuda_auto_ptr<double>(val.size(), stream);
-
-  // cudaMemcpyAsync(gpu_val.get(), val.data(), val.size() * sizeof(double), cudaMemcpyHostToDevice, stream);
-
-  // expand_encode_kernel<<<num_blocks, block_size>>>(
-  //     gpu_val.get(), poly_modulus_degree, , p.data());
-
   cudaStreamSynchronize(stream);
 
-  uint64_t *p_data = new uint64_t[poly_modulus_degree * 2 * coeff_modulus_size];
-  cudaMemcpy(p_data, p.data(), poly_modulus_degree * 2 * coeff_modulus_size * sizeof(uint64_t), cudaMemcpyDeviceToHost);
+  uint64_t *p_data = new uint64_t[coeff_modulus_size * poly_modulus_degree * 2];
+  cudaMemcpy(p_data, p.data(), coeff_modulus_size * poly_modulus_degree * 2 * sizeof(uint64_t), cudaMemcpyDeviceToHost);
 
   for (auto i = 0; i < poly_modulus_degree; i++) {
     auto coeffd = std::round(val[i] * 10000000000);
@@ -191,7 +167,7 @@ void MMEvaluator::expand_encode(vector<double> &val, PhantomCiphertext &ct) {
   cudaMemcpy(p.data(), p_data, poly_modulus_degree * 2 * coeff_modulus_size * sizeof(uint64_t), cudaMemcpyHostToDevice);
 
   for (std::size_t i = 0; i < 2; i++) {
-    nwt_2d_radix8_forward_inplace(p.data(i * poly_modulus_degree), ckks->context->gpu_rns_tables(), coeff_modulus_size, i, stream);
+    nwt_2d_radix8_forward_inplace(p.data(i * poly_modulus_degree), ckks->context->gpu_rns_tables(), coeff_modulus_size, 0, stream);
   }
 
   p.set_chain_index(ckks->context->get_first_index());
@@ -219,8 +195,6 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
     b_compressed_cts.push_back(ct);
   }
 
-  cout << "1" << endl;
-
   auto timer = Timer();
   vector<PhantomCiphertext> b_expanded_cts;
   for (auto i = 0; i < b_compressed_cts.size(); i++) {
@@ -232,6 +206,17 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
   }
   timer.stop();
   cout << "Expanding time: " << timer.duration<seconds>() << " seconds" << endl;
+
+  vector<double> b0_expanded_output;
+  PhantomPlaintext b0_expanded;
+
+  ckks->decryptor.decrypt(b_expanded_cts[0], b0_expanded);
+  ckks->encoder.decode(b0_expanded, b0_expanded_output);
+
+  for (auto i = 0; i < 10; i++) {
+    cout << b0_expanded_output[i] << ", ";
+  }
+  cout << endl;
 
   PhantomPlaintext pt;
   PhantomCiphertext zero;
