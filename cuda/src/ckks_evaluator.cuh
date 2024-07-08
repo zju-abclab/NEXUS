@@ -241,7 +241,6 @@ class Evaluator {
   inline void transform_from_ntt(const PhantomCiphertext &ct, PhantomCiphertext &dest) {
     dest = ct;
     transform_from_ntt_inplace(dest);
-    cudaStreamSynchronize(phantom::util::global_variables::default_stream->get_stream());
   }
 
   inline void transform_from_ntt_inplace(PhantomCiphertext &ct) {
@@ -257,19 +256,15 @@ class Evaluator {
       nwt_2d_radix8_backward_inplace(
           ct.data() + i * ct.poly_modulus_degree() * ct.coeff_modulus_size(),
           context->gpu_rns_tables(), coeff_modulus_size, 0, stream);
-      rns_tool.base_Ql().compose_array(ct.data() + i * ct.poly_modulus_degree() * ct.coeff_modulus_size(),
-                                       ct.data() + i * ct.poly_modulus_degree() * ct.coeff_modulus_size(),
-                                       ct.poly_modulus_degree(), 1, stream);
     }
 
     ct.set_ntt_form(false);
-    cudaStreamSynchronize(stream);
+    // cudaStreamSynchronize(stream);
   }
 
   inline void transform_to_ntt(const PhantomCiphertext &ct, PhantomCiphertext &dest) {
     dest = ct;
     transform_to_ntt_inplace(dest);
-    cudaStreamSynchronize(phantom::util::global_variables::default_stream->get_stream());
   }
 
   inline void transform_to_ntt_inplace(PhantomCiphertext &ct) {
@@ -287,13 +282,10 @@ class Evaluator {
     }
 
     ct.set_ntt_form(true);
-    cudaStreamSynchronize(stream);
+    // cudaStreamSynchronize(stream);
   }
 
-  inline void negacyclic_shift_poly_coeffmod(const std::uint64_t *poly, size_t coeff_count, size_t shift, const Modulus &modulus, std::uint64_t *result) {
-    int block_size = blockDimGlb.x;
-    int num_blocks = coeff_count / block_size;
-
+  inline void negacyclic_shift_poly_coeffmod(const std::uint64_t *poly, size_t poly_degree, size_t shift, DModulus *moduli, size_t coeff_mod_size, std::uint64_t *result) {
     // cout << block_size << endl;
 
     // if (shift == 0) {
@@ -312,8 +304,11 @@ class Evaluator {
     //   }
     // }
 
-    negacyclic_shift_poly_coeffmod_kernel<<<num_blocks, block_size>>>(poly, coeff_count, shift, modulus.value(), result);
-    cudaStreamSynchronize(phantom::util::global_variables::default_stream->get_stream());
+    const auto &stream = phantom::util::global_variables::default_stream->get_stream();
+    uint64_t gridDimGlb = poly_degree * coeff_mod_size / blockDimGlb.x;
+
+    negacyclic_shift_poly_coeffmod_kernel<<<gridDimGlb, blockDimGlb, 0, stream>>>(poly, poly_degree, shift, moduli, coeff_mod_size, result);
+    // cudaStreamSynchronize(phantom::util::global_variables::default_stream->get_stream());
   }
 
   // {
@@ -441,9 +436,9 @@ class Decryptor {
     decryptor->decrypt(*context, ct, plain);
   }
 
-  inline void create_galois_keys_from_steps(vector<int> &steps, PhantomGaloisKey &galois_keys) {
-    galois_keys = decryptor->create_galois_keys_from_steps(*context, steps);
-  }
+  // inline void create_galois_keys_from_steps(vector<int> &steps, PhantomGaloisKey &galois_keys) {
+  //   galois_keys = decryptor->create_galois_keys_from_steps(*context, steps);
+  // }
 };
 
 class CKKSEvaluator {

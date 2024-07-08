@@ -42,7 +42,6 @@ apply_galois_permutation(uint64_t *dst, const uint64_t *src, const DModulus *mod
 [[nodiscard]] std::uint32_t PhantomGaloisTool::get_elt_from_step(int step) const {
     auto n = static_cast<uint32_t>(coeff_count_);
 
-    std::cout << n << std::endl;
     uint32_t m32 = n * 2;
     auto m = static_cast<uint64_t>(m32);
 

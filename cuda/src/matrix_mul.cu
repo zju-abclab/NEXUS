@@ -53,6 +53,7 @@ void MMEvaluator::multiply_power_of_x(PhantomCiphertext &encrypted, PhantomCiphe
 
   auto coeff_mod_count = param.coeff_modulus().size();
   auto coeff_count = ckks->degree;
+  auto base_rns = context->gpu_rns_tables().modulus();
   auto encrypted_count = encrypted.size();
 
   ckks->evaluator.transform_from_ntt_inplace(encrypted);
@@ -71,14 +72,14 @@ void MMEvaluator::multiply_power_of_x(PhantomCiphertext &encrypted, PhantomCiphe
   // cout << endl;
 
   for (int i = 0; i < encrypted_count; i++) {
-    for (int j = 0; j < coeff_mod_count; j++) {
-      ckks->evaluator.negacyclic_shift_poly_coeffmod(
-          encrypted.data(i) + (j * coeff_count),
-          coeff_count,
-          index,
-          param.coeff_modulus()[j],
-          destination.data(i) + (j * coeff_count));
-    }
+    // TODO: fix me
+    ckks->evaluator.negacyclic_shift_poly_coeffmod(
+        encrypted.data(i),
+        coeff_count,
+        index,
+        base_rns,
+        coeff_mod_count,
+        destination.data(i));
   }
 
   // auto destination_data_2 = new uint64_t[encrypted_count * coeff_count * encrypted.coeff_modulus_size()];
@@ -136,6 +137,7 @@ void MMEvaluator::expand_encode(vector<double> &val, PhantomCiphertext &ct) {
   auto param = context_data.parms();
   auto coeff_modulus_size = param.coeff_modulus().size();
   auto poly_modulus_degree = ckks->degree;
+  auto moduli = ckks->context->gpu_rns_tables().modulus();
 
   const phantom::util::cuda_stream_wrapper &stream_wrapper = *phantom::util::global_variables::default_stream;
   const auto &stream = stream_wrapper.get_stream();
@@ -143,29 +145,16 @@ void MMEvaluator::expand_encode(vector<double> &val, PhantomCiphertext &ct) {
   PhantomPlaintext p;
   p.resize(coeff_modulus_size, poly_modulus_degree * 2, stream);
 
-  cudaStreamSynchronize(stream);
+  // Copy vector values to the GPU
+  auto val_gpu = make_cuda_auto_ptr<double>(val.size(), stream);
+  cudaMemcpy(val_gpu.get(), val.data(), val.size(), cudaMemcpyHostToDevice);
 
-  uint64_t *p_data = new uint64_t[coeff_modulus_size * poly_modulus_degree * 2];
-  cudaMemcpy(p_data, p.data(), coeff_modulus_size * poly_modulus_degree * 2 * sizeof(uint64_t), cudaMemcpyDeviceToHost);
+  // Execute expand kernel
+  uint64_t block_size = blockDimGlb.x;
+  int num_blocks = (poly_modulus_degree + block_size - 1) / block_size;
+  expand_encode_kernel<<<num_blocks, block_size, 0, stream>>>(val_gpu.get(), poly_modulus_degree, moduli, p.data());
 
-  for (auto i = 0; i < poly_modulus_degree; i++) {
-    auto coeffd = std::round(val[i] * 10000000000);
-    bool is_negative = std::signbit(coeffd);
-    auto coeffu = static_cast<std::uint64_t>(std::fabs(coeffd));
-    if (is_negative) {
-      for (std::size_t j = 0; j < 2; j++) {
-        p_data[i + (j * poly_modulus_degree)] = negate_uint_mod(
-            barrett_reduce_64(coeffu, param.coeff_modulus()[j]), param.coeff_modulus()[j]);
-      }
-    } else {
-      for (std::size_t j = 0; j < 2; j++) {
-        p_data[i + (j * poly_modulus_degree)] = barrett_reduce_64(coeffu, param.coeff_modulus()[j]);
-      }
-    }
-  }
-
-  cudaMemcpy(p.data(), p_data, poly_modulus_degree * 2 * coeff_modulus_size * sizeof(uint64_t), cudaMemcpyHostToDevice);
-
+  // To NTT
   for (std::size_t i = 0; i < 2; i++) {
     nwt_2d_radix8_forward_inplace(p.data(i * poly_modulus_degree), ckks->context->gpu_rns_tables(), coeff_modulus_size, 0, stream);
   }
@@ -200,7 +189,7 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
   for (auto i = 0; i < b_compressed_cts.size(); i++) {
     vector<PhantomCiphertext> temp_cts =
         expand_ciphertext(b_compressed_cts[i], ckks->degree, *ckks->galois_keys, ckks->rots);
-    cout << "Expanding..." << endl;
+    // cout << "Expanding..." << endl;
     b_expanded_cts.insert(
         b_expanded_cts.end(), make_move_iterator(temp_cts.begin()), make_move_iterator(temp_cts.end()));
   }

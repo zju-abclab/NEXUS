@@ -44,7 +44,7 @@ int main() {
   long scale_factor = 2;
   long inverse_deg = 1;
 
-  long logN = 16;
+  long logN = 15;
   long loge = 10;
 
   long logn = 14;
@@ -57,8 +57,6 @@ int main() {
   int log_special_prime = 51;
 
   int secret_key_hamming_weight = 192;
-
-  int log_integer_part = logq - logp - loge + 5;
 
   // int remaining_level = 14; // Calculation required
   int remaining_level = 16;  // Calculation required
@@ -91,7 +89,7 @@ int main() {
   PhantomSecretKey secret_key(context);
   PhantomPublicKey public_key = secret_key.gen_publickey(context);
   PhantomRelinKey relin_keys = secret_key.gen_relinkey(context);
-  PhantomGaloisKey galois_keys = secret_key.create_galois_keys(context);
+  PhantomGaloisKey galois_keys;
 
   PhantomCKKSEncoder encoder(context);
 
@@ -110,33 +108,34 @@ int main() {
       scale_factor,
       inverse_deg,
       ckks_evaluator);
-  Bootstrapper bootstrapper_2(
-      loge,
-      logn_2,
-      logN - 1,
-      total_level,
-      scale,
-      boundary_K,
-      deg,
-      scale_factor,
-      inverse_deg,
-      ckks_evaluator);
-  Bootstrapper bootstrapper_3(
-      loge,
-      logn_3,
-      logN - 1,
-      total_level,
-      scale,
-      boundary_K,
-      deg,
-      scale_factor,
-      inverse_deg,
-      ckks_evaluator);
+  // Bootstrapper bootstrapper_2(
+  //     loge,
+  //     logn_2,
+  //     logN - 1,
+  //     total_level,
+  //     scale,
+  //     boundary_K,
+  //     deg,
+  //     scale_factor,
+  //     inverse_deg,
+  //     ckks_evaluator);
+  // Bootstrapper bootstrapper_3(
+  //     loge,
+  //     logn_3,
+  //     logN - 1,
+  //     total_level,
+  //     scale,
+  //     boundary_K,
+  //     deg,
+  //     scale_factor,
+  //     inverse_deg,
+  //     ckks_evaluator);
 
   cout << "Generating Optimal Minimax Polynomials..." << endl;
+  cout << "-1" << endl;
   bootstrapper.prepare_mod_polynomial();
-  bootstrapper_2.prepare_mod_polynomial();
-  bootstrapper_3.prepare_mod_polynomial();
+  // bootstrapper_2.prepare_mod_polynomial();
+  // bootstrapper_3.prepare_mod_polynomial();
   cout << "Adding Bootstrapping Keys..." << endl;
   // bootstrapper.addBootKeys_3_other_slots(gal_keys, slot_vec);
   vector<int> gal_steps_vector;
@@ -145,18 +144,21 @@ int main() {
     gal_steps_vector.push_back((1 << i));
   }
   bootstrapper.addLeftRotKeys_Linear_to_vector_3(gal_steps_vector);
-  bootstrapper_2.addLeftRotKeys_Linear_to_vector_3(gal_steps_vector);
-  bootstrapper_3.addLeftRotKeys_Linear_to_vector_3(gal_steps_vector);
+  cout << "-2" << endl;
+  // bootstrapper_2.addLeftRotKeys_Linear_to_vector_3(gal_steps_vector);
+  // bootstrapper_3.addLeftRotKeys_Linear_to_vector_3(gal_steps_vector);
   ckks_evaluator.decryptor.create_galois_keys_from_steps(gal_steps_vector, *(ckks_evaluator.galois_keys));
+  cout << "-3" << endl;
 
   bootstrapper.slot_vec.push_back(logn);
-  bootstrapper_2.slot_vec.push_back(logn_2);
-  bootstrapper_3.slot_vec.push_back(logn_3);
+  // bootstrapper_2.slot_vec.push_back(logn_2);
+  // bootstrapper_3.slot_vec.push_back(logn_3);
 
   cout << "Generating Linear Transformation Coefficients..." << endl;
   bootstrapper.generate_LT_coefficient_3();
-  bootstrapper_2.generate_LT_coefficient_3();
-  bootstrapper_3.generate_LT_coefficient_3();
+  cout << "-4" << endl;
+  // bootstrapper_2.generate_LT_coefficient_3();
+  // bootstrapper_3.generate_LT_coefficient_3();
 
   double tot_err = 0, mean_err;
   size_t iterations = 1;
@@ -202,10 +204,10 @@ int main() {
 
     if (_ == 0)
       bootstrapper.bootstrap_3(rtn, cipher);
-    else if (_ == 1)
-      bootstrapper_2.bootstrap_3(rtn, cipher);
-    else if (_ == 2)
-      bootstrapper_3.bootstrap_3(rtn, cipher);
+    // else if (_ == 1)
+      // bootstrapper_2.bootstrap_3(rtn, cipher);
+    // else if (_ == 2)
+      // bootstrapper_3.bootstrap_3(rtn, cipher);
 
     duration<double> sec = system_clock::now() - start;
     cout << "bootstrapping time : " << sec.count() << "s" << endl;

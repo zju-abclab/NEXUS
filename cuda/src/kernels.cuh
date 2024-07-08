@@ -7,9 +7,9 @@ using namespace phantom;
 using namespace phantom::arith;
 
 __global__ void negacyclic_shift_poly_coeffmod_kernel(
-    const uint64_t *d_poly, size_t coeff_count, size_t shift, uint64_t modulus_value, uint64_t *d_result);
+    const uint64_t *d_poly, size_t poly_degree, size_t shift, DModulus *modulus, size_t coeff_mod_size, uint64_t *d_result);
 
-// __global__ void expand_encode_kernel(const double *d_val, size_t poly_modulus_degree, Modulus *d_coeff_modulus, uint64_t *d_p);
+__global__ void expand_encode_kernel(const double *d_val, size_t poly_modulus_degree, DModulus *modulus, uint64_t *d_p);
 
 // __global__ void negate_uint_mod_kernel(uint64_t operand, uint64_t modulus_value, uint64_t *result);
 

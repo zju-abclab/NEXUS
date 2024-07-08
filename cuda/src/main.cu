@@ -53,67 +53,70 @@ void MM_test() {
   CKKSEvaluator ckks_evaluator(context, public_key, secret_key, encoder, relin_keys, galois_keys, SCALE);
   MMEvaluator mme(ckks_evaluator);
 
-  // std::vector<std::vector<double>> matrix_4096x768 = mme.read_matrix("../../data/input/matrixmul_input_m_128_n_768_k_64_batch_128.txt", 4096, 768);
-  // std::vector<std::vector<double>> matrix_768x64 = mme.read_matrix("../../data/input/matrix_input_n_768_k_64.txt", 768, 64);
+  std::vector<std::vector<double>> matrix_4096x768 = mme.read_matrix("../../data/input/matrixmul_input_m_128_n_768_k_64_batch_128.txt", 4096, 768);
+  std::vector<std::vector<double>> matrix_768x64 = mme.read_matrix("../../data/input/matrix_input_n_768_k_64.txt", 768, 64);
 
-  // vector<PhantomCiphertext> res;
+  vector<PhantomCiphertext> res;
 
-  // auto matrix_4096x768_T = mme.transpose_matrix(matrix_4096x768);
-  // auto matrix_768x64_T = mme.transpose_matrix(matrix_768x64);
+  auto matrix_4096x768_T = mme.transpose_matrix(matrix_4096x768);
+  auto matrix_768x64_T = mme.transpose_matrix(matrix_768x64);
 
-  // std::vector<std::vector<double>> row_pack;
+  std::vector<std::vector<double>> row_pack;
 
-  // std::vector<double> row_ct(4096, 0.0);
-  // for (auto i = 0; i < 64 * 768; i++) {
-  //   int row = i / 768;
-  //   int col = i % 768;
-  //   row_ct[i % 4096] = matrix_768x64_T[row][col];
-  //   if (i % 4096 == 4095) {
-  //     row_pack.push_back(row_ct);
-  //   }
-  // }
-
-  // mme.matrix_mul(matrix_4096x768_T, row_pack, res);
-
-  // std::vector<std::vector<double>> matrix_4096x64 = mme.read_matrix("../../data/calibration/matrix_output_m_128_k_64_batch_128.txt", 4096, 64);
-  // auto matrix_4096x64_T = mme.transpose_matrix(matrix_4096x64);
-
-  // double average_err = 0.0;
-
-  // // err of the first col
-  // PhantomPlaintext res_pt;
-  // vector<double> mm_res;
-  // ckks_evaluator.decryptor.decrypt(res[0], res_pt);
-  // ckks_evaluator.encoder.decode(res_pt, mm_res);
-  // for (auto i = 0; i < 4096; i++) {
-  //   average_err += fabs(mm_res[i] / 2.0 - matrix_4096x64_T[0][i]);
-  //   // printf("%+.10lf %+.10lf\n", mm_res[i] / 2.0, matrix_4096x64_T[0][i]);
-  // }
-  // std::cout << "average_err: " << average_err / 4096.0 << std::endl;
-
-  vector<double> input = {1.0, 2.0, 3.0, 4.0, 5.0};
-  vector<double> output;
-  vector<double> temp;
-
-  PhantomPlaintext input_plain;
-  PhantomCiphertext input_cipher;
-  PhantomPlaintext temp_plain;
-  PhantomCiphertext temp_cipher;
-  PhantomCiphertext output_cipher;
-  PhantomPlaintext output_plain;
-
-  ckks_evaluator.encoder.encode(input, SCALE, input_plain);
-  ckks_evaluator.encryptor.encrypt(input_plain, input_cipher);
-
-  mme.multiply_power_of_x(input_cipher, output_cipher, 1);
-
-  ckks_evaluator.decryptor.decrypt(output_cipher, output_plain);
-  ckks_evaluator.encoder.decode(output_plain, output);
-  
-  for (auto i = 0; i < 7; i++) {
-    cout << fixed << setprecision(5) << output[i] << ", ";
+  std::vector<double> row_ct(4096, 0.0);
+  for (auto i = 0; i < 64 * 768; i++) {
+    int row = i / 768;
+    int col = i % 768;
+    row_ct[i % 4096] = matrix_768x64_T[row][col];
+    if (i % 4096 == 4095) {
+      row_pack.push_back(row_ct);
+    }
   }
-  cout << endl;
+
+  auto timer = Timer();
+  mme.matrix_mul(matrix_4096x768_T, row_pack, res);
+  timer.stop();
+  cout << "[MatMul] 4096x768 x 768x64 takes: " << timer.duration<milliseconds>() << " milliseconds" << endl;
+
+  std::vector<std::vector<double>> matrix_4096x64 = mme.read_matrix("../../data/calibration/matrix_output_m_128_k_64_batch_128.txt", 4096, 64);
+  auto matrix_4096x64_T = mme.transpose_matrix(matrix_4096x64);
+
+  double average_err = 0.0;
+
+  // err of the first col
+  PhantomPlaintext res_pt;
+  vector<double> mm_res;
+  ckks_evaluator.decryptor.decrypt(res[0], res_pt);
+  ckks_evaluator.encoder.decode(res_pt, mm_res);
+  for (auto i = 0; i < 4096; i++) {
+    average_err += fabs(mm_res[i] / 2.0 - matrix_4096x64_T[0][i]);
+    // printf("%+.10lf %+.10lf\n", mm_res[i] / 2.0, matrix_4096x64_T[0][i]);
+  }
+  std::cout << "average_err: " << average_err / 4096.0 << std::endl;
+
+  // vector<double> input = {1.0, 2.0, 3.0, 4.0, 5.0};
+  // vector<double> output;
+  // vector<double> temp;
+
+  // PhantomPlaintext input_plain;
+  // PhantomCiphertext input_cipher;
+  // PhantomPlaintext temp_plain;
+  // PhantomCiphertext temp_cipher;
+  // PhantomCiphertext output_cipher;
+  // PhantomPlaintext output_plain;
+
+  // ckks_evaluator.encoder.encode(input, SCALE, input_plain);
+  // ckks_evaluator.encryptor.encrypt(input_plain, input_cipher);
+
+  // mme.multiply_power_of_x(input_cipher, output_cipher, 1);
+
+  // ckks_evaluator.decryptor.decrypt(output_cipher, output_plain);
+  // ckks_evaluator.encoder.decode(output_plain, output);
+
+  // for (auto i = 0; i < 7; i++) {
+  //   cout << fixed << setprecision(5) << output[i] << ", ";
+  // }
+  // cout << endl;
 }
 
 int main() {

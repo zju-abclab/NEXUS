@@ -2953,7 +2953,12 @@ void Bootstrapper::modraise_inplace(PhantomCiphertext &cipher) {
 
   const auto &stream = (*phantom::util::global_variables::default_stream).get_stream();
 
-  rns_tool.modup(cipher.data(), cipher.data(), ckks->context->gpu_rns_tables(), scheme, stream);
+  PhantomCiphertext cipher_modup = cipher;
+  rns_tool.modup(cipher_modup.data(), cipher.data(), ckks->context->gpu_rns_tables(), scheme, stream);
+
+  cudaFree(cipher.data());
+
+  cipher = cipher_modup;
 }
 
 void Bootstrapper::bootstrap_sparse(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher) {

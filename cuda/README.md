@@ -22,6 +22,6 @@ This should produce a binary file `bin/main` under `build` directory.
 ## TO-DO
 - Bootstrapping
   - `Bootstrapper::modraise_inplace`
-- Matrix Multiplication
-  - `transform_from_ntt_inplace` (see `moddown_from_NTT`)
-  - `transform_to_ntt_inplace`
+- Matrix Multiplication (on hold)
+  - `transform_from_ntt_inplace` (see `moddown_from_NTT`, might need to use `nwt_2d_radix8_backward_scale`)
+  - `transform_to_ntt_inplace` (might need to use `nwt_2d_radix8_forward_inplace_include_special_mod`)
