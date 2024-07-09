@@ -44,12 +44,12 @@ int main() {
   long scale_factor = 2;
   long inverse_deg = 1;
 
-  long logN = 15;
+  long logN = 15; // 16 -> 15
   long loge = 10;
 
-  long logn = 14;
-  long logn_2 = 13;
-  long logn_3 = 12;
+  long logn = 13; // 14 -> 13
+  // long logn_2 = 13;
+  // long logn_3 = 12;
   long sparse_slots = (1 << logn);
 
   int logp = 46;
@@ -80,9 +80,7 @@ int main() {
   parms.set_poly_modulus_degree(poly_modulus_degree);
   parms.set_coeff_modulus(CoeffModulus::Create(poly_modulus_degree, coeff_bit_vec));
   double scale = pow(2.0, logp);
-  // modified SEAL
   parms.set_secret_key_hamming_weight(secret_key_hamming_weight);
-  // parms.set_sparse_slots(sparse_slots);
 
   PhantomContext context(parms);
 
@@ -176,10 +174,10 @@ int main() {
   for (size_t _ = 0; _ < iterations; _++) {
     if (_ == 0)
       sparse_slots = (1 << logn);
-    else if (_ == 1)
-      sparse_slots = (1 << logn_2);
-    else if (_ == 2)
-      sparse_slots = (1 << logn_3);
+    // else if (_ == 1)
+    // sparse_slots = (1 << logn_2);
+    // else if (_ == 2)
+    // sparse_slots = (1 << logn_3);
 
     cout << _ << "-th iteration : sparse_slots = " << sparse_slots << endl;
 
@@ -197,7 +195,6 @@ int main() {
     PhantomCiphertext rtn;
 
     ckks_evaluator.decryptor.decrypt(cipher, plain);
-    // encoder.decode(plain, before, sparse_slots);
     ckks_evaluator.encoder.decode(plain, before);
 
     auto start = system_clock::now();
@@ -205,9 +202,9 @@ int main() {
     if (_ == 0)
       bootstrapper.bootstrap_3(rtn, cipher);
     // else if (_ == 1)
-      // bootstrapper_2.bootstrap_3(rtn, cipher);
+    // bootstrapper_2.bootstrap_3(rtn, cipher);
     // else if (_ == 2)
-      // bootstrapper_3.bootstrap_3(rtn, cipher);
+    // bootstrapper_3.bootstrap_3(rtn, cipher);
 
     duration<double> sec = system_clock::now() - start;
     cout << "bootstrapping time : " << sec.count() << "s" << endl;
@@ -217,7 +214,6 @@ int main() {
     rtn = ckks_evaluator.sgn_eval(rtn, 2, 2);
 
     ckks_evaluator.decryptor.decrypt(rtn, plain);
-    // encoder.decode(plain, after, sparse_slots);
     ckks_evaluator.encoder.decode(plain, after);
 
     for (long i = 0; i < sparse_slots; i++) {
@@ -230,30 +226,17 @@ int main() {
 
     mean_err = 0;
     for (long i = 0; i < sparse_slots; i++) {
-      // cout << i << "m: " << recover_vefore(before[i].real(), boundary_K) << "\td: " << after[i].real()<< endl;
-
       if (i < 10)
         cout << i << " " << before[i] << "<---->" << after[i] << endl;
-
       mean_err += abs(before[i] - after[i]);
-      // if (file.is_open())
-      // {
-      //     file << before[i].real() - after[i].real() << ","
-      //      << before[i].imag() - after[i].imag() << "," << flush;
-      // }
     }
     mean_err /= sparse_slots;
     cout << "Absolute mean of error: " << mean_err << endl;
     tot_err += mean_err;
   }
-  tot_err /= iterations;
 
-  // if (file.is_open())
-  // {
-  //     file << endl;
-  // }
+  tot_err /= iterations;
   cout << " mean error: " << tot_err << endl;
-  // file.close();
 
   return 0;
 }

@@ -53,8 +53,6 @@ apply_galois_permutation(uint64_t *dst, const uint64_t *src, const DModulus *mod
         bool sign = step < 0;
         auto pos_step = static_cast<uint32_t>(abs(step));
 
-        cout << pos_step << endl;
-
         if (pos_step >= (n >> 1)) {
             throw invalid_argument("step count too large");
         }

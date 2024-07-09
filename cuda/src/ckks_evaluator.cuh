@@ -396,16 +396,25 @@ class Evaluator {
   }
 
   template <typename T, typename = std::enable_if_t<std::is_same<std::remove_cv_t<T>, double>::value || std::is_same<std::remove_cv_t<T>, std::complex<double>>::value>>
-  inline void multiply_vector_reduced_error(PhantomCiphertext &ct, const std::vector<T> &value, PhantomCiphertext &dest) {
+  inline void multiply_vector_reduced_error(PhantomCiphertext &ct, std::vector<T> &value, PhantomCiphertext &dest) {
     dest = ct;
     multiply_vector_inplace_reduced_error(dest, value);
   }
 
-  template <typename T, typename = std::enable_if_t<std::is_same<std::remove_cv_t<T>, double>::value || std::is_same<std::remove_cv_t<T>, std::complex<double>>::value>>
-  inline void multiply_vector_inplace_reduced_error(PhantomCiphertext &ct, const std::vector<T> &value) {
+  inline void multiply_vector_inplace_reduced_error(PhantomCiphertext &ct, vector<complex<double>> &values) {
     PhantomPlaintext plain;
 
-    encoder->encode(*context, value, ct.scale(), plain);
+    values.resize(encoder->message_length(), 0.0 + 0.0i);
+    encoder->encode(*context, values, ct.scale(), plain);
+    mod_switch_to_inplace(plain, ct.params_id());
+    multiply_plain_inplace(ct, plain);
+  }
+
+  inline void multiply_vector_inplace_reduced_error(PhantomCiphertext &ct, vector<double> &values) {
+    PhantomPlaintext plain;
+
+    values.resize(encoder->message_length(), 0.0);
+    encoder->encode(*context, values, ct.scale(), plain);
     mod_switch_to_inplace(plain, ct.params_id());
     multiply_plain_inplace(ct, plain);
   }
@@ -436,9 +445,9 @@ class Decryptor {
     decryptor->decrypt(*context, ct, plain);
   }
 
-  // inline void create_galois_keys_from_steps(vector<int> &steps, PhantomGaloisKey &galois_keys) {
-  //   galois_keys = decryptor->create_galois_keys_from_steps(*context, steps);
-  // }
+  inline void create_galois_keys_from_steps(vector<int> &steps, PhantomGaloisKey &galois_keys) {
+    galois_keys = decryptor->create_galois_keys_from_steps(*context, steps);
+  }
 };
 
 class CKKSEvaluator {

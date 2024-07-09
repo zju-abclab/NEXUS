@@ -533,24 +533,26 @@ PhantomGaloisKey PhantomSecretKey::create_galois_keys(const PhantomContext &cont
 }
 
 PhantomGaloisKey PhantomSecretKey::create_galois_keys_from_elts(PhantomContext &context, const std::vector<uint32_t> &elts) const {
-    int log_n = phantom::arith::get_power_of_two(context.poly_degree_);
     const auto &s = phantom::util::global_variables::default_stream->get_stream();
+
+    int log_n = phantom::arith::get_power_of_two(context.poly_degree_);
     bool is_bfv = (context.first_context_data().parms().scheme() == phantom::scheme_type::bfv);
 
     context.key_galois_tool_ = std::make_unique<PhantomGaloisTool>(elts, log_n, s, is_bfv);
 
-    create_galois_keys(context);
+    return create_galois_keys(context);
 }
 
 PhantomGaloisKey PhantomSecretKey::create_galois_keys_from_steps(PhantomContext &context, const std::vector<int> &steps) const {
+    const auto &s = phantom::util::global_variables::default_stream->get_stream();
+    
     auto elts = context.key_galois_tool_->get_elts_from_steps(steps);
     int log_n = phantom::arith::get_power_of_two(context.poly_degree_);
-    const auto &s = phantom::util::global_variables::default_stream->get_stream();
     bool is_bfv = (context.first_context_data().parms().scheme() == phantom::scheme_type::bfv);
     
     context.key_galois_tool_ = std::make_unique<PhantomGaloisTool>(elts, log_n, s, is_bfv);
 
-    create_galois_keys(context);
+    return create_galois_keys(context);
 }
 
 void PhantomSecretKey::encrypt_symmetric(const PhantomContext &context, const PhantomPlaintext &plain,
