@@ -2944,7 +2944,7 @@ void Bootstrapper::coefftoslot_full_mul_first(PhantomCiphertext &rtncipher1, Pha
   ckks->evaluator.add_reduced_error(tmpct2, tmpct4, rtncipher2);
 }
 
-// TODO: Fix this
+// TODO: Verify its correctness
 void Bootstrapper::modraise_inplace(PhantomCiphertext &cipher) {
   if (cipher.size() != 2) {
     throw invalid_argument("Ciphertexts of size 2 are supported only!");
@@ -3155,9 +3155,7 @@ void Bootstrapper::bootstrap_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphe
     PhantomCiphertext rotrtncipher;
     ckks->evaluator.rotate_vector(rtncipher, 1, *(ckks->galois_keys), rotrtncipher);
     ckks->evaluator.add_inplace_reduced_error(rtncipher, rotrtncipher);
-  }
-
-  else {
+  } else {
     std::cout << "Slottocoeff..." << endl;
     slottocoeff_3(rtncipher, modrtn);
   }

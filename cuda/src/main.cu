@@ -15,27 +15,31 @@ using namespace phantom::arith;
 using namespace phantom::util;
 using namespace nexus;
 
+int TEST_TARGET_IDX = 0;
+
 size_t N = 1ULL << 16;
 size_t MM_LOG_N = 13;
 size_t MM_N = 1ULL << MM_LOG_N;
 
 double SCALE = pow(2.0, 40);
 
-string TEST_TARGET = "MatMul";
-vector<int> COEFF_MODULI =
-    {60, 40, 60}  // MatMul
-// {58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58}         // Softmax
-// {58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58} // LayerNorm
-// {58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58} // GELU
-// {58, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50,
-//  50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 55}             // 1763-bit
-;
+vector<string> TEST_TARGETS = {"MatMul", "SoftMax", "LayerNorm", "GELU"};
+vector<vector<int>> COEFF_MODULI =
+    {
+        {60, 40, 40, 40, 40, 40, 40, 40, 60},                                                                      // MatMul (0)
+        {58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58},          // SoftMax (1)
+        {58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58},  // LayerNorm (2)
+        {58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58}   // GELU (3)
+};
+
+string TEST_TARGET = TEST_TARGETS[TEST_TARGET_IDX];
+vector<int> TEST_COEFF_MODULI = COEFF_MODULI[TEST_TARGET_IDX];
 
 void MM_test() {
   EncryptionParameters parms(scheme_type::ckks);
 
   parms.set_poly_modulus_degree(MM_N);
-  parms.set_coeff_modulus(CoeffModulus::Create(MM_N, COEFF_MODULI));
+  parms.set_coeff_modulus(CoeffModulus::Create(MM_N, TEST_COEFF_MODULI));
 
   PhantomContext context(parms);
 
@@ -49,8 +53,10 @@ void MM_test() {
   }
   PhantomGaloisKey galois_keys = secret_key.create_galois_keys_from_elts(context, rots);
 
+  // PhantomGaloisKey galois_keys = secret_key.create_galois_keys(context);
+
   PhantomCKKSEncoder encoder(context);
-  CKKSEvaluator ckks_evaluator(context, public_key, secret_key, encoder, relin_keys, galois_keys, SCALE);
+  CKKSEvaluator ckks_evaluator(&context, &public_key, &secret_key, &encoder, &relin_keys, &galois_keys, SCALE);
   MMEvaluator mme(ckks_evaluator);
 
   std::vector<std::vector<double>> matrix_4096x768 = mme.read_matrix("../../data/input/matrixmul_input_m_128_n_768_k_64_batch_128.txt", 4096, 768);
@@ -94,26 +100,34 @@ void MM_test() {
   }
   std::cout << "average_err: " << average_err / 4096.0 << std::endl;
 
-  // vector<double> input = {1.0, 2.0, 3.0, 4.0, 5.0};
+  // vector<double> input1 = {1.0, 2.0, 3.0, 4.0, 5.0};
+  // vector<double> input2 = {1.0, 2.0, 3.0, 4.0, 5.0};
   // vector<double> output;
-  // vector<double> temp;
 
-  // PhantomPlaintext input_plain;
-  // PhantomCiphertext input_cipher;
-  // PhantomPlaintext temp_plain;
-  // PhantomCiphertext temp_cipher;
+  // PhantomPlaintext input1_plain;
+  // PhantomCiphertext input1_cipher;
+  // PhantomPlaintext input2_plain;
+  // PhantomCiphertext input2_cipher;
   // PhantomCiphertext output_cipher;
   // PhantomPlaintext output_plain;
 
-  // ckks_evaluator.encoder.encode(input, SCALE, input_plain);
-  // ckks_evaluator.encryptor.encrypt(input_plain, input_cipher);
+  // ckks_evaluator.encoder.encode(input1, SCALE, input1_plain);
+  // ckks_evaluator.encryptor.encrypt(input1_plain, input1_cipher);
 
-  // mme.multiply_power_of_x(input_cipher, output_cipher, 1);
+  // // ckks_evaluator.encoder.encode(input2, SCALE, input2_plain);
+  // // ckks_evaluator.encryptor.encrypt(input2_plain, input2_cipher);
 
-  // ckks_evaluator.decryptor.decrypt(output_cipher, output_plain);
+  // // ckks_evaluator.evaluator.multiply(input1_cipher, input2_cipher, output_cipher);
+  // // ckks_evaluator.evaluator.relinearize_inplace(output_cipher, relin_keys);
+  // // ckks_evaluator.evaluator.rescale_to_next_inplace(output_cipher);
+
+  // ckks_evaluator.evaluator.rotate_vector_inplace(input1_cipher, -2, *ckks_evaluator.galois_keys);
+  // // ckks_evaluator.evaluator.add(input1_cipher, input2_cipher, output_cipher);
+
+  // ckks_evaluator.decryptor.decrypt(input1_cipher, output_plain);
   // ckks_evaluator.encoder.decode(output_plain, output);
 
-  // for (auto i = 0; i < 7; i++) {
+  // for (auto i = 0; i < 5; i++) {
   //   cout << fixed << setprecision(5) << output[i] << ", ";
   // }
   // cout << endl;
@@ -131,7 +145,7 @@ int main() {
   EncryptionParameters params(scheme_type::ckks);
 
   params.set_poly_modulus_degree(N);
-  params.set_coeff_modulus(CoeffModulus::Create(N, COEFF_MODULI));
+  params.set_coeff_modulus(CoeffModulus::Create(N, TEST_COEFF_MODULI));
 
   PhantomContext context(params);
 
@@ -142,7 +156,7 @@ int main() {
 
   PhantomCKKSEncoder encoder(context);
 
-  CKKSEvaluator ckks_evaluator(context, public_key, secret_key, encoder, relin_keys, galois_keys, SCALE);
+  CKKSEvaluator ckks_evaluator(&context, &public_key, &secret_key, &encoder, &relin_keys, &galois_keys, SCALE);
 
   vector<double> input;
   PhantomPlaintext plain_input;

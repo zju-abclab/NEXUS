@@ -383,8 +383,8 @@ std::vector<size_t> adjust_sk_hamming_weight(uint64_t *arr, size_t arr_size, siz
 
 // Newly added
 void adjust_sk_hamming_weight(uint64_t *arr, size_t hamming_weight, std::vector<size_t> non_zero_indices) {
-    size_t elementsToZero = non_zero_indices.size() - hamming_weight;
-    for (size_t i = 0; i < elementsToZero; ++i) {
+    size_t elements_to_zero = non_zero_indices.size() - hamming_weight;
+    for (size_t i = 0; i < elements_to_zero; ++i) {
         arr[non_zero_indices[i]] = 0;
     }
 }
@@ -424,7 +424,7 @@ void PhantomSecretKey::gen_secretkey(const PhantomContext &context, const cudaSt
     if (auto sk_hamming_weight = context.key_context_data().parms().secret_key_hamming_weight()) {
 			std::cout << "Generating secret key with hamming weight: " << sk_hamming_weight << std::endl;
 
-	  // Make device has finished previous kernels
+	  	// Make device has finished previous kernels
       cudaStreamSynchronize(s);
 
       // Copy sk data from device to host
@@ -432,9 +432,11 @@ void PhantomSecretKey::gen_secretkey(const PhantomContext &context, const cudaSt
       cudaMemcpy(sk_arr_non_ntt, secret_key_array_.get(), poly_degree * coeff_mod_size * sizeof(uint64_t), cudaMemcpyDeviceToHost);
 
       // Adjust hamming weight for each rns sk (each sk should be the same but with different modulus)
-      // Get the indices of non-zero elements in the secret keys
+      
+			// Get the indices of non-zero elements in the secret keys
       std::vector<size_t> non_zero_indices = adjust_sk_hamming_weight(sk_arr_non_ntt, poly_degree, sk_hamming_weight, coeff_modulus[0].value());
-      // Adjust the hamming weight for the rest of the secret keys
+      
+			// Adjust the hamming weight for the rest of the secret keys (set the randomly chosen non-zero indices from last step to zero)
       for (auto i = 1; i < coeff_mod_size; i++) {
         adjust_sk_hamming_weight(sk_arr_non_ntt + i * poly_degree, sk_hamming_weight, non_zero_indices);
       }

@@ -1654,6 +1654,8 @@ static void rotate_internal(const PhantomContext &context, PhantomCiphertext &en
     auto iter = find(galois_elts.begin(), galois_elts.end(), step_galois_elt);
     if (iter != galois_elts.end()) {
         auto galois_elt_index = iter - galois_elts.begin();
+        cout << "galois_elt: " << step_galois_elt << endl;
+        cout << "galois_elt_index: " << galois_elt_index << endl;
         // Perform rotation and key switching
         apply_galois_inplace(context, encrypted, galois_elt_index, galois_key, stream_wrapper);
     } else {

@@ -8,32 +8,36 @@ using namespace std::chrono;
 
 class Timer {
  private:
-  std::chrono::_V2::system_clock::time_point start;
-  std::chrono::_V2::system_clock::time_point end;
+  std::chrono::_V2::system_clock::time_point start_;
+  std::chrono::_V2::system_clock::time_point end_;
 
   template <typename T = milliseconds>
   inline void print_duration(const char *text) {
-    cout << text << duration_cast<T>(end - start).count() << endl;
+    cout << text << duration_cast<T>(end_ - start_).count() << endl;
   }
 
  public:
   Timer() {
-    start = high_resolution_clock::now();
+    start_ = high_resolution_clock::now();
+  }
+
+  inline void start() {
+    start_ = high_resolution_clock::now();
   }
 
   template <typename T = milliseconds>
   inline void stop(const char *text) {
-    end = high_resolution_clock::now();
+    end_ = high_resolution_clock::now();
     print_duration<T>(text);
   }
 
   inline void stop() {
-    end = high_resolution_clock::now();
+    end_ = high_resolution_clock::now();
   }
 
   template <typename T = milliseconds>
   inline long duration() {
-    return duration_cast<T>(end - start).count() / 1.0;
+    return duration_cast<T>(end_ - start_).count() / 1.0;
   }
 };
 }  // namespace nexus

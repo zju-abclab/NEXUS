@@ -17,9 +17,9 @@ class Encoder {
  public:
   Encoder() = default;
 
-  Encoder(PhantomContext &context, PhantomCKKSEncoder &encoder) {
-    this->context = &context;
-    this->encoder = &encoder;
+  Encoder(PhantomContext *context, PhantomCKKSEncoder *encoder) {
+    this->context = context;
+    this->encoder = encoder;
   }
 
   inline size_t message_length() { return encoder->message_length(); }
@@ -81,9 +81,9 @@ class Encryptor {
  public:
   Encryptor() = default;
 
-  Encryptor(PhantomContext &context, PhantomPublicKey &encryptor) {
-    this->context = &context;
-    this->encryptor = &encryptor;
+  Encryptor(PhantomContext *context, PhantomPublicKey *encryptor) {
+    this->context = context;
+    this->encryptor = encryptor;
   }
 
   inline void encrypt(PhantomPlaintext &plain, PhantomCiphertext &ct) {
@@ -98,9 +98,9 @@ class Evaluator {
 
  public:
   Evaluator() = default;
-  Evaluator(PhantomContext &context, PhantomCKKSEncoder &encoder) {
-    this->context = &context;
-    this->encoder = &encoder;
+  Evaluator(PhantomContext *context, PhantomCKKSEncoder *encoder) {
+    this->context = context;
+    this->encoder = encoder;
   }
 
   // Mod switch
@@ -208,7 +208,7 @@ class Evaluator {
   }
 
   // Rotation
-  inline void rotate_vector(PhantomCiphertext &ct, int steps, PhantomGaloisKey &galois_keys, PhantomCiphertext &dest) {
+  inline void rotate_vector(const PhantomCiphertext &ct, int steps, PhantomGaloisKey &galois_keys, PhantomCiphertext &dest) {
     dest = ct;
     rotate_vector_inplace(dest, steps, galois_keys);
   }
@@ -235,6 +235,16 @@ class Evaluator {
 
   inline void apply_galois_inplace(PhantomCiphertext &ct, int step, PhantomGaloisKey &galois_keys) {
     ::apply_galois_inplace(*context, ct, step, galois_keys);
+  }
+
+  // Complex Conjugate
+  inline void complex_conjugate(PhantomCiphertext &ct, const PhantomGaloisKey &galois_keys, PhantomCiphertext &dest) {
+    dest = ct;
+    complex_conjugate_inplace(dest, galois_keys);
+  }
+
+  inline void complex_conjugate_inplace(PhantomCiphertext &ct, const PhantomGaloisKey &galois_keys) {
+    ::complex_conjugate_inplace(*context, ct, galois_keys);
   }
 
   // Matrix Multiplication
@@ -396,36 +406,18 @@ class Evaluator {
   }
 
   template <typename T, typename = std::enable_if_t<std::is_same<std::remove_cv_t<T>, double>::value || std::is_same<std::remove_cv_t<T>, std::complex<double>>::value>>
-  inline void multiply_vector_reduced_error(PhantomCiphertext &ct, std::vector<T> &value, PhantomCiphertext &dest) {
+  inline void multiply_vector_reduced_error(PhantomCiphertext &ct, std::vector<T> &values, PhantomCiphertext &dest) {
     dest = ct;
-    multiply_vector_inplace_reduced_error(dest, value);
+    multiply_vector_inplace_reduced_error(dest, values);
   }
 
-  inline void multiply_vector_inplace_reduced_error(PhantomCiphertext &ct, vector<complex<double>> &values) {
+  template <typename T, typename = std::enable_if_t<std::is_same<std::remove_cv_t<T>, double>::value || std::is_same<std::remove_cv_t<T>, std::complex<double>>::value>>
+  inline void multiply_vector_inplace_reduced_error(PhantomCiphertext &ct, vector<T> &values) {
     PhantomPlaintext plain;
 
-    values.resize(encoder->message_length(), 0.0 + 0.0i);
     encoder->encode(*context, values, ct.scale(), plain);
     mod_switch_to_inplace(plain, ct.params_id());
     multiply_plain_inplace(ct, plain);
-  }
-
-  inline void multiply_vector_inplace_reduced_error(PhantomCiphertext &ct, vector<double> &values) {
-    PhantomPlaintext plain;
-
-    values.resize(encoder->message_length(), 0.0);
-    encoder->encode(*context, values, ct.scale(), plain);
-    mod_switch_to_inplace(plain, ct.params_id());
-    multiply_plain_inplace(ct, plain);
-  }
-
-  inline void complex_conjugate(PhantomCiphertext &ct, const PhantomGaloisKey &galois_keys, PhantomCiphertext &dest) {
-    dest = ct;
-    complex_conjugate_inplace(dest, galois_keys);
-  }
-
-  inline void complex_conjugate_inplace(PhantomCiphertext &ct, const PhantomGaloisKey &galois_keys) {
-    ::complex_conjugate_inplace(*context, ct, galois_keys);
   }
 };
 
@@ -436,9 +428,9 @@ class Decryptor {
 
  public:
   Decryptor() = default;
-  Decryptor(PhantomContext &context, PhantomSecretKey &decryptor) {
-    this->context = &context;
-    this->decryptor = &decryptor;
+  Decryptor(PhantomContext *context, PhantomSecretKey *decryptor) {
+    this->context = context;
+    this->decryptor = decryptor;
   }
 
   inline void decrypt(PhantomCiphertext &ct, PhantomPlaintext &plain) {
@@ -476,27 +468,28 @@ class CKKSEvaluator {
 
  public:
   PhantomContext *context;
+  PhantomRelinKey *relin_keys;
+  PhantomGaloisKey *galois_keys;
+  std::vector<std::uint32_t> rots;
+
   Encryptor encryptor;
   Decryptor decryptor;
   Encoder encoder;
   Evaluator evaluator;
-  PhantomRelinKey *relin_keys;
-  PhantomGaloisKey *galois_keys;
-  std::vector<std::uint32_t> rots;
 
   size_t degree;
   double scale;
   size_t slot_count;
 
-  CKKSEvaluator(PhantomContext &context, PhantomPublicKey &encryptor, PhantomSecretKey &decryptor,
-                PhantomCKKSEncoder &encoder, PhantomRelinKey &relin_keys, PhantomGaloisKey &galois_keys,
+  CKKSEvaluator(PhantomContext *context, PhantomPublicKey *encryptor, PhantomSecretKey *decryptor,
+                PhantomCKKSEncoder *encoder, PhantomRelinKey *relin_keys, PhantomGaloisKey *galois_keys,
                 double scale) {
-    this->context = &context;
-    this->relin_keys = &relin_keys;
-    this->galois_keys = &galois_keys;
+    this->context = context;
+    this->relin_keys = relin_keys;
+    this->galois_keys = galois_keys;
 
     this->scale = scale;
-    this->slot_count = encoder.slot_count();
+    this->slot_count = encoder->slot_count();
     this->degree = this->slot_count * 2;
 
     // Instantiate the component classes

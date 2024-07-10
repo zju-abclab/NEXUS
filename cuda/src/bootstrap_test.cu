@@ -91,7 +91,7 @@ int main() {
 
   PhantomCKKSEncoder encoder(context);
 
-  CKKSEvaluator ckks_evaluator(context, public_key, secret_key, encoder, relin_keys, galois_keys, scale);
+  CKKSEvaluator ckks_evaluator(&context, &public_key, &secret_key, &encoder, &relin_keys, &galois_keys, scale);
 
   size_t slot_count = encoder.slot_count();
 
