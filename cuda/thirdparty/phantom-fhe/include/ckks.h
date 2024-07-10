@@ -27,6 +27,12 @@ private:
                          PhantomPlaintext &destination,
                          const cudaStream_t &stream);
 
+    void expand_encode_internal(const PhantomContext &context,
+                                const cuDoubleComplex *values, size_t values_size,
+                                size_t chain_index, double scale,
+                                PhantomPlaintext &destination,
+                                const cudaStream_t &stream);
+
     inline void encode_internal(const PhantomContext &context,
                                 const double *values, size_t values_size,
                                 size_t chain_index, double scale,

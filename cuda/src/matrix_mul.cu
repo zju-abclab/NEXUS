@@ -1,10 +1,13 @@
 #include <fstream>
-#include <iostream>
+#include <mutex>
+#include <thread>
 
 #include "matrix_mul.cuh"
 #include "utils.cuh"
 
 using namespace nexus;
+
+mutex mtx;
 
 std::vector<std::vector<double>> MMEvaluator::transpose_matrix(const std::vector<std::vector<double>> &matrix) {
   if (matrix.empty()) {
@@ -50,30 +53,22 @@ std::vector<std::vector<double>> MMEvaluator::read_matrix(const std::string &fil
 
 void MMEvaluator::multiply_power_of_x(PhantomCiphertext &encrypted, PhantomCiphertext &destination, int index) {
   auto context = ckks->context;
+  auto base_rns = context->gpu_rns_tables().modulus();
   auto param = context->first_context_data().parms();
 
   auto coeff_mod_count = param.coeff_modulus().size();
   auto coeff_count = ckks->degree;
-  auto base_rns = context->gpu_rns_tables().modulus();
   auto encrypted_count = encrypted.size();
+
+  const auto &stream = phantom::util::global_variables::default_stream->get_stream();
+  uint64_t gridDimGlb = coeff_count * coeff_mod_count / blockDimGlb.x;
 
   ckks->evaluator.transform_from_ntt_inplace(encrypted);
 
   destination = encrypted;
 
-  // auto destination_data = new uint64_t[encrypted_count * coeff_count * destination.coeff_modulus_size()];
-  // cudaMemcpy(destination_data, destination.data(), encrypted_count * coeff_count * coeff_mod_count * sizeof(uint64_t), cudaMemcpyDeviceToHost);
-  // for (auto i = 0; i < 4; i++) {
-  //   cout << fixed << setprecision(5) << destination_data[i] << ", ";
-  // }
-  // cout << "..., ";
-  // for (auto i = coeff_count - 4; i < coeff_count; i++) {
-  //   cout << fixed << setprecision(5) << destination_data[i] << ", ";
-  // }
-  // cout << endl;
-
   for (int i = 0; i < encrypted_count; i++) {
-    ckks->evaluator.negacyclic_shift_poly_coeffmod(
+    negacyclic_shift_poly_coeffmod_kernel<<<gridDimGlb, blockDimGlb, 0, stream>>>(
         encrypted.data(i),
         coeff_count,
         index,
@@ -82,33 +77,8 @@ void MMEvaluator::multiply_power_of_x(PhantomCiphertext &encrypted, PhantomCiphe
         destination.data(i));
   }
 
-  // auto destination_data_2 = new uint64_t[encrypted_count * coeff_count * encrypted.coeff_modulus_size()];
-  // cudaMemcpy(destination_data_2, destination.data(), encrypted_count * coeff_count * coeff_mod_count * sizeof(uint64_t), cudaMemcpyDeviceToHost);
-  // for (auto i = 0; i < 4; i++) {
-  //   cout << fixed << setprecision(5) << destination_data_2[i] << ", ";
-  // }
-  // cout << "..., ";
-  // for (auto i = coeff_count - 4; i < coeff_count; i++) {
-  //   cout << fixed << setprecision(5) << destination_data_2[i] << ", ";
-  // }
-  // cout << endl;
-
   ckks->evaluator.transform_to_ntt_inplace(encrypted);
   ckks->evaluator.transform_to_ntt_inplace(destination);
-
-  // string s = "";
-  // destination = encrypted;
-  // while (index >= ckks->degree - 1) {
-  //   s = "1x^" + to_string(ckks->degree - 1);
-  //   PhantomPlaintext p(s);
-  //   ckks->evaluator.multiply_plain(destination, p, destination);
-  //   index -= ckks->degree - 1;
-  // }
-
-  // s = "1x^" + to_string(index);
-
-  // PhantomPlaintext p(s);
-  // ckks->evaluator.multiply_plain(destination, p, destination);
 }
 
 vector<PhantomCiphertext> MMEvaluator::expand_ciphertext(
@@ -129,7 +99,7 @@ vector<PhantomCiphertext> MMEvaluator::expand_ciphertext(
     int index_raw = (n << 1) - (1 << i);
     int index = (index_raw * galois_elts[i]) % (n << 1);
     for (uint32_t a = 0; a < temp.size(); a++) {
-      ckks->evaluator.apply_galois(temp[a], i, *(ckks->galois_keys), tempctxt_rotated);  // sub
+      ckks->evaluator.apply_galois(temp[a], ckks->rots[i], *(ckks->galois_keys), tempctxt_rotated);  // sub
       ckks->evaluator.add(temp[a], tempctxt_rotated, newtemp[a]);
       multiply_power_of_x(temp[a], tempctxt_shifted, index_raw);  // x**-1
       multiply_power_of_x(tempctxt_rotated, tempctxt_rotatedshifted, index);
@@ -141,9 +111,9 @@ vector<PhantomCiphertext> MMEvaluator::expand_ciphertext(
   return temp;
 }
 
-void MMEvaluator::expand_encode(vector<double> &val, PhantomCiphertext &ct) {
+void MMEvaluator::enc_compress(vector<double> &val, PhantomCiphertext &ct) {
   PhantomPlaintext zero_pt;
-  ckks->encoder.encode(std::vector<double>(ckks->degree / 2, 0.0), ckks->scale, zero_pt);
+  ckks->encoder.encode(0.0, ckks->scale, zero_pt);
   PhantomCiphertext zero;
   ckks->encryptor.encrypt(zero_pt, zero);
 
@@ -157,7 +127,7 @@ void MMEvaluator::expand_encode(vector<double> &val, PhantomCiphertext &ct) {
   const auto &stream = stream_wrapper.get_stream();
 
   PhantomPlaintext p;
-  p.resize(coeff_modulus_size, poly_modulus_degree * 2, stream);
+  p.resize(coeff_modulus_size, poly_modulus_degree, stream);
 
   // Copy vector values to the GPU
   auto val_gpu = make_cuda_auto_ptr<double>(val.size(), stream);
@@ -169,36 +139,14 @@ void MMEvaluator::expand_encode(vector<double> &val, PhantomCiphertext &ct) {
   expand_encode_kernel<<<num_blocks, block_size, 0, stream>>>(val_gpu.get(), poly_modulus_degree, moduli, p.data());
 
   // To NTT
-  for (std::size_t i = 0; i < 2; i++) {
-    nwt_2d_radix8_forward_inplace(p.data(i * poly_modulus_degree), ckks->context->gpu_rns_tables(), coeff_modulus_size, 0, stream);
-  }
+  nwt_2d_radix8_forward_inplace(p.data(), ckks->context->gpu_rns_tables(), coeff_modulus_size, 0, stream);
 
-  p.set_chain_index(ckks->context->get_first_index());
+  p.set_chain_index(context_data.chain_index());
   p.scale() = 10000000000;
 
   zero.scale() = p.scale();
 
   ckks->evaluator.add_plain(zero, p, ct);
-}
-
-void MMEvaluator::expand_and_insert(CKKSEvaluator *ckks, mutex &mtx, const PhantomCiphertext &compressed_ct, vector<PhantomCiphertext> &b_expanded_cts) {
-  vector<PhantomCiphertext> temp_cts = expand_ciphertext(compressed_ct, ckks->degree, *ckks->galois_keys, ckks->rots);
-  cout << "Expanding..." << endl;
-  lock_guard<mutex> lock(mtx);
-  b_expanded_cts.insert(b_expanded_cts.end(), make_move_iterator(temp_cts.begin()), make_move_iterator(temp_cts.end()));
-}
-
-void MMEvaluator::multithreaded_expansion(CKKSEvaluator *ckks, const vector<PhantomCiphertext> &b_compressed_cts, vector<PhantomCiphertext> &b_expanded_cts) {
-  vector<thread> threads;
-  mutex mtx;
-  for (auto i = 0; i < b_compressed_cts.size(); ++i) {
-    threads.emplace_back([this, ckks, &mtx, &b_compressed_cts, &b_expanded_cts, i]() {
-      this->expand_and_insert(ckks, mtx, b_compressed_cts[i], b_expanded_cts);
-    });
-  }
-  for (auto &th : threads) {
-    th.join();
-  }
 }
 
 void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &y, vector<PhantomCiphertext> &res) {
@@ -215,34 +163,22 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
   for (int i = 0; i < 768 * 64 / ckks->degree; i++) {
     PhantomPlaintext pt;
     PhantomCiphertext ct;
-    expand_encode(y[i], ct);
+    enc_compress(y[i], ct);
     b_compressed_cts.push_back(ct);
   }
 
   auto timer = Timer();
   vector<PhantomCiphertext> b_expanded_cts;
-  // for (auto i = 0; i < b_compressed_cts.size(); i++) {
-  //   vector<PhantomCiphertext> temp_cts =
-  //       expand_ciphertext(b_compressed_cts[i], ckks->degree, *ckks->galois_keys, ckks->rots);
-  //   cout << "Expanding..." << endl;
-  //   b_expanded_cts.insert(
-  //       b_expanded_cts.end(), make_move_iterator(temp_cts.begin()), make_move_iterator(temp_cts.end()));
-  // }
-
-  multithreaded_expansion(ckks, b_compressed_cts, b_expanded_cts);
-
-  cout << "Expanding time: " << timer.duration<seconds>() << " seconds" << endl;
-
-  vector<double> b0_expanded_output;
-  PhantomPlaintext b0_expanded;
-
-  ckks->decryptor.decrypt(b_expanded_cts[0], b0_expanded);
-  ckks->encoder.decode(b0_expanded, b0_expanded_output);
-
-  for (auto i = 0; i < 10; i++) {
-    cout << b0_expanded_output[i] << ", ";
+  for (auto i = 0; i < b_compressed_cts.size(); i++) {
+    vector<PhantomCiphertext> temp_cts =
+        expand_ciphertext(b_compressed_cts[i], ckks->degree, *ckks->galois_keys, ckks->rots);
+    cout << "Expanding..." << endl;
+    ckks->print_decrypted_ct(temp_cts[0], 10);
+    b_expanded_cts.insert(
+        b_expanded_cts.end(), make_move_iterator(temp_cts.begin()), make_move_iterator(temp_cts.end()));
   }
-  cout << endl;
+  timer.stop();
+  cout << "Expanding time: " << timer.duration<seconds>() << " seconds" << endl;
 
   PhantomPlaintext pt;
   PhantomCiphertext zero;

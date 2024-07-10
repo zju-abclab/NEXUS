@@ -26,7 +26,7 @@ double SCALE = pow(2.0, 40);
 vector<string> TEST_TARGETS = {"MatMul", "SoftMax", "LayerNorm", "GELU"};
 vector<vector<int>> COEFF_MODULI =
     {
-        {60, 40, 40, 40, 40, 40, 40, 40, 60},                                                                      // MatMul (0)
+        {60, 40, 60},                                                                      // MatMul (0)
         {58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58},          // SoftMax (1)
         {58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58},  // LayerNorm (2)
         {58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58}   // GELU (3)
@@ -56,7 +56,7 @@ void MM_test() {
   // PhantomGaloisKey galois_keys = secret_key.create_galois_keys(context);
 
   PhantomCKKSEncoder encoder(context);
-  CKKSEvaluator ckks_evaluator(&context, &public_key, &secret_key, &encoder, &relin_keys, &galois_keys, SCALE);
+  CKKSEvaluator ckks_evaluator(&context, &public_key, &secret_key, &encoder, &relin_keys, &galois_keys, SCALE, rots);
   MMEvaluator mme(ckks_evaluator);
 
   std::vector<std::vector<double>> matrix_4096x768 = mme.read_matrix("../../data/input/matrixmul_input_m_128_n_768_k_64_batch_128.txt", 4096, 768);
@@ -100,6 +100,7 @@ void MM_test() {
   }
   std::cout << "average_err: " << average_err / 4096.0 << std::endl;
 
+  // -------------------------------
   // vector<double> input1 = {1.0, 2.0, 3.0, 4.0, 5.0};
   // vector<double> input2 = {1.0, 2.0, 3.0, 4.0, 5.0};
   // vector<double> output;
@@ -121,7 +122,10 @@ void MM_test() {
   // // ckks_evaluator.evaluator.relinearize_inplace(output_cipher, relin_keys);
   // // ckks_evaluator.evaluator.rescale_to_next_inplace(output_cipher);
 
-  // ckks_evaluator.evaluator.rotate_vector_inplace(input1_cipher, -2, *ckks_evaluator.galois_keys);
+  // // ckks_evaluator.evaluator.rotate_vector(input1_cipher, -2, *ckks_evaluator.galois_keys, output_cipher);
+
+  // // mme.multiply_power_of_x(input1_cipher, output_cipher, 1);
+
   // // ckks_evaluator.evaluator.add(input1_cipher, input2_cipher, output_cipher);
 
   // ckks_evaluator.decryptor.decrypt(input1_cipher, output_plain);

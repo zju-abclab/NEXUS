@@ -151,9 +151,102 @@ void PhantomCKKSEncoder::encode_internal(const PhantomContext &context, const cu
         throw std::invalid_argument("encoded values are too large");
     }
 
+    // for(auto i = 0; i < 10; i++) {
+    //     cout << values[i].x << " ";
+    // }
+    // cout << endl;
+    // cout << fixed << values_size << endl;
+    // for(auto i = 0; i < 10; i++) {
+    //     cout << temp2[i].x << " ";
+    // }
+    // cout << endl;
+    // cout << fixed << temp2.size() << endl;
+
     // we can in fact find all coeff_modulus in DNTTTable structure....
     rns_tool.base_Ql().decompose_array(destination.data(), gpu_ckks_msg_vec_->in(), sparse_slots_ << 1,
                                        (uint32_t) slots_ / sparse_slots_, max_coeff_bit_count, stream);
+
+    // auto dest_data = new uint64_t[coeff_count * coeff_modulus_size];
+    // cudaMemcpy(dest_data, destination.data(), coeff_count * coeff_modulus_size * sizeof(uint64_t), cudaMemcpyDeviceToHost);
+    
+    // for(auto i = 0; i < 10; i++) {
+    //     cout << fixed << dest_data[i] << " ";
+    // }
+    // cout << endl;
+    // cout << "coeff_count: " << coeff_count << endl;
+    // cout << "coeff_modulus_size: " << coeff_modulus_size << endl;
+    // cout << destination.data_ptr().get_n() << endl;
+
+    nwt_2d_radix8_forward_inplace(destination.data(), context.gpu_rns_tables(), coeff_modulus_size, 0, stream);
+
+    destination.chain_index_ = chain_index;
+    destination.scale_ = scale;
+}
+
+void PhantomCKKSEncoder::expand_encode_internal(const PhantomContext &context, const cuDoubleComplex *values,
+                                                size_t values_size, size_t chain_index, double scale,
+                                                PhantomPlaintext &destination, const cudaStream_t &stream) {
+    uint32_t expanded_slots = slots_ * 2;
+		
+		auto &context_data = context.get_context_data(chain_index);
+    auto &parms = context_data.parms();
+    auto &coeff_modulus = parms.coeff_modulus();
+    auto &rns_tool = context_data.gpu_rns_tool();
+    std::size_t coeff_modulus_size = coeff_modulus.size();
+    std::size_t coeff_count = parms.poly_modulus_degree();
+
+    if (!values && values_size > 0) {
+        throw std::invalid_argument("values cannot be null");
+    }
+    if (values_size > expanded_slots) {
+        throw std::invalid_argument("values_size is too large");
+    }
+
+    // Check that scale is positive and not too large
+    if (scale <= 0 || (static_cast<int>(log2(scale)) + 1 >= context_data.total_coeff_modulus_bit_count())) {
+        throw std::invalid_argument("scale out of bounds");
+    }
+
+    gpu_ckks_msg_vec_->set_sparse_slots(expanded_slots);
+    PHANTOM_CHECK_CUDA(cudaMemsetAsync(gpu_ckks_msg_vec_->in(), 0, slots_ * sizeof(cuDoubleComplex), stream));
+    auto temp = make_cuda_auto_ptr<cuDoubleComplex>(values_size, stream);
+    PHANTOM_CHECK_CUDA(cudaMemsetAsync(temp.get(), 0, values_size * sizeof(cuDoubleComplex), stream));
+    PHANTOM_CHECK_CUDA(
+            cudaMemcpyAsync(temp.get(), values, sizeof(cuDoubleComplex) * values_size, cudaMemcpyHostToDevice, stream));
+
+    uint32_t log_sparse_n = log2(expanded_slots);
+    uint64_t gridDimGlb = ceil(expanded_slots / blockDimGlb.x);
+    bit_reverse_and_zero_padding<<<gridDimGlb, blockDimGlb, 0, stream>>>(
+            gpu_ckks_msg_vec_->in(), temp.get(), values_size, expanded_slots, log_sparse_n);
+
+    double fix = scale / static_cast<double>(expanded_slots);
+
+    special_fft_backward(*gpu_ckks_msg_vec_, fix, stream);
+
+    // TODO to opt this
+    vector<cuDoubleComplex> temp2(expanded_slots);
+    PHANTOM_CHECK_CUDA(cudaMemcpyAsync(temp2.data(), gpu_ckks_msg_vec_->in(), expanded_slots * sizeof(cuDoubleComplex),
+                                       cudaMemcpyDeviceToHost, stream));
+
+    double max_coeff = 0;
+    for (std::size_t i = 0; i < expanded_slots; i++) {
+        max_coeff = std::max(max_coeff, std::fabs(temp2[i].x));
+    }
+    for (std::size_t i = 0; i < expanded_slots; i++) {
+        max_coeff = std::max(max_coeff, std::fabs(temp2[i].y));
+    }
+    // Verify that the values are not too large to fit in coeff_modulus
+    // Note that we have an extra + 1 for the sign bit
+    // Don't compute logarithmis of numbers less than 1
+    int max_coeff_bit_count = static_cast<int>(std::ceil(std::log2(std::max(max_coeff, 1.0)))) + 1;
+
+    if (max_coeff_bit_count >= context_data.total_coeff_modulus_bit_count()) {
+        throw std::invalid_argument("encoded values are too large");
+    }
+
+    // we can in fact find all coeff_modulus in DNTTTable structure....
+    rns_tool.base_Ql().decompose_array(destination.data(), gpu_ckks_msg_vec_->in(), expanded_slots << 1,
+                                       (uint32_t) slots_ / expanded_slots, max_coeff_bit_count, stream);
 
     nwt_2d_radix8_forward_inplace(destination.data(), context.gpu_rns_tables(), coeff_modulus_size, 0, stream);
 

@@ -209,8 +209,7 @@ class Evaluator {
 
   // Rotation
   inline void rotate_vector(const PhantomCiphertext &ct, int steps, PhantomGaloisKey &galois_keys, PhantomCiphertext &dest) {
-    dest = ct;
-    rotate_vector_inplace(dest, steps, galois_keys);
+    dest = ::rotate_vector(*context, ct, steps, galois_keys);
   }
 
   inline void rotate_vector_inplace(PhantomCiphertext &ct, int steps, PhantomGaloisKey &galois_keys) {
@@ -228,9 +227,12 @@ class Evaluator {
   }
 
   // Galois
-  inline void apply_galois(PhantomCiphertext &ct, int step, PhantomGaloisKey &galois_keys, PhantomCiphertext &dest) {
-    dest = ct;
-    apply_galois_inplace(dest, step, galois_keys);
+  inline void apply_galois(PhantomCiphertext &ct, uint32_t elt, PhantomGaloisKey &galois_keys, PhantomCiphertext &dest) {
+    auto &galois_elts = context->key_galois_tool_->galois_elts();
+    auto iter = find(galois_elts.begin(), galois_elts.end(), elt);
+    auto galois_elt_index = iter - galois_elts.begin();
+
+    dest = ::apply_galois(*context, ct, galois_elt_index, galois_keys);
   }
 
   inline void apply_galois_inplace(PhantomCiphertext &ct, int step, PhantomGaloisKey &galois_keys) {
@@ -294,50 +296,6 @@ class Evaluator {
     ct.set_ntt_form(true);
     // cudaStreamSynchronize(stream);
   }
-
-  inline void negacyclic_shift_poly_coeffmod(const std::uint64_t *poly, size_t poly_degree, size_t shift, DModulus *moduli, size_t coeff_mod_size, std::uint64_t *result) {
-    // cout << block_size << endl;
-
-    // if (shift == 0) {
-    //   set_uint(poly, coeff_count, result);
-    //   return;
-    // }
-
-    // uint64_t index_raw = shift;
-    // uint64_t coeff_count_mod_mask = static_cast<uint64_t>(coeff_count) - 1;
-    // for (size_t i = 0; i < coeff_count; i++, poly++, index_raw++) {
-    //   uint64_t index = index_raw & coeff_count_mod_mask;
-    //   if (!(index_raw & static_cast<uint64_t>(coeff_count)) || !*poly) {
-    //     *(result + index) = *poly;
-    //   } else {
-    //     *(result + index) = modulus.value() - *poly;
-    //   }
-    // }
-
-    const auto &stream = phantom::util::global_variables::default_stream->get_stream();
-    uint64_t gridDimGlb = poly_degree * coeff_mod_size / blockDimGlb.x;
-
-    negacyclic_shift_poly_coeffmod_kernel<<<gridDimGlb, blockDimGlb, 0, stream>>>(poly, poly_degree, shift, moduli, coeff_mod_size, result);
-    // cudaStreamSynchronize(phantom::util::global_variables::default_stream->get_stream());
-  }
-
-  // {
-  //   if (shift == 0) {
-  //     set_uint(poly, coeff_count, result);
-  //     return;
-  //   }
-
-  //   uint64_t index_raw = shift;
-  //   uint64_t coeff_count_mod_mask = static_cast<uint64_t>(coeff_count) - 1;
-  //   for (size_t i = 0; i < coeff_count; i++, poly++, index_raw++) {
-  //     uint64_t index = index_raw & coeff_count_mod_mask;
-  //     if (!(index_raw & static_cast<uint64_t>(coeff_count)) || !*poly) {
-  //       result[index] = *poly;
-  //     } else {
-  //       result[index] = modulus.value() - *poly;
-  //     }
-  //   }
-  // }
 
   // Bootstrapping
   inline void multiply_const(const PhantomCiphertext &ct, double value, PhantomCiphertext &dest) {
@@ -483,10 +441,11 @@ class CKKSEvaluator {
 
   CKKSEvaluator(PhantomContext *context, PhantomPublicKey *encryptor, PhantomSecretKey *decryptor,
                 PhantomCKKSEncoder *encoder, PhantomRelinKey *relin_keys, PhantomGaloisKey *galois_keys,
-                double scale) {
+                double scale, vector<uint32_t> rots = {}) {
     this->context = context;
     this->relin_keys = relin_keys;
     this->galois_keys = galois_keys;
+    this->rots = rots;
 
     this->scale = scale;
     this->slot_count = encoder->slot_count();
@@ -504,11 +463,6 @@ class CKKSEvaluator {
 
     Decryptor ckks_decryptor(context, decryptor);
     this->decryptor = ckks_decryptor;
-
-    // Compute rotation steps
-    for (int i = 0; i < uint(std::ceil(log2(degree))); i++) {
-      rots.push_back((degree + exponentiate_uint(2, i)) / exponentiate_uint(2, i));
-    }
 
     // Compute sign function coefficients
     f4_coeffs_last.resize(10, 0);

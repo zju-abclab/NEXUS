@@ -1132,6 +1132,9 @@ void add_plain_inplace(const PhantomContext &context, PhantomCiphertext &encrypt
         // TODO: be more precious
         throw std::invalid_argument("scale mismatch");
     }
+    if (encrypted.chain_index() != plain.chain_index()) {
+      	throw invalid_argument("encrypted and plain parameter mismatch");
+    }
 
     auto &coeff_modulus = parms.coeff_modulus();
     auto coeff_mod_size = coeff_modulus.size();
