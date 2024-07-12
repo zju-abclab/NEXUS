@@ -206,7 +206,6 @@ void MM_test()
     ckks_evaluator.encoder->decode(res_pt, mm_res);
     for (auto i = 0; i < 4096; i++) {
         average_err += fabs(mm_res[i] / 2.0 - matrix_4096x64_T[0][i]);
-        printf("%+.10lf %+.10lf\n", mm_res[i] / 2.0, matrix_4096x64_T[0][i]);
     }
     std::cout << "average_err: " << average_err / 4096.0 << std::endl;
 }
