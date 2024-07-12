@@ -270,7 +270,7 @@ void Remez::getextreme_local(Point* local_extreme_point, long& local_extreme_cou
           prec_x = detail[prec_ind];
           prec_sc = prec_sc / 2;
           for (long k = 0; k < 3; k++) {
-            detail[k] = min(prec_x + prec_sc, scan_1) - 2 * prec_sc + prec_sc * k;
+            detail[k] = std::min(prec_x + prec_sc, scan_1) - 2 * prec_sc + prec_sc * k;
           }
           prec_iter++;
           // cout << "prec_ind : " << prec_ind << " prec_x : " << prec_x << endl;
@@ -347,7 +347,7 @@ void Remez::getextreme_local(Point* local_extreme_point, long& local_extreme_cou
             // cout << "prec_ind : " << prec_ind << " prec_x : " << prec_x << endl;
             for (long k = 0; k < 3; k++) {
               if (inc_1 == 0)
-                detail[k] = max(prec_x - prec_sc, scan_1) + prec_sc * k;
+                detail[k] = std::max(prec_x - prec_sc, scan_1) + prec_sc * k;
               else
                 detail[k] = prec_x - prec_sc + prec_sc * k;
             }

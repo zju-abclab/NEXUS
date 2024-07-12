@@ -34,6 +34,8 @@ private:
                                                    size_t chain_index,
                                                    bool is_ntt_form, const cudaStream_t &stream) const;
 
+public:
+
     /** Encrypt zero using the public key, and perform the model switch is necessary
      * @brief pk [pk0, pk1], ternary variable u, cbd (gauss) noise e0, e1, return [pk0*u+e0, pk1*u+e1]
      * @param[in] context PhantomContext

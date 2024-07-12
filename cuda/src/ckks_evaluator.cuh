@@ -1,13 +1,13 @@
 #pragma once
 #include <complex>
 
-#include "kernels.cuh"
 #include "phantom.h"
+#include "troy.cuh"
 
 namespace nexus {
 using namespace std;
 using namespace phantom;
-using namespace phantom::util;
+using namespace troy;
 
 class Encoder {
  private:
@@ -89,6 +89,16 @@ class Encryptor {
   inline void encrypt(PhantomPlaintext &plain, PhantomCiphertext &ct) {
     encryptor->encrypt_asymmetric(*context, plain, ct);
   }
+
+  inline void encrypt_zero(PhantomCiphertext &ct, size_t chain_index) {
+    const phantom::util::cuda_stream_wrapper &stream_wrapper = *phantom::util::global_variables::default_stream;
+    const auto &stream = stream_wrapper.get_stream();
+
+    ct.set_correction_factor(1);
+    ct.set_scale(1.0);
+
+    encryptor->encrypt_zero_asymmetric_internal(*context, ct, chain_index, stream);
+  }
 };
 
 class Evaluator {
@@ -157,7 +167,7 @@ class Evaluator {
   }
 
   // Addition
-  inline void add_plain(PhantomCiphertext &ct, PhantomPlaintext &plain, PhantomCiphertext &dest) {
+  inline void add_plain(const PhantomCiphertext &ct, PhantomPlaintext &plain, PhantomCiphertext &dest) {
     dest = ct;
     add_plain_inplace(dest, plain);
   }
@@ -167,12 +177,7 @@ class Evaluator {
   }
 
   inline void add(PhantomCiphertext &ct1, const PhantomCiphertext &ct2, PhantomCiphertext &dest) {
-    if (&ct2 == &dest) {
-      add_inplace(dest, ct1);
-    } else {
-      dest = ct1;
-      add_inplace(dest, ct2);
-    }
+    dest = ::add(*context, ct1, ct2);
   }
 
   inline void add_inplace(PhantomCiphertext &ct1, const PhantomCiphertext &ct2) {
@@ -262,16 +267,16 @@ class Evaluator {
     const size_t coeff_modulus_size = coeff_modulus.size();
     auto &rns_tool = context_data.gpu_rns_tool();
 
+    auto rns_coeff_count = ct.poly_modulus_degree() * ct.coeff_modulus_size();
+
     const auto &stream = phantom::util::global_variables::default_stream->get_stream();
 
     for (size_t i = 0; i < ct.size(); i++) {
-      nwt_2d_radix8_backward_inplace(
-          ct.data() + i * ct.poly_modulus_degree() * ct.coeff_modulus_size(),
-          context->gpu_rns_tables(), coeff_modulus_size, 0, stream);
+      uint64_t *ci = ct.data() + i * rns_coeff_count;
+      nwt_2d_radix8_backward_inplace(ci, context->gpu_rns_tables(), coeff_modulus_size, 0, stream);
     }
 
     ct.set_ntt_form(false);
-    // cudaStreamSynchronize(stream);
   }
 
   inline void transform_to_ntt(const PhantomCiphertext &ct, PhantomCiphertext &dest) {
@@ -285,16 +290,16 @@ class Evaluator {
     auto &coeff_modulus = parms.coeff_modulus();
     const size_t coeff_modulus_size = coeff_modulus.size();
 
+    auto rns_coeff_count = ct.poly_modulus_degree() * ct.coeff_modulus_size();
+
     const auto &stream = phantom::util::global_variables::default_stream->get_stream();
 
     for (size_t i = 0; i < ct.size(); i++) {
-      nwt_2d_radix8_forward_inplace(
-          ct.data() + i * ct.poly_modulus_degree() * ct.coeff_modulus_size(),
-          context->gpu_rns_tables(), coeff_modulus_size, 0, stream);
+      uint64_t *ci = ct.data() + i * rns_coeff_count;
+      nwt_2d_radix8_forward_inplace(ci, context->gpu_rns_tables(), coeff_modulus_size, 0, stream);
     }
 
     ct.set_ntt_form(true);
-    // cudaStreamSynchronize(stream);
   }
 
   // Bootstrapping
@@ -425,15 +430,26 @@ class CKKSEvaluator {
   void eval_odd_deg9_poly(vector<double> &a, PhantomCiphertext &x, PhantomCiphertext &dest);
 
  public:
+  // PhantomFHE
   PhantomContext *context;
   PhantomRelinKey *relin_keys;
   PhantomGaloisKey *galois_keys;
-  std::vector<std::uint32_t> rots;
+  std::vector<std::uint32_t> galois_elts;
 
-  Encryptor encryptor;
-  Decryptor decryptor;
   Encoder encoder;
+  Encryptor encryptor;
   Evaluator evaluator;
+  Decryptor decryptor;
+
+  // TroyNova
+  HeContextPointer troy_context;
+  GaloisKeys *troy_galois_keys;
+  std::vector<std::uint64_t> troy_galois_elts;
+
+  troy::CKKSEncoder *troy_encoder;
+  troy::Encryptor *troy_encryptor;
+  troy::Evaluator *troy_evaluator;
+  troy::Decryptor *troy_decryptor;
 
   size_t degree;
   double scale;
@@ -441,11 +457,11 @@ class CKKSEvaluator {
 
   CKKSEvaluator(PhantomContext *context, PhantomPublicKey *encryptor, PhantomSecretKey *decryptor,
                 PhantomCKKSEncoder *encoder, PhantomRelinKey *relin_keys, PhantomGaloisKey *galois_keys,
-                double scale, vector<uint32_t> rots = {}) {
+                double scale, vector<uint32_t> galois_elts = {}) {
     this->context = context;
     this->relin_keys = relin_keys;
     this->galois_keys = galois_keys;
-    this->rots = rots;
+    this->galois_elts = galois_elts;
 
     this->scale = scale;
     this->slot_count = encoder->slot_count();
@@ -474,6 +490,23 @@ class CKKSEvaluator {
       g4_coeffs[i] /= g4_scale;
       g4_coeffs_last[i] = g4_coeffs[i] * sgn_factor;
     }
+  }
+
+  CKKSEvaluator(HeContextPointer context, troy::Encryptor *encryptor, troy::Decryptor *decryptor,
+                troy::Evaluator *evaluator, troy::CKKSEncoder *encoder, troy::GaloisKeys *galois_keys,
+                double scale, vector<uint64_t> galois_elts = {}) {
+    this->troy_context = context;
+    this->troy_galois_keys = galois_keys;
+    this->troy_galois_elts = galois_elts;
+
+    this->scale = scale;
+    this->slot_count = encoder->slot_count();
+    this->degree = this->slot_count * 2;
+
+    this->troy_encoder = encoder;
+    this->troy_encryptor = encryptor;
+    this->troy_evaluator = evaluator;
+    this->troy_decryptor = decryptor;
   }
 
   // Helper functions

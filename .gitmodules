@@ -1,0 +1,3 @@
+[submodule "cuda/thirdparty/troy-nova"]
+	path = cuda/thirdparty/troy-nova
+	url = git@github.com:lightbulb128/troy-nova.git

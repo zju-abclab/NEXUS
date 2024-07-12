@@ -419,18 +419,15 @@ RR find_extreme(RR (*func)(RR), Point *&ext, int &ext_count, vector<RR> coeff, l
     inc_2 = -1;
 
   while (1) {
-    size_t tempi;
     if (scan_2 > end) std::runtime_error("scan2 > end");
     if (is_opt_sampling == true) {
       for (size_t i = 0; i < s; i++) {
         if (start + 10 * origin_sc / pow(10, i) < scan_2 && scan_2 < end - 10 * origin_sc / pow(10, i)) {
           sc = origin_sc / pow(10, i);
-          tempi = i;
           break;
         }
         if (i == s - 1) {
           sc = origin_sc / pow(10, i + 1);
-          tempi = i + 1;
           break;
         }
       }

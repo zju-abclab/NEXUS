@@ -173,7 +173,7 @@ void Remez::choosemaxs() {
 
 bool Remez::test() {
   long it = 0;
-  int sum = 0;
+  // int sum = 0;
   // RR* temp = new RR[deg+2];
 
   initialize();

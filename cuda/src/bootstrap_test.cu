@@ -44,10 +44,10 @@ int main() {
   long scale_factor = 2;
   long inverse_deg = 1;
 
-  long logN = 15; // 16 -> 15
+  long logN = 15;  // 16 -> 15
   long loge = 10;
 
-  long logn = 13; // 14 -> 13
+  long logn = 13;  // 14 -> 13
   // long logn_2 = 13;
   // long logn_3 = 12;
   long sparse_slots = (1 << logn);
@@ -75,14 +75,16 @@ int main() {
   coeff_bit_vec.push_back(log_special_prime);
 
   cout << "Setting Parameters" << endl;
-  EncryptionParameters parms(scheme_type::ckks);
+  phantom::EncryptionParameters parms(scheme_type::ckks);
   size_t poly_modulus_degree = (size_t)(1 << logN);
   parms.set_poly_modulus_degree(poly_modulus_degree);
-  parms.set_coeff_modulus(CoeffModulus::Create(poly_modulus_degree, coeff_bit_vec));
+  parms.set_coeff_modulus(phantom::arith::CoeffModulus::Create(poly_modulus_degree, coeff_bit_vec));
   double scale = pow(2.0, logp);
   parms.set_secret_key_hamming_weight(secret_key_hamming_weight);
 
   PhantomContext context(parms);
+
+  cout << context.first_context_data().total_coeff_modulus_bit_count() << endl;
 
   PhantomSecretKey secret_key(context);
   PhantomPublicKey public_key = secret_key.gen_publickey(context);

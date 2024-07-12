@@ -61,7 +61,7 @@ PhantomCiphertext CKKSEvaluator::invert_sqrt(PhantomCiphertext x, int d_newt, in
 }
 
 uint64_t CKKSEvaluator::get_modulus(PhantomCiphertext &x, int k) {
-  const vector<Modulus> &modulus = context->get_context_data(x.params_id()).parms().coeff_modulus();
+  const vector<phantom::arith::Modulus> &modulus = context->get_context_data(x.params_id()).parms().coeff_modulus();
   int sz = modulus.size();
   return modulus[sz - k].value();
 }
@@ -440,7 +440,7 @@ PhantomCiphertext CKKSEvaluator::inverse(PhantomCiphertext x, int iter) {
   return res;
 }
 
-void Evaluator::add_inplace_reduced_error(PhantomCiphertext &encrypted1, const PhantomCiphertext &encrypted2) {
+void nexus::Evaluator::add_inplace_reduced_error(PhantomCiphertext &encrypted1, const PhantomCiphertext &encrypted2) {
   size_t encrypted1_coeff_modulus_size = encrypted1.coeff_modulus_size();
   size_t encrypted2_coeff_modulus_size = encrypted2.coeff_modulus_size();
 
@@ -477,7 +477,7 @@ void Evaluator::add_inplace_reduced_error(PhantomCiphertext &encrypted1, const P
   }
 }
 
-void Evaluator::sub_inplace_reduced_error(PhantomCiphertext &encrypted1, const PhantomCiphertext &encrypted2) {
+void nexus::Evaluator::sub_inplace_reduced_error(PhantomCiphertext &encrypted1, const PhantomCiphertext &encrypted2) {
   size_t encrypted1_coeff_modulus_size = encrypted1.coeff_modulus_size();
   size_t encrypted2_coeff_modulus_size = encrypted2.coeff_modulus_size();
 
@@ -514,7 +514,7 @@ void Evaluator::sub_inplace_reduced_error(PhantomCiphertext &encrypted1, const P
   }
 }
 
-void Evaluator::multiply_inplace_reduced_error(PhantomCiphertext &encrypted1, const PhantomCiphertext &encrypted2, const PhantomRelinKey &relin_keys) {
+void nexus::Evaluator::multiply_inplace_reduced_error(PhantomCiphertext &encrypted1, const PhantomCiphertext &encrypted2, const PhantomRelinKey &relin_keys) {
   size_t encrypted1_coeff_modulus_size = encrypted1.coeff_modulus_size();
   size_t encrypted2_coeff_modulus_size = encrypted2.coeff_modulus_size();
 
