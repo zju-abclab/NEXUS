@@ -10,6 +10,7 @@
 using namespace std;
 using namespace nexus;
 using namespace phantom;
+using namespace phantom::util;
 
 class Bootstrapper {
  public:

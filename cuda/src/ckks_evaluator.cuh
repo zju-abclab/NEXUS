@@ -68,7 +68,8 @@ class Encoder {
     encoder->encode(*context, complex_values, scale, plain);
   }
 
-  inline void decode(PhantomPlaintext &plain, vector<double> &values) {
+  template <typename T, typename = std::enable_if_t<std::is_same<std::remove_cv_t<T>, double>::value || std::is_same<std::remove_cv_t<T>, std::complex<double>>::value>>
+  inline void decode(PhantomPlaintext &plain, vector<T> &values) {
     encoder->decode(*context, plain, values);
   }
 };

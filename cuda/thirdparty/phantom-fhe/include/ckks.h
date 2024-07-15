@@ -113,6 +113,22 @@ public:
         decode_internal(context, plain, destination.data(), s);
     }
 
+    inline void decode(const PhantomContext &context,
+                       const PhantomPlaintext &plain,
+                       std::vector<std::complex<double>> &destination,
+                       const phantom::util::cuda_stream_wrapper &stream_wrapper = *phantom::util::global_variables::default_stream) {
+        const auto &s = stream_wrapper.get_stream();
+        destination.resize(sparse_slots_);
+
+        std::vector<cuDoubleComplex> output(sparse_slots_);
+        decode_internal(context, plain, output.data(), s);
+
+        for (size_t i = 0; i < sparse_slots_; i++) {
+            destination[i] = std::complex<double>(output[i].x, output[i].y);
+        }
+        output.clear();
+    }
+
     template<class T>
     [[nodiscard]] inline auto decode(const PhantomContext &context, const PhantomPlaintext &plain,
                                      const phantom::util::cuda_stream_wrapper &stream_wrapper = *phantom::util::global_variables::default_stream) {

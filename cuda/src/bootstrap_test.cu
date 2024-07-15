@@ -74,26 +74,78 @@ int main() {
   }
   coeff_bit_vec.push_back(log_special_prime);
 
-  cout << "Setting Parameters" << endl;
+  cout << "Setting Parameters..." << endl;
   phantom::EncryptionParameters parms(scheme_type::ckks);
   size_t poly_modulus_degree = (size_t)(1 << logN);
+  double scale = pow(2.0, logp);
+
   parms.set_poly_modulus_degree(poly_modulus_degree);
   parms.set_coeff_modulus(phantom::arith::CoeffModulus::Create(poly_modulus_degree, coeff_bit_vec));
-  double scale = pow(2.0, logp);
   parms.set_secret_key_hamming_weight(secret_key_hamming_weight);
 
   PhantomContext context(parms);
-
-  cout << context.first_context_data().total_coeff_modulus_bit_count() << endl;
 
   PhantomSecretKey secret_key(context);
   PhantomPublicKey public_key = secret_key.gen_publickey(context);
   PhantomRelinKey relin_keys = secret_key.gen_relinkey(context);
   PhantomGaloisKey galois_keys;
 
+  // Bootstrapping evaluation function test Galois Key
+  // PhantomGaloisKey galois_keys = secret_key.create_galois_keys(context);
+
   PhantomCKKSEncoder encoder(context);
 
   CKKSEvaluator ckks_evaluator(&context, &public_key, &secret_key, &encoder, &relin_keys, &galois_keys, scale);
+
+  // Bootstrapping evaluation function tests ------------------------------------------
+  // vector<double> output;
+  // vector<complex<double>> output2;
+  // vector<double> input = {1.0, 2.0, 3.0, 4.0, 5.0};
+  // vector<double> input2 = {1.0, 2.0, 3.0, 4.0, 5.0};
+  // vector<complex<double>> input3 = {1.0 + 2.0i, 3.0 + 4.0i, 5.0 + 6.0i};
+  // PhantomPlaintext plain;
+  // PhantomPlaintext plain2;
+  // PhantomPlaintext plain3;
+  // PhantomPlaintext output_plain;
+  // PhantomPlaintext output2_plain;
+  // PhantomCiphertext cipher;
+  // PhantomCiphertext cipher2;
+  // PhantomCiphertext cipher3;
+  // PhantomCiphertext output_cipher;
+  // ckks_evaluator.encoder.encode(input, scale, plain);
+  // ckks_evaluator.encoder.encode(input2, scale, plain2);
+  // ckks_evaluator.encoder.encode(input3, scale, plain3);
+  // ckks_evaluator.encryptor.encrypt(plain, cipher);
+  // ckks_evaluator.encryptor.encrypt(plain2, cipher2);
+  // ckks_evaluator.encryptor.encrypt(plain3, cipher3);
+
+  // ckks_evaluator.evaluator.add_inplace_reduced_error(cipher, cipher2);
+  // ckks_evaluator.evaluator.sub_inplace_reduced_error(cipher, cipher2);
+
+  // ckks_evaluator.evaluator.multiply_inplace_reduced_error(cipher, cipher2, *ckks_evaluator.relin_keys);
+  // ckks_evaluator.evaluator.multiply_vector_inplace_reduced_error(cipher, input2);
+
+  // ckks_evaluator.evaluator.add_const_inplace(cipher, 1.0);
+  // ckks_evaluator.evaluator.multiply_const_inplace(cipher, 2.0);
+
+  // ckks_evaluator.evaluator.complex_conjugate_inplace(cipher3, *ckks_evaluator.galois_keys);
+
+  // ckks_evaluator.decryptor.decrypt(cipher, output_plain);
+  // ckks_evaluator.encoder.decode(output_plain, output);
+
+  // ckks_evaluator.decryptor.decrypt(cipher3, output2_plain);
+  // ckks_evaluator.encoder.decode(output2_plain, output2);
+
+  // for (int i = 0; i < 5; i++) {
+  //   cout << output[i] << " ";
+  // }
+  // cout << endl;
+
+  // for (int i = 0; i < 3; i++) {
+  //   cout << output2[i] << " ";
+  // }
+  // cout << endl;
+  // Bootstrapping evaluation function tests ------------------------------------------
 
   size_t slot_count = encoder.slot_count();
 
@@ -132,23 +184,22 @@ int main() {
   //     ckks_evaluator);
 
   cout << "Generating Optimal Minimax Polynomials..." << endl;
-  cout << "-1" << endl;
   bootstrapper.prepare_mod_polynomial();
   // bootstrapper_2.prepare_mod_polynomial();
   // bootstrapper_3.prepare_mod_polynomial();
-  cout << "Adding Bootstrapping Keys..." << endl;
-  // bootstrapper.addBootKeys_3_other_slots(gal_keys, slot_vec);
+
+  cout << "Generating Galois Keys..." << endl;
   vector<int> gal_steps_vector;
   gal_steps_vector.push_back(0);
   for (int i = 0; i < logN - 1; i++) {
     gal_steps_vector.push_back((1 << i));
   }
   bootstrapper.addLeftRotKeys_Linear_to_vector_3(gal_steps_vector);
-  cout << "-2" << endl;
   // bootstrapper_2.addLeftRotKeys_Linear_to_vector_3(gal_steps_vector);
   // bootstrapper_3.addLeftRotKeys_Linear_to_vector_3(gal_steps_vector);
+
   ckks_evaluator.decryptor.create_galois_keys_from_steps(gal_steps_vector, *(ckks_evaluator.galois_keys));
-  cout << "-3" << endl;
+  cout << "Galois key generated from steps vector." << endl;
 
   bootstrapper.slot_vec.push_back(logn);
   // bootstrapper_2.slot_vec.push_back(logn_2);
@@ -156,7 +207,6 @@ int main() {
 
   cout << "Generating Linear Transformation Coefficients..." << endl;
   bootstrapper.generate_LT_coefficient_3();
-  cout << "-4" << endl;
   // bootstrapper_2.generate_LT_coefficient_3();
   // bootstrapper_3.generate_LT_coefficient_3();
 
@@ -183,6 +233,7 @@ int main() {
 
     cout << _ << "-th iteration : sparse_slots = " << sparse_slots << endl;
 
+    // Create input cipher
     for (size_t i = 0; i < slot_count; i++) {
       input[i] = sparse[i % sparse_slots];
     }
@@ -190,16 +241,18 @@ int main() {
     ckks_evaluator.encoder.encode(input, scale, plain);
     ckks_evaluator.encryptor.encrypt(plain, cipher);
 
+    // Mod switch to the lowest level
     for (int i = 0; i < total_level; i++) {
       ckks_evaluator.evaluator.mod_switch_to_next_inplace(cipher);
     }
 
-    PhantomCiphertext rtn;
-
+    // Decrypt input cipher to obtain the original input
     ckks_evaluator.decryptor.decrypt(cipher, plain);
     ckks_evaluator.encoder.decode(plain, before);
 
     auto start = system_clock::now();
+
+    PhantomCiphertext rtn;
 
     if (_ == 0)
       bootstrapper.bootstrap_3(rtn, cipher);
@@ -209,9 +262,8 @@ int main() {
     // bootstrapper_3.bootstrap_3(rtn, cipher);
 
     duration<double> sec = system_clock::now() - start;
-    cout << "bootstrapping time : " << sec.count() << "s" << endl;
-
-    cout << "return cipher level: " << rtn.coeff_modulus_size() << endl;
+    cout << "Bootstrapping took: " << sec.count() << "s" << endl;
+    cout << "Return cipher level: " << rtn.coeff_modulus_size() << endl;
 
     rtn = ckks_evaluator.sgn_eval(rtn, 2, 2);
 
@@ -229,16 +281,16 @@ int main() {
     mean_err = 0;
     for (long i = 0; i < sparse_slots; i++) {
       if (i < 10)
-        cout << i << " " << before[i] << "<---->" << after[i] << endl;
+        cout << before[i] << " <----> " << after[i] << endl;
       mean_err += abs(before[i] - after[i]);
     }
     mean_err /= sparse_slots;
-    cout << "Absolute mean of error: " << mean_err << endl;
+    cout << "Mean absolute error: " << mean_err << endl;
     tot_err += mean_err;
   }
 
   tot_err /= iterations;
-  cout << " mean error: " << tot_err << endl;
+  cout << "Mean error: " << tot_err << endl;
 
   return 0;
 }

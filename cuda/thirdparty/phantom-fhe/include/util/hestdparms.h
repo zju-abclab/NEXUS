@@ -26,7 +26,8 @@ namespace phantom {
                 case std::size_t(32768):
                     return 881;
                 case std::size_t(65536):
-                    return 1777;
+                    // return 1777;
+                    return 1792;
                 case std::size_t(131072):
                     return 3576;
             }

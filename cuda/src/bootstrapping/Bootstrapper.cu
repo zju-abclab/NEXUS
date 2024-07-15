@@ -2582,23 +2582,15 @@ void Bootstrapper::sflinv_3(PhantomCiphertext &rtncipher, PhantomCiphertext &cip
   int basicstep3 = 1;
 
   PhantomCiphertext tmpct;
-  cout << "mod size before rotated_bsgs_linear_transform: " << cipher.coeff_modulus_size() << endl;
   rotated_bsgs_linear_transform(tmpct, cipher, totlen1, basicstep1, logn, invfftcoeff1[slot_index]);
-  cout << "mod size after rotated_bsgs_linear_transform: " << tmpct.coeff_modulus_size() << endl;
   ckks->evaluator.rescale_to_next_inplace(tmpct);
-
-  cout << "11" << endl;
 
   PhantomCiphertext tmpct2;
   bsgs_linear_transform(tmpct2, tmpct, totlen2, basicstep2, logn, invfftcoeff2[slot_index]);
   ckks->evaluator.rescale_to_next_inplace(tmpct2);
 
-  cout << "12" << endl;
-
   bsgs_linear_transform(rtncipher, tmpct2, totlen3, basicstep3, logn + 1, invfftcoeff3[slot_index]);
   ckks->evaluator.rescale_to_next_inplace(rtncipher);
-
-  cout << "13" << endl;
 }
 
 void Bootstrapper::sflinv_full_3(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher) {
@@ -2955,19 +2947,22 @@ void Bootstrapper::modraise_inplace(PhantomCiphertext &cipher) {
   }
 
   const auto &stream = phantom::util::global_variables::default_stream->get_stream();
-  auto &rns_tool = ckks->context->get_context_data(cipher.chain_index()).gpu_rns_tool();
+  auto &rns_tool = ckks->context->get_context_data(cipher.params_id()).gpu_rns_tool();
   const auto &key_context_data = ckks->context->key_context_data();
   const auto &key_parms = key_context_data.parms();
   const auto data_parms = ckks->context->first_context_data().parms();
   const auto scheme = key_parms.scheme();
 
-  // Make a copy of ciphertext
-  PhantomCiphertext encrypted_copy(cipher);
+  // // Make a copy of ciphertext
+  // PhantomCiphertext cipher_copy = cipher;
 
   // Resize to the full level.
   cipher.resize(*ckks->context, ckks->context->get_first_index(), 2, stream);
 
   rns_tool.modup(cipher.data(), cipher.data(), ckks->context->gpu_rns_tables(), scheme, stream);
+
+  // // Wipe the copy
+  // cudaMemsetAsync(cipher_copy.data(), 0, cipher_copy.coeff_modulus_size() * cipher_copy.poly_modulus_degree() * sizeof(uint64_t), stream);
 }
 
 void Bootstrapper::bootstrap_sparse(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher) {
@@ -3125,7 +3120,7 @@ void Bootstrapper::bootstrap_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphe
     ckks->evaluator.complex_conjugate(rtn, *(ckks->galois_keys), conjrtn);
     ckks->evaluator.add_inplace_reduced_error(rtn, conjrtn);
   } else {
-    std::cout << "Coefftoslot...3" << endl;
+    std::cout << "Coefftoslot..." << endl;
     coefftoslot_3(rtn, cipher);
   }
 
