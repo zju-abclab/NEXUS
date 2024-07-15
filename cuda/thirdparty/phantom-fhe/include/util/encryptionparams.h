@@ -128,6 +128,26 @@ namespace phantom {
             compute_parms_id();
         }
 
+        // Manually specify CKKSEncoder's sparse slots
+        inline void set_sparse_slots(std::size_t sparse_slots)
+        {
+            if (scheme_ == scheme_type::none && sparse_slots)
+            {
+                throw std::logic_error("secret key hamming weight is not supported for this scheme");
+            }
+
+            if ((sparse_slots & (sparse_slots - 1)) != 0)
+            {
+                throw std::logic_error("secret key hamming weight is not zero or power-of-two");
+            }
+
+            // Set the degree
+            sparse_slots_= sparse_slots;
+
+            // Re-compute the parms_id
+            compute_parms_id();
+        }
+
         inline void set_galois_elts(const std::vector<uint32_t> &galois_elts) {
             galois_elts_ = galois_elts;
         }
@@ -210,6 +230,10 @@ namespace phantom {
 
         [[nodiscard]] inline std::size_t secret_key_hamming_weight() const noexcept {
             return secret_key_hamming_weight_;
+        }
+
+        [[nodiscard]] inline std::size_t sparse_slots() const noexcept {
+            return sparse_slots_;
         }
 
         [[nodiscard]] inline auto galois_elts() const noexcept {
@@ -351,6 +375,8 @@ namespace phantom {
         std::size_t special_modulus_size_ = 1;
 
         std::size_t secret_key_hamming_weight_ = 0;
+
+        std::size_t sparse_slots_ = 0;
 
         // used for hybrid key-switching
         std::vector<arith::Modulus> key_modulus_{};

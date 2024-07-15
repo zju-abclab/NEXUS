@@ -2746,17 +2746,11 @@ void Bootstrapper::coefftoslot_full_3(PhantomCiphertext &rtncipher1, PhantomCiph
   ckks->evaluator.mod_switch_to_inplace(tmpplain, tmpct1.params_id());
   ckks->evaluator.multiply_plain(tmpct1, tmpplain, tmpct2);
 
-  std::cout << "2" << endl;
-
   ckks->evaluator.complex_conjugate(tmpct2, *(ckks->galois_keys), tmpct3);
   ckks->evaluator.complex_conjugate(tmpct1, *(ckks->galois_keys), tmpct4);
 
-  std::cout << "3" << endl;
-
   ckks->evaluator.add_reduced_error(tmpct1, tmpct4, rtncipher1);
   ckks->evaluator.add_reduced_error(tmpct2, tmpct3, rtncipher2);
-
-  std::cout << "4" << endl;
 }
 void Bootstrapper::slottocoeff_full_3(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher1, PhantomCiphertext &cipher2) {
   PhantomCiphertext tmpct1, tmpct2, tmpct3;
@@ -2946,23 +2940,101 @@ void Bootstrapper::modraise_inplace(PhantomCiphertext &cipher) {
     throw invalid_argument("Ciphertexts in the lowest level are supported only!");
   }
 
+  // Method 2: -----------------------------------------------------------------
+  // if (cipher.is_ntt_form()) {
+  //   ckks->evaluator.transform_from_ntt_inplace(cipher);
+  // }
+
+  // Method 1: -----------------------------------------------------------------
   const auto &stream = phantom::util::global_variables::default_stream->get_stream();
   auto &rns_tool = ckks->context->get_context_data(cipher.params_id()).gpu_rns_tool();
   const auto &key_context_data = ckks->context->key_context_data();
   const auto &key_parms = key_context_data.parms();
+  auto &key_modulus = key_parms.coeff_modulus();
   const auto data_parms = ckks->context->first_context_data().parms();
   const auto scheme = key_parms.scheme();
 
+  auto n = key_parms.poly_modulus_degree();
+  size_t size_P = key_parms.special_modulus_size();
+  size_t size_QP = key_modulus.size();
+
+  size_t size_Ql = rns_tool.base_Ql().size();
+  size_t size_QlP = size_Ql + size_P;
+
+  auto size_Ql_n = size_Ql * n;
+  auto size_QlP_n = size_QlP * n;
+
+  auto c0 = make_cuda_auto_ptr<uint64_t>(size_Ql_n, stream);
+  auto c1 = make_cuda_auto_ptr<uint64_t>(size_Ql_n, stream);
+
+  size_t beta = rns_tool.v_base_part_Ql_to_compl_part_QlP_conv().size();
+
+  auto modup_c0 = make_cuda_auto_ptr<uint64_t>(beta * size_QlP_n, stream);
+  auto modup_c1 = make_cuda_auto_ptr<uint64_t>(beta * size_QlP_n, stream);
+
+  // Method 2: -----------------------------------------------------------------
   // // Make a copy of ciphertext
   // PhantomCiphertext cipher_copy = cipher;
 
+  // Method 1: -----------------------------------------------------------------
   // Resize to the full level.
-  cipher.resize(*ckks->context, ckks->context->get_first_index(), 2, stream);
+  cipher.resize(*ckks->context, ckks->context->first_context_data().chain_index(), 2, stream);
 
-  rns_tool.modup(cipher.data(), cipher.data(), ckks->context->gpu_rns_tables(), scheme, stream);
+  cudaMemcpyAsync(
+      c0.get(), cipher.data(), size_Ql_n * sizeof(uint64_t), cudaMemcpyDeviceToDevice, stream);
+  cudaMemcpyAsync(
+      c1.get(), cipher.data() + size_Ql_n, size_Ql_n * sizeof(uint64_t), cudaMemcpyDeviceToDevice, stream);
 
-  // // Wipe the copy
-  // cudaMemsetAsync(cipher_copy.data(), 0, cipher_copy.coeff_modulus_size() * cipher_copy.poly_modulus_degree() * sizeof(uint64_t), stream);
+  rns_tool.modup(modup_c0.get(), c0.get(), ckks->context->gpu_rns_tables(), scheme, stream);
+  rns_tool.modup(modup_c1.get(), c1.get() + size_Ql_n, ckks->context->gpu_rns_tables(), scheme, stream);
+
+  cudaMemcpyAsync(cipher.data(), modup_c0.get(), size_Ql_n * sizeof(uint64_t), cudaMemcpyDeviceToDevice, stream);
+  cudaMemcpyAsync(cipher.data() + size_Ql_n, modup_c1.get(), size_Ql_n * sizeof(uint64_t), cudaMemcpyDeviceToDevice, stream);
+
+  // Method 2: -----------------------------------------------------------------
+  // auto ciphertext_size = cipher.size();
+  // const auto &modulus = ckks->context->first_context_data().parms().coeff_modulus();
+  // auto coeff_modulus_size = cipher.coeff_modulus_size();
+  // auto poly_modulus_degree = cipher.poly_modulus_degree();
+
+  // auto cipher_copy_data = new uint64_t[ciphertext_size * coeff_modulus_size * poly_modulus_degree];
+  // auto cipher_data = new uint64_t[ciphertext_size * coeff_modulus_size * poly_modulus_degree];
+
+  // cudaMemcpy(cipher_copy_data, cipher_copy.data(), sizeof(uint64_t) * ciphertext_size * coeff_modulus_size * poly_modulus_degree, cudaMemcpyDeviceToHost);
+  // cudaMemcpy(cipher_data, cipher.data(), sizeof(uint64_t) * ciphertext_size * coeff_modulus_size * poly_modulus_degree, cudaMemcpyDeviceToHost);
+
+  // uint64_t q0 = modulus[0].value();
+  // vector<uint64_t> minus_q0(coeff_modulus_size);
+  // minus_q0[0] = 0;
+
+  // for (size_t l = 1; l < coeff_modulus_size; l++) {
+  //   minus_q0[l] = modulus[l].value() - q0 % modulus[l].value();
+  // }
+
+  // for (size_t poly_idx = 0; poly_idx < ciphertext_size; poly_idx++) {
+  //   const auto rns_poly_src = cipher_copy_data + poly_idx * coeff_modulus_size * poly_modulus_degree;
+  //   const auto rns_poly_dest = cipher_data + poly_idx * coeff_modulus_size * poly_modulus_degree;
+  //   const auto poly_src_zero = rns_poly_src;
+
+  //   for (size_t j = 0; j < coeff_modulus_size - 1; j++) {
+  //     const auto &poly_dest = rns_poly_dest + j * poly_modulus_degree;
+  //     for (size_t i = 0; i < poly_modulus_degree; i++) {
+  //       auto q = modulus[j].value();
+  //       poly_dest[i] = poly_src_zero[i] % q;
+  //       if (poly_src_zero[i] > (q0 >> 1)) {
+  //         poly_dest[i] += minus_q0[j];
+  //         poly_dest[i] -= (poly_dest[i] >= q) ? q : 0;
+  //       }
+  //     }
+  //   }
+  // }
+
+  // cudaMemcpy(cipher.data(), cipher_data, sizeof(uint64_t) * ciphertext_size * coeff_modulus_size * poly_modulus_degree, cudaMemcpyHostToDevice);
+
+  // // Wipe cipher_copy data
+  // cudaMemset(cipher_copy.data(), 0, sizeof(uint64_t) * ciphertext_size * coeff_modulus_size * poly_modulus_degree);
+
+  // ckks->evaluator.transform_to_ntt_inplace(cipher);
 }
 
 void Bootstrapper::bootstrap_sparse(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher) {
@@ -3094,6 +3166,8 @@ void Bootstrapper::bootstrap_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphe
   std::cout << "Modulus Raising..." << endl;
   modraise_inplace(cipher);
 
+  ckks->print_decrypted_ct(cipher, 10);
+
   const auto &modulus = ckks->context->first_context_data().parms().coeff_modulus();
   cipher.scale() = ((double)modulus[0].value());
 
@@ -3103,6 +3177,8 @@ void Bootstrapper::bootstrap_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphe
     ckks->evaluator.rotate_vector(cipher, (1 << i), *(ckks->galois_keys), rot);
     ckks->evaluator.add_inplace(cipher, rot);
   }
+
+  ckks->print_decrypted_ct(cipher, 10);
 
   PhantomCiphertext rtn;
   if (logn == 0) {
@@ -3122,11 +3198,14 @@ void Bootstrapper::bootstrap_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphe
   } else {
     std::cout << "Coefftoslot..." << endl;
     coefftoslot_3(rtn, cipher);
+    ckks->print_decrypted_ct(rtn, 10);
   }
 
   std::cout << "Modular reduction..." << endl;
   PhantomCiphertext modrtn;
   mod_reducer->modular_reduction(modrtn, rtn);
+
+  ckks->print_decrypted_ct(modrtn, 10);
 
   if (logn == 0) {
     const auto &modulus = ckks->context->first_context_data().parms().coeff_modulus();
@@ -3153,6 +3232,7 @@ void Bootstrapper::bootstrap_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphe
   } else {
     std::cout << "Slottocoeff..." << endl;
     slottocoeff_3(rtncipher, modrtn);
+    ckks->print_decrypted_ct(rtncipher, 10);
   }
   rtncipher.scale() = final_scale;
 }

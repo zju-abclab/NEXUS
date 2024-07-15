@@ -29,7 +29,8 @@ void random_real(vector<double> &vec, size_t size) {
   vec.reserve(size);
 
   for (size_t i = 0; i < size; i++) {
-    vec[i] = distribution(rnd);
+    // vec[i] = distribution(rnd);
+    vec[i] = 0.5;
   }
 }
 
@@ -82,6 +83,7 @@ int main() {
   parms.set_poly_modulus_degree(poly_modulus_degree);
   parms.set_coeff_modulus(phantom::arith::CoeffModulus::Create(poly_modulus_degree, coeff_bit_vec));
   parms.set_secret_key_hamming_weight(secret_key_hamming_weight);
+  parms.set_sparse_slots(sparse_slots);
 
   PhantomContext context(parms);
 
@@ -114,35 +116,28 @@ int main() {
   // PhantomCiphertext output_cipher;
   // ckks_evaluator.encoder.encode(input, scale, plain);
   // ckks_evaluator.encoder.encode(input2, scale, plain2);
-  // ckks_evaluator.encoder.encode(input3, scale, plain3);
+  // // ckks_evaluator.encoder.encode(input3, scale, plain3);
   // ckks_evaluator.encryptor.encrypt(plain, cipher);
   // ckks_evaluator.encryptor.encrypt(plain2, cipher2);
-  // ckks_evaluator.encryptor.encrypt(plain3, cipher3);
+  // // ckks_evaluator.encryptor.encrypt(plain3, cipher3);
 
-  // ckks_evaluator.evaluator.add_inplace_reduced_error(cipher, cipher2);
-  // ckks_evaluator.evaluator.sub_inplace_reduced_error(cipher, cipher2);
+  // // ckks_evaluator.evaluator.add_inplace_reduced_error(cipher, cipher2);
+  // // ckks_evaluator.evaluator.sub_inplace_reduced_error(cipher, cipher2);
 
-  // ckks_evaluator.evaluator.multiply_inplace_reduced_error(cipher, cipher2, *ckks_evaluator.relin_keys);
-  // ckks_evaluator.evaluator.multiply_vector_inplace_reduced_error(cipher, input2);
+  // // ckks_evaluator.evaluator.multiply_inplace_reduced_error(cipher, cipher2, *ckks_evaluator.relin_keys);
+  // // ckks_evaluator.evaluator.multiply_vector_inplace_reduced_error(cipher, input2);
 
-  // ckks_evaluator.evaluator.add_const_inplace(cipher, 1.0);
-  // ckks_evaluator.evaluator.multiply_const_inplace(cipher, 2.0);
+  // // ckks_evaluator.evaluator.add_const_inplace(cipher, 1.0);
+  // // ckks_evaluator.evaluator.multiply_const_inplace(cipher, 2.0);
 
-  // ckks_evaluator.evaluator.complex_conjugate_inplace(cipher3, *ckks_evaluator.galois_keys);
+  // // ckks_evaluator.evaluator.complex_conjugate_inplace(cipher3, *ckks_evaluator.galois_keys);
+  // // ckks_evaluator.evaluator.rotate_vector_inplace(cipher3, 1, *ckks_evaluator.galois_keys);
 
   // ckks_evaluator.decryptor.decrypt(cipher, output_plain);
   // ckks_evaluator.encoder.decode(output_plain, output);
 
-  // ckks_evaluator.decryptor.decrypt(cipher3, output2_plain);
-  // ckks_evaluator.encoder.decode(output2_plain, output2);
-
   // for (int i = 0; i < 5; i++) {
   //   cout << output[i] << " ";
-  // }
-  // cout << endl;
-
-  // for (int i = 0; i < 3; i++) {
-  //   cout << output2[i] << " ";
   // }
   // cout << endl;
   // Bootstrapping evaluation function tests ------------------------------------------
@@ -254,6 +249,8 @@ int main() {
 
     PhantomCiphertext rtn;
 
+    ckks_evaluator.print_decrypted_ct(cipher, 10);
+
     if (_ == 0)
       bootstrapper.bootstrap_3(rtn, cipher);
     // else if (_ == 1)
@@ -265,18 +262,18 @@ int main() {
     cout << "Bootstrapping took: " << sec.count() << "s" << endl;
     cout << "Return cipher level: " << rtn.coeff_modulus_size() << endl;
 
-    rtn = ckks_evaluator.sgn_eval(rtn, 2, 2);
+    // rtn = ckks_evaluator.sgn_eval(rtn, 2, 2);
 
     ckks_evaluator.decryptor.decrypt(rtn, plain);
     ckks_evaluator.encoder.decode(plain, after);
 
-    for (long i = 0; i < sparse_slots; i++) {
-      if (before[i] > 0) {
-        before[i] = 0.5;
-      } else {
-        before[i] = -0.5;
-      }
-    }
+    // for (long i = 0; i < sparse_slots; i++) {
+    //   if (before[i] > 0) {
+    //     before[i] = 0.5;
+    //   } else {
+    //     before[i] = -0.5;
+    //   }
+    // }
 
     mean_err = 0;
     for (long i = 0; i < sparse_slots; i++) {

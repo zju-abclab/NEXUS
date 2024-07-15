@@ -260,6 +260,93 @@ namespace phantom::arith {
         }
     }
 
+    __global__ void compose_kernel_step1(cuDoubleComplex *dst, uint64_t *temp_prod_array, uint64_t *acc_mod_array,
+                                   const uint64_t *src, const uint32_t size, const DModulus *base_q,
+                                   const uint64_t *base_prod, const uint64_t *punctured_prod_array,
+                                   const uint64_t *inv_punctured_prod_mod_base_array,
+                                   const uint64_t *inv_punctured_prod_mod_base_array_shoup,
+                                   const uint64_t *upper_half_threshold, const double inv_scale,
+                                   const uint32_t coeff_count,
+                                   const uint32_t sparse_coeff_count, const uint32_t sparse_ratio) {
+        for (size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
+             tid < sparse_coeff_count; tid += blockDim.x * gridDim.x) {
+            if (size > 1) {
+                uint64_t prod;
+
+                for (uint32_t i = 0; i < size; i++) {
+                    // [a[j] * hat(q)_j^(-1)]_(q_j)
+                    prod = multiply_and_reduce_shoup(src[tid * sparse_ratio + i * coeff_count],
+                                                     inv_punctured_prod_mod_base_array[i],
+                                                     inv_punctured_prod_mod_base_array_shoup[i], base_q[i].value());
+
+                    // * hat(q)_j over ZZ
+                    multiply_uint_uint64(punctured_prod_array + i * size, size, // operand1 and size
+                                         prod, // operand2 with uint64_t
+                                         temp_prod_array + tid * size); // result and size
+
+                    // accumulation and mod Q over ZZ
+                    add_uint_uint_mod(temp_prod_array + tid * size, acc_mod_array + tid * size, base_prod, size,
+                                      acc_mod_array + tid * size);
+                }
+            } else {
+                acc_mod_array[tid] = src[tid * sparse_ratio];
+            }
+        }
+    }
+
+    __global__ void compose_kernel_step2(cuDoubleComplex *dst, uint64_t *temp_prod_array, uint64_t *acc_mod_array,
+                                   const uint64_t *src, const uint32_t size, const DModulus *base_q,
+                                   const uint64_t *base_prod, const uint64_t *punctured_prod_array,
+                                   const uint64_t *inv_punctured_prod_mod_base_array,
+                                   const uint64_t *inv_punctured_prod_mod_base_array_shoup,
+                                   const uint64_t *upper_half_threshold, const double inv_scale,
+                                   const uint32_t coeff_count,
+                                   const uint32_t sparse_coeff_count, const uint32_t sparse_ratio) {
+        for (size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
+             tid < sparse_coeff_count; tid += blockDim.x * gridDim.x) {
+            // Create floating-point representations of the multi-precision integer coefficients
+            // Scaling instead incorporated above; this can help in cases
+            // where otherwise pow(two_pow_64, j) would overflow due to very
+            // large coeff_modulus_size and very large scale
+            // res[i] = res_accum * inv_scale;
+            double res = 0.0;
+            double scaled_two_pow_64 = inv_scale;
+            uint64_t diff;
+
+            if (is_greater_than_or_equal_uint(acc_mod_array + tid * size, upper_half_threshold, size)) {
+                for (uint32_t i = 0; i < size; i++, scaled_two_pow_64 *= two_pow_64_dev) {
+                    if (acc_mod_array[tid * size + i] > base_prod[i]) {
+                        diff = acc_mod_array[tid * size + i] - base_prod[i];
+                        res += diff ? static_cast<double>(diff) * scaled_two_pow_64 : 0.0;
+                    } else {
+                        diff = base_prod[i] - acc_mod_array[tid * size + i];
+                        res -= diff ? static_cast<double>(diff) * scaled_two_pow_64 : 0.0;
+                    }
+                }
+            } else {
+                for (size_t i = 0; i < size; i++, scaled_two_pow_64 *= two_pow_64_dev) {
+                    diff = acc_mod_array[tid * size + i];
+                    res += diff ? static_cast<double>(diff) * scaled_two_pow_64 : 0.0;
+                }
+            }
+
+            if (tid < sparse_coeff_count >> 1)
+                dst[tid].x = res;
+            else
+                dst[tid - (sparse_coeff_count >> 1)].y = res;
+        }
+    }
+
+    __global__ void compose_kernel_step1_1(const uint32_t sparse_ratio, std::size_t coeff_count, std::size_t coeff_modulus_size, std::uint64_t* acc_mod_array) {
+        std::size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+        if (idx < coeff_count && ((idx - 1) & (sparse_ratio - 1)) != sparse_ratio - 1) {
+            for (std::size_t j = 0; j < coeff_modulus_size; j++) {
+                acc_mod_array[idx * coeff_modulus_size + j] = 0;
+            }
+        }
+    }
+
     void DRNSBase::compose_array(cuDoubleComplex *dst, const uint64_t *src, const uint64_t *upper_half_threshold,
                                  const double inv_scale, const uint32_t coeff_count, const uint32_t sparse_coeff_count,
                                  const uint32_t sparse_ratio, const cudaStream_t &stream) const {
@@ -274,7 +361,18 @@ namespace phantom::arith {
 
         uint64_t gridDimGlb = ceil(sparse_coeff_count / blockDimGlb.x);
 
-        compose_kernel<<<gridDimGlb, blockDimGlb, 0, stream>>>(
+        compose_kernel_step1<<<gridDimGlb, blockDimGlb, 0, stream>>>(
+                dst, temp_prod_array.get(), acc_mod_array.get(), src, size(), base(),
+                big_modulus(), big_qiHat(), QHatInvModq(), QHatInvModq_shoup(),
+                upper_half_threshold, inv_scale, coeff_count, sparse_coeff_count, sparse_ratio);
+        
+        // Newly added to handle sparse_slots_ != slots_
+        if (sparse_ratio != 1) {
+            int numBlocks = (coeff_count + blockDimGlb.x - 1) / blockDimGlb.x;
+            compose_kernel_step1_1<<<numBlocks, blockDimGlb, 0, stream>>>(sparse_ratio, coeff_count, size(), acc_mod_array.get());
+        }
+        
+        compose_kernel_step2<<<gridDimGlb, blockDimGlb, 0, stream>>>(
                 dst, temp_prod_array.get(), acc_mod_array.get(), src, size(), base(),
                 big_modulus(), big_qiHat(), QHatInvModq(), QHatInvModq_shoup(),
                 upper_half_threshold, inv_scale, coeff_count, sparse_coeff_count, sparse_ratio);

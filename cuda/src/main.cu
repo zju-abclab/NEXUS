@@ -17,6 +17,7 @@ using namespace troy;
 using namespace troy::utils;
 using namespace nexus;
 
+// Choose test target here:
 int TEST_TARGET_IDX = 0;
 
 size_t N = 1ULL << 16;
@@ -25,7 +26,7 @@ size_t MM_N = 1ULL << MM_LOG_N;
 
 double SCALE = pow(2.0, 40);
 
-vector<string> TEST_TARGETS = {"MatMul", "SoftMax", "LayerNorm", "GELU"};
+vector<string> TEST_TARGETS = {"MatMul", "MatMul_Phantom", "SoftMax", "LayerNorm", "GELU"};
 vector<vector<int>> COEFF_MODULI =
     {
         {60, 40, 60},                                                                      // MatMul (0)
@@ -121,12 +122,81 @@ void MM_test() {
   MemoryPool::Destroy();
 }
 
+void MM_test_p() {
+  phantom::EncryptionParameters parms(scheme_type::ckks);
+
+  parms.set_poly_modulus_degree(MM_N);
+  parms.set_coeff_modulus(phantom::arith::CoeffModulus::Create(MM_N, TEST_COEFF_MODULI));
+
+  PhantomContext context(parms);
+
+  PhantomSecretKey secret_key(context);
+  PhantomPublicKey public_key = secret_key.gen_publickey(context);
+  PhantomRelinKey relin_keys = secret_key.gen_relinkey(context);
+
+  std::vector<uint32_t> rots;
+  for (int i = 0; i < MM_LOG_N; i++) {
+    rots.push_back((MM_N + exponentiate_uint(2, i)) / exponentiate_uint(2, i));
+  }
+  PhantomGaloisKey galois_keys = secret_key.create_galois_keys_from_elts(context, rots);
+
+  PhantomCKKSEncoder encoder(context);
+  CKKSEvaluator ckks_evaluator(&context, &public_key, &secret_key, &encoder, &relin_keys, &galois_keys, SCALE, rots);
+  MMEvaluator mme(ckks_evaluator);
+
+  std::vector<std::vector<double>> matrix_4096x768 = mme.read_matrix("../../data/input/matrixmul_input_m_128_n_768_k_64_batch_128.txt", 4096, 768);
+  std::vector<std::vector<double>> matrix_768x64 = mme.read_matrix("../../data/input/matrix_input_n_768_k_64.txt", 768, 64);
+
+  vector<PhantomCiphertext> res;
+
+  auto matrix_4096x768_T = mme.transpose_matrix(matrix_4096x768);
+  auto matrix_768x64_T = mme.transpose_matrix(matrix_768x64);
+
+  std::vector<std::vector<double>> row_pack;
+
+  std::vector<double> row_ct(4096, 0.0);
+  for (auto i = 0; i < 64 * 768; i++) {
+    int row = i / 768;
+    int col = i % 768;
+    row_ct[i % 4096] = matrix_768x64_T[row][col];
+    if (i % 4096 == 4095) {
+      row_pack.push_back(row_ct);
+    }
+  }
+
+  auto timer = Timer();
+  mme.matrix_mul(matrix_4096x768_T, row_pack, res);
+  timer.stop();
+  cout << "[MatMul] 4096x768 x 768x64 takes: " << timer.duration<milliseconds>() << " milliseconds" << endl;
+
+  std::vector<std::vector<double>> matrix_4096x64 = mme.read_matrix("../../data/calibration/matrix_output_m_128_k_64_batch_128.txt", 4096, 64);
+  auto matrix_4096x64_T = mme.transpose_matrix(matrix_4096x64);
+
+  double average_err = 0.0;
+
+  // err of the first col
+  PhantomPlaintext res_pt;
+  vector<double> mm_res;
+  ckks_evaluator.decryptor.decrypt(res[0], res_pt);
+  ckks_evaluator.encoder.decode(res_pt, mm_res);
+  for (auto i = 0; i < 4096; i++) {
+    average_err += fabs(mm_res[i] / 2.0 - matrix_4096x64_T[0][i]);
+    // printf("%+.10lf %+.10lf\n", mm_res[i] / 2.0, matrix_4096x64_T[0][i]);
+  }
+  std::cout << "average_err: " << average_err / 4096.0 << std::endl;
+}
+
 int main() {
   /*
     MatMul
   */
   if (TEST_TARGET == "MatMul") {
     MM_test();
+    return 0;
+  }
+
+  if (TEST_TARGET == "MatMul_Phantom") {
+    MM_test_p();
     return 0;
   }
 

@@ -56,7 +56,7 @@ void MMEvaluator::multiply_power_of_x(PhantomCiphertext &encrypted, PhantomCiphe
   auto moduli = param.coeff_modulus();
   auto coeff_mod_count = param.coeff_modulus().size();
   auto encrypted_count = encrypted.size();
-  auto rns_coeff_count = coeff_count * coeff_mod_count;
+  auto rns_coeff_count = coeff_count * (coeff_mod_count + 1);
 
   const auto &stream = phantom::util::global_variables::default_stream->get_stream();
   // uint64_t gridDimGlb = coeff_count * coeff_mod_count / blockDimGlb.x;

@@ -24,6 +24,8 @@ class Encoder {
 
   inline size_t message_length() { return encoder->message_length(); }
 
+  inline void reset_sparse_slots() { encoder->reset_sparse_slots(); }
+
   // Vector (of doubles or complexes) inputs
   inline void encode(vector<double> values, size_t chain_index, double scale, PhantomPlaintext &plain) {
     if (values.size() == 1) {
@@ -375,10 +377,19 @@ class Evaluator {
     multiply_vector_inplace_reduced_error(dest, values);
   }
 
-  template <typename T, typename = std::enable_if_t<std::is_same<std::remove_cv_t<T>, double>::value || std::is_same<std::remove_cv_t<T>, std::complex<double>>::value>>
-  inline void multiply_vector_inplace_reduced_error(PhantomCiphertext &ct, vector<T> &values) {
+  inline void multiply_vector_inplace_reduced_error(PhantomCiphertext &ct, vector<double> &values) {
     PhantomPlaintext plain;
 
+    values.resize(encoder->message_length(), 0.0);
+    encoder->encode(*context, values, ct.scale(), plain);
+    mod_switch_to_inplace(plain, ct.params_id());
+    multiply_plain_inplace(ct, plain);
+  }
+
+  inline void multiply_vector_inplace_reduced_error(PhantomCiphertext &ct, vector<complex<double>> &values) {
+    PhantomPlaintext plain;
+
+    values.resize(encoder->message_length(), 0.0 + 0.0i);
     encoder->encode(*context, values, ct.scale(), plain);
     mod_switch_to_inplace(plain, ct.params_id());
     multiply_plain_inplace(ct, plain);

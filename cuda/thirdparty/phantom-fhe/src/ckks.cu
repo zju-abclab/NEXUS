@@ -40,6 +40,11 @@ PhantomCKKSEncoder::PhantomCKKSEncoder(const PhantomContext &context) {
         throw std::invalid_argument("unsupported scheme");
     }
     slots_ = coeff_count >> 1; // n/2
+
+    // Newly added: set sparse_slots immediately if specified
+    auto specified_sparse_slots = context_data.parms().sparse_slots();
+    if (specified_sparse_slots) sparse_slots_ = specified_sparse_slots;
+
     uint32_t m = coeff_count << 1;
     uint32_t slots_half = slots_ >> 1;
     gpu_ckks_msg_vec_ = std::make_unique<DCKKSEncoderInfo>(coeff_count, s);
@@ -105,7 +110,7 @@ void PhantomCKKSEncoder::encode_internal(const PhantomContext &context, const cu
         sparse_slots_ = 1 << log_sparse_slots;
     } else {
         if (values_size > sparse_slots_) {
-            throw std::invalid_argument("values_size exceeds previous message length");
+            throw std::invalid_argument("values_size exceeds previous message length: " + std::to_string(values_size) + " > " + std::to_string(sparse_slots_));
         }
     }
     // size_t log_sparse_slots = ceil(log2(slots_));
