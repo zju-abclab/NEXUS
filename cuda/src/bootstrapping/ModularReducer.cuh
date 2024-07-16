@@ -33,7 +33,7 @@ class ModularReducer {
   boot::Polynomial sin_cos_polynomial;
   boot::Polynomial inverse_sin_polynomial;
 
-  ModularReducer(long _boundary_K, double _log_width, long _deg, long _num_double_formula, long _inverse_deg, CKKSEvaluator &ckks);
+  ModularReducer(long _boundary_K, double _log_width, long _deg, long _num_double_formula, long _inverse_deg, CKKSEvaluator *ckks);
 
   void double_angle_formula(PhantomCiphertext &cipher);
   void double_angle_formula_scaled(PhantomCiphertext &cipher, double scale_coeff);

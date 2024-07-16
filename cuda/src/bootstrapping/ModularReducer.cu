@@ -1,6 +1,7 @@
 #include "ModularReducer.cuh"
 
-ModularReducer::ModularReducer(long _boundary_K, double _log_width, long _deg, long _num_double_formula, long _inverse_deg, CKKSEvaluator &ckks) : boundary_K(_boundary_K), log_width(_log_width), deg(_deg), num_double_formula(_num_double_formula), inverse_deg(_inverse_deg), ckks(&ckks) {
+ModularReducer::ModularReducer(long _boundary_K, double _log_width, long _deg, long _num_double_formula, long _inverse_deg,
+                               CKKSEvaluator *_ckks) : boundary_K(_boundary_K), log_width(_log_width), deg(_deg), num_double_formula(_num_double_formula), inverse_deg(_inverse_deg), ckks(_ckks) {
   inverse_log_width = -log2(sin(2 * M_PI * pow(2.0, -log_width)));
   poly_generator = new RemezCos(rmparm, boundary_K, log_width, deg, (1 << num_double_formula));
   inverse_poly_generator = new RemezArcsin(rmparm, inverse_log_width, inverse_deg);
@@ -54,7 +55,10 @@ void ModularReducer::modular_reduction(PhantomCiphertext &rtn, PhantomCiphertext
   PhantomPlaintext tmpplain;
   tmp1 = cipher;
 
-  sin_cos_polynomial.homomorphic_poly_evaluation(*ckks, tmp2, tmp1);
+  sin_cos_polynomial.homomorphic_poly_evaluation(ckks, tmp2, tmp1);
+
+  ckks->print_decrypted_ct(tmp2, 10);
+
   if (inverse_deg == 1) {
     double curr_scale = scale_inverse_coeff;
     for (int i = 0; i < num_double_formula; i++) {
@@ -64,6 +68,6 @@ void ModularReducer::modular_reduction(PhantomCiphertext &rtn, PhantomCiphertext
     rtn = tmp2;
   } else {
     for (int i = 0; i < num_double_formula; i++) double_angle_formula(tmp2);
-    inverse_sin_polynomial.homomorphic_poly_evaluation(*ckks, rtn, tmp2);
+    inverse_sin_polynomial.homomorphic_poly_evaluation(ckks, rtn, tmp2);
   }
 }

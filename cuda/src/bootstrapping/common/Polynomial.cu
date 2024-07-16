@@ -250,60 +250,64 @@ void Polynomial::read_heap_from_file(ifstream &in) {
   copy(*poly_heap[0]);
 }
 
-void Polynomial::homomorphic_poly_evaluation(CKKSEvaluator &ckks, PhantomCiphertext &rtn, PhantomCiphertext &cipher) {
-  double zero = 1. / cipher.scale();
+void Polynomial::homomorphic_poly_evaluation(CKKSEvaluator *ckks, PhantomCiphertext &rtn, PhantomCiphertext &cipher) {
+  double zero = 1.0 / cipher.scale();
 
   if (deg == 1) {
-    ckks.evaluator.multiply_const(cipher, to_double(coeff[1]), rtn);
-    ckks.evaluator.rescale_to_next_inplace(rtn);
-    ckks.evaluator.add_const(rtn, to_double(coeff[0]), rtn);
+    ckks->evaluator.multiply_const(cipher, to_double(coeff[1]), rtn);
+    ckks->evaluator.rescale_to_next_inplace(rtn);
+    ckks->evaluator.add_const(rtn, to_double(coeff[0]), rtn);
     return;
-  } else if (deg == 2) {
-    PhantomCiphertext squared;
-    ckks.evaluator.square(cipher, squared);
-    ckks.evaluator.relinearize_inplace(squared, *(ckks.relin_keys));
-    ckks.evaluator.rescale_to_next_inplace(squared);
+  }
 
-    ckks.evaluator.multiply_const_inplace(squared, to_double(coeff[2]));
-    ckks.evaluator.rescale_to_next_inplace(squared);
+  else if (deg == 2) {
+    PhantomCiphertext squared;
+    ckks->evaluator.square(cipher, squared);
+    ckks->evaluator.relinearize_inplace(squared, *(ckks->relin_keys));
+    ckks->evaluator.rescale_to_next_inplace(squared);
+
+    ckks->evaluator.multiply_const_inplace(squared, to_double(coeff[2]));
+    ckks->evaluator.rescale_to_next_inplace(squared);
 
     if (abs(to_double(coeff[1])) >= zero) {
-      ckks.evaluator.multiply_const(cipher, to_double(coeff[1]), rtn);
-      ckks.evaluator.rescale_to_next_inplace(rtn);
-      ckks.evaluator.add_reduced_error(rtn, squared, rtn);
+      ckks->evaluator.multiply_const(cipher, to_double(coeff[1]), rtn);
+      ckks->evaluator.rescale_to_next_inplace(rtn);
+      ckks->evaluator.add_reduced_error(rtn, squared, rtn);
     } else {
       rtn = squared;
     }
 
-    ckks.evaluator.add_const_inplace(rtn, to_double(coeff[0]));
+    ckks->evaluator.add_const_inplace(rtn, to_double(coeff[0]));
     return;
-  } else if (deg == 3) {
+  }
+
+  else if (deg == 3) {
     PhantomCiphertext squared, cubic;
-    ckks.evaluator.square(cipher, squared);
-    ckks.evaluator.relinearize_inplace(squared, *(ckks.relin_keys));
-    ckks.evaluator.rescale_to_next_inplace(squared);
+    ckks->evaluator.square(cipher, squared);
+    ckks->evaluator.relinearize_inplace(squared, *(ckks->relin_keys));
+    ckks->evaluator.rescale_to_next_inplace(squared);
 
-    ckks.evaluator.multiply_const(cipher, to_double(coeff[3]), cubic);
-    ckks.evaluator.rescale_to_next_inplace(cubic);
+    ckks->evaluator.multiply_const(cipher, to_double(coeff[3]), cubic);
+    ckks->evaluator.rescale_to_next_inplace(cubic);
 
-    ckks.evaluator.multiply_inplace_reduced_error(cubic, squared, *(ckks.relin_keys));
-    ckks.evaluator.rescale_to_next_inplace(cubic);
+    ckks->evaluator.multiply_inplace_reduced_error(cubic, squared, *(ckks->relin_keys));
+    ckks->evaluator.rescale_to_next_inplace(cubic);
 
     if (abs(to_double(coeff[1])) >= zero) {
-      ckks.evaluator.multiply_const(cipher, to_double(coeff[1]), rtn);
-      ckks.evaluator.rescale_to_next_inplace(rtn);
-      ckks.evaluator.add_reduced_error(rtn, cubic, rtn);
+      ckks->evaluator.multiply_const(cipher, to_double(coeff[1]), rtn);
+      ckks->evaluator.rescale_to_next_inplace(rtn);
+      ckks->evaluator.add_reduced_error(rtn, cubic, rtn);
     } else {
       rtn = cubic;
     }
 
     if (abs(to_double(coeff[2])) >= zero) {
-      ckks.evaluator.multiply_const_inplace(squared, to_double(coeff[2]));
-      ckks.evaluator.rescale_to_next_inplace(squared);
-      ckks.evaluator.add_reduced_error(rtn, squared, rtn);
+      ckks->evaluator.multiply_const_inplace(squared, to_double(coeff[2]));
+      ckks->evaluator.rescale_to_next_inplace(squared);
+      ckks->evaluator.add_reduced_error(rtn, squared, rtn);
     }
 
-    ckks.evaluator.add_const_inplace(rtn, to_double(coeff[0]));
+    ckks->evaluator.add_const_inplace(rtn, to_double(coeff[0]));
     return;
   } else {
     vector<PhantomCiphertext> baby(heap_k, PhantomCiphertext());
@@ -317,12 +321,12 @@ void Polynomial::homomorphic_poly_evaluation(CKKSEvaluator &ckks, PhantomCiphert
     babybool[1] = true;
 
     for (int i = 2; i < heap_k; i *= 2) {
-      ckks.evaluator.square(baby[i / 2], baby[i]);
-      ckks.evaluator.relinearize_inplace(baby[i], *(ckks.relin_keys));
-      ckks.evaluator.rescale_to_next_inplace(baby[i]);
-      ckks.evaluator.double_inplace(baby[i]);
+      ckks->evaluator.square(baby[i / 2], baby[i]);
+      ckks->evaluator.relinearize_inplace(baby[i], *(ckks->relin_keys));
+      ckks->evaluator.rescale_to_next_inplace(baby[i]);
+      ckks->evaluator.double_inplace(baby[i]);
 
-      ckks.evaluator.add_const(baby[i], -1.0, baby[i]);
+      ckks->evaluator.add_const(baby[i], -1.0, baby[i]);
       babybool[i] = true;
     }
 
@@ -335,11 +339,11 @@ void Polynomial::homomorphic_poly_evaluation(CKKSEvaluator &ckks, PhantomCiphert
         res = i - lpow2;
         diff = abs(lpow2 - res);
 
-        ckks.evaluator.multiply_reduced_error(baby[lpow2], baby[res], *(ckks.relin_keys), baby[i]);
-        ckks.evaluator.rescale_to_next_inplace(baby[i]);
-        ckks.evaluator.double_inplace(baby[i]);
+        ckks->evaluator.multiply_reduced_error(baby[lpow2], baby[res], *(ckks->relin_keys), baby[i]);
+        ckks->evaluator.rescale_to_next_inplace(baby[i]);
+        ckks->evaluator.double_inplace(baby[i]);
 
-        ckks.evaluator.sub_reduced_error(baby[i], baby[diff], baby[i]);
+        ckks->evaluator.sub_reduced_error(baby[i], baby[diff], baby[i]);
         babybool[i] = true;
       }
     }
@@ -357,27 +361,29 @@ void Polynomial::homomorphic_poly_evaluation(CKKSEvaluator &ckks, PhantomCiphert
     }
 
     else if (diff == 0) {
-      ckks.evaluator.square(baby[lpow2], giant[0]);
-      ckks.evaluator.relinearize_inplace(giant[0], *(ckks.relin_keys));
-      ckks.evaluator.rescale_to_next_inplace(giant[0]);
-      ckks.evaluator.double_inplace(giant[0]);
-      ckks.evaluator.add_const(giant[0], -1.0, giant[0]);
-    } else {
-      ckks.evaluator.multiply_reduced_error(baby[lpow2], baby[res], *(ckks.relin_keys), giant[0]);
-      ckks.evaluator.rescale_to_next_inplace(giant[0]);
-      ckks.evaluator.double_inplace(giant[0]);
-      ckks.evaluator.sub_reduced_error(giant[0], baby[diff], giant[0]);
+      ckks->evaluator.square(baby[lpow2], giant[0]);
+      ckks->evaluator.relinearize_inplace(giant[0], *(ckks->relin_keys));
+      ckks->evaluator.rescale_to_next_inplace(giant[0]);
+      ckks->evaluator.double_inplace(giant[0]);
+      ckks->evaluator.add_const(giant[0], -1.0, giant[0]);
+    }
+
+    else {
+      ckks->evaluator.multiply_reduced_error(baby[lpow2], baby[res], *(ckks->relin_keys), giant[0]);
+      ckks->evaluator.rescale_to_next_inplace(giant[0]);
+      ckks->evaluator.double_inplace(giant[0]);
+      ckks->evaluator.sub_reduced_error(giant[0], baby[diff], giant[0]);
     }
 
     for (int i = 1; i < heap_m; i++) {
       giantbool[i] = true;
 
-      ckks.evaluator.square(giant[i - 1], giant[i]);
-      ckks.evaluator.relinearize_inplace(giant[i], *(ckks.relin_keys));
-      ckks.evaluator.rescale_to_next_inplace(giant[i]);
-      ckks.evaluator.double_inplace(giant[i]);
+      ckks->evaluator.square(giant[i - 1], giant[i]);
+      ckks->evaluator.relinearize_inplace(giant[i], *(ckks->relin_keys));
+      ckks->evaluator.rescale_to_next_inplace(giant[i]);
+      ckks->evaluator.double_inplace(giant[i]);
 
-      ckks.evaluator.add_const_inplace(giant[i], -1.0);
+      ckks->evaluator.add_const_inplace(giant[i], -1.0);
     }
 
     vector<PhantomCiphertext> cipherheap((1 << (heap_m + 1)) - 1, PhantomCiphertext());
@@ -385,31 +391,31 @@ void Polynomial::homomorphic_poly_evaluation(CKKSEvaluator &ckks, PhantomCiphert
 
     long heapfirst = (1 << heap_m) - 1;
     long heaplast = (1 << (heap_m + 1)) - 1;
-    double zero = 1. / cipher.scale();
+    double zero = 1.0 / cipher.scale();
 
     for (int i = heapfirst; i < heaplast; i++) {
       if (poly_heap[i]) {
         cipherheapbool[i] = true;
 
-        ckks.evaluator.multiply_const(baby[1], to_double(poly_heap[i]->chebcoeff[1]), cipherheap[i]);
-        ckks.evaluator.rescale_to_next_inplace(cipherheap[i]);
+        ckks->evaluator.multiply_const(baby[1], to_double(poly_heap[i]->chebcoeff[1]), cipherheap[i]);
+        ckks->evaluator.rescale_to_next_inplace(cipherheap[i]);
 
         if (!(abs(to_double(poly_heap[i]->chebcoeff[1])) <= zero))
-          ckks.evaluator.add_const_inplace(cipherheap[i], to_double(poly_heap[i]->chebcoeff[0]));
+          ckks->evaluator.add_const_inplace(cipherheap[i], to_double(poly_heap[i]->chebcoeff[0]));
 
         for (int j = 2; j <= poly_heap[i]->deg; j++) {
           if (abs(to_double(poly_heap[i]->chebcoeff[j])) <= zero)
             continue;
 
           if (j < heap_k) {
-            ckks.evaluator.multiply_const(baby[j], to_double(poly_heap[i]->chebcoeff[j]), tmp);
-            ckks.evaluator.rescale_to_next_inplace(tmp);
+            ckks->evaluator.multiply_const(baby[j], to_double(poly_heap[i]->chebcoeff[j]), tmp);
+            ckks->evaluator.rescale_to_next_inplace(tmp);
           } else {
-            ckks.evaluator.multiply_const(giant[0], to_double(poly_heap[i]->chebcoeff[j]), tmp);
-            ckks.evaluator.rescale_to_next_inplace(tmp);
+            ckks->evaluator.multiply_const(giant[0], to_double(poly_heap[i]->chebcoeff[j]), tmp);
+            ckks->evaluator.rescale_to_next_inplace(tmp);
           }
 
-          ckks.evaluator.add_reduced_error(cipherheap[i], tmp, cipherheap[i]);
+          ckks->evaluator.add_reduced_error(cipherheap[i], tmp, cipherheap[i]);
         }
       }
     }
@@ -427,9 +433,9 @@ void Polynomial::homomorphic_poly_evaluation(CKKSEvaluator &ckks, PhantomCiphert
           if (!cipherheapbool[2 * (i + 1) - 1]) {
             cipherheap[i] = cipherheap[2 * (i + 1)];
           } else {
-            ckks.evaluator.multiply_reduced_error(cipherheap[2 * (i + 1) - 1], giant[gindex], *(ckks.relin_keys), cipherheap[i]);
-            ckks.evaluator.rescale_to_next_inplace(cipherheap[i]);
-            ckks.evaluator.add_reduced_error(cipherheap[i], cipherheap[2 * (i + 1)], cipherheap[i]);
+            ckks->evaluator.multiply_reduced_error(cipherheap[2 * (i + 1) - 1], giant[gindex], *(ckks->relin_keys), cipherheap[i]);
+            ckks->evaluator.rescale_to_next_inplace(cipherheap[i]);
+            ckks->evaluator.add_reduced_error(cipherheap[i], cipherheap[2 * (i + 1)], cipherheap[i]);
           }
         }
       }

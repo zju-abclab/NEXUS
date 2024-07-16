@@ -21,7 +21,7 @@ namespace boot {
 class Polynomial {
  public:
   RR *coeff = 0;
-  long deg, heap_k, heap_m, heaplen;
+  long deg = 0, heap_k = 0, heap_m = 0, heaplen = 0;
   RR *chebcoeff = 0;
   Polynomial **poly_heap = 0;
 
@@ -52,7 +52,7 @@ class Polynomial {
   void write_heap_to_file(ofstream &out);
   void read_heap_from_file(ifstream &in);
 
-  void homomorphic_poly_evaluation(CKKSEvaluator &ckks, PhantomCiphertext &rtn, PhantomCiphertext &cipher);
+  void homomorphic_poly_evaluation(CKKSEvaluator *ckks, PhantomCiphertext &rtn, PhantomCiphertext &cipher);
 };
 
 void mul(Polynomial &rtn, Polynomial &a, Polynomial &b);

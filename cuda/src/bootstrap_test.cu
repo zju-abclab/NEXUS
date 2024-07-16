@@ -24,13 +24,13 @@ using namespace chrono;
 void random_real(vector<double> &vec, size_t size) {
   random_device rn;
   mt19937_64 rnd(rn());
-  thread_local std::uniform_real_distribution<double> distribution(-1, 1);
+  thread_local std::uniform_real_distribution<double> distribution(-10, 10);
 
   vec.reserve(size);
 
   for (size_t i = 0; i < size; i++) {
-    // vec[i] = distribution(rnd);
-    vec[i] = 0.5;
+    vec[i] = distribution(rnd);
+    // vec[i] = 0.5;
   }
 }
 
@@ -154,7 +154,7 @@ int main() {
       deg,
       scale_factor,
       inverse_deg,
-      ckks_evaluator);
+      &ckks_evaluator);
   // Bootstrapper bootstrapper_2(
   //     loge,
   //     logn_2,
@@ -179,7 +179,7 @@ int main() {
   //     ckks_evaluator);
 
   cout << "Generating Optimal Minimax Polynomials..." << endl;
-  bootstrapper.prepare_mod_polynomial();
+  bootstrapper.prepare_mod_polynomial(); // Good to go
   // bootstrapper_2.prepare_mod_polynomial();
   // bootstrapper_3.prepare_mod_polynomial();
 
@@ -193,7 +193,7 @@ int main() {
   // bootstrapper_2.addLeftRotKeys_Linear_to_vector_3(gal_steps_vector);
   // bootstrapper_3.addLeftRotKeys_Linear_to_vector_3(gal_steps_vector);
 
-  ckks_evaluator.decryptor.create_galois_keys_from_steps(gal_steps_vector, *(ckks_evaluator.galois_keys));
+  ckks_evaluator.decryptor.create_galois_keys_from_steps(gal_steps_vector, *(ckks_evaluator.galois_keys)); // Good to go
   cout << "Galois key generated from steps vector." << endl;
 
   bootstrapper.slot_vec.push_back(logn);
@@ -201,7 +201,7 @@ int main() {
   // bootstrapper_3.slot_vec.push_back(logn_3);
 
   cout << "Generating Linear Transformation Coefficients..." << endl;
-  bootstrapper.generate_LT_coefficient_3();
+  bootstrapper.generate_LT_coefficient_3(); // Good to go
   // bootstrapper_2.generate_LT_coefficient_3();
   // bootstrapper_3.generate_LT_coefficient_3();
 
@@ -248,8 +248,6 @@ int main() {
     auto start = system_clock::now();
 
     PhantomCiphertext rtn;
-
-    ckks_evaluator.print_decrypted_ct(cipher, 10);
 
     if (_ == 0)
       bootstrapper.bootstrap_3(rtn, cipher);

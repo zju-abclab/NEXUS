@@ -51,7 +51,7 @@ class Bootstrapper {
       long _sin_cos_deg,
       long _scale_factor,
       long _inverse_deg,
-      CKKSEvaluator &ckks);
+      CKKSEvaluator *ckks);
 
   // Add rotation keys needed in bootstrapping (private function)
   void addLeftRotKeys_Linear_to_vector(vector<int> &gal_steps_vector);

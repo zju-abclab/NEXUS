@@ -10,8 +10,8 @@ Bootstrapper::Bootstrapper(
     long _sin_cos_deg,
     long _scale_factor,
     long _inverse_deg,
-    CKKSEvaluator &ckks)
-    : loge(_loge), logn(_logn), logNh(_logNh), L(_L), final_scale(_final_scale), boundary_K(_boundary_K), sin_cos_deg(_sin_cos_deg), scale_factor(_scale_factor), inverse_deg(_inverse_deg), ckks(&ckks) {
+    CKKSEvaluator *_ckks)
+    : loge(_loge), logn(_logn), logNh(_logNh), L(_L), final_scale(_final_scale), boundary_K(_boundary_K), sin_cos_deg(_sin_cos_deg), scale_factor(_scale_factor), inverse_deg(_inverse_deg), ckks(_ckks) {
   n = 1 << logn;
   Nh = 1 << logNh;
   mod_reducer =
@@ -1812,140 +1812,6 @@ void Bootstrapper::geninvfftcoeff_3() {  // not yet
   }
 }
 
-// void Bootstrapper::geninvfftcoeff_full_3() {
-// invfftcoeff1.resize(slot_vec.size());
-// invfftcoeff2.resize(slot_vec.size());
-// invfftcoeff3.resize(slot_vec.size());
-// vector<complex<double>> tmpvec;
-// vector<int> tmpcount;
-// int div_part1, div_part2, div_part3;
-// int totlen1, totlen2, totlen3;
-// int basicstep1, basicstep2, basicstep3;
-// int all_case_count, pos, current_pos, ind, ind_res;
-// int curr_logn, curr_n;
-
-// for(int u = 0; u < slot_vec.size(); u++) {
-// curr_logn = slot_vec[u];
-// curr_n = (1 << curr_logn);
-// div_part1 = floor(curr_logn / 3.0);
-// div_part2 = floor((curr_logn - div_part1) / 2.0);
-// div_part3 = curr_logn - div_part1 - div_part2;
-
-// totlen1 = (1 << div_part1) - 1;
-// totlen2 = (1 << div_part2) - 1;
-// totlen3 = (1 << div_part3) - 1;
-
-// basicstep1 = (1 << (curr_logn - div_part1));
-// basicstep2 = (1 << (curr_logn - div_part1 - div_part2));
-// basicstep3 = 1;
-
-// invfftcoeff1[u].resize(totlen1 + 1);
-// invfftcoeff2[u].resize(2*totlen2 + 1);
-// invfftcoeff3[u].resize(2*totlen3 + 1);
-
-// for(int i = 0; i < totlen1 + 1; i++) invfftcoeff1[u][i].resize(curr_n, 0);
-// for(int i = 0; i < 2*totlen2 + 1; i++) invfftcoeff2[u][i].resize(curr_n, 0);
-// for(int i = 0; i < 2*totlen3 + 1; i++) invfftcoeff3[u][i].resize(curr_n, 0);
-
-// tmpvec.clear();
-// tmpvec.resize(curr_n);
-
-// tmpcount.clear();
-// tmpcount.resize(div_part1);
-// all_case_count = pow(3, div_part1);
-
-// for(int j = 0; j < all_case_count; j++) {
-// ind = j;
-// pos = 0;
-// for(int p = 0; p < div_part1; p++) {
-// ind_res = ind % 3;
-// pos += (ind_res - 1) * (1 << (div_part1 - 1 - p));
-// tmpcount[p] = ind_res;
-// ind = (ind - ind_res) / 3;
-//}
-// current_pos = pos;
-// for(int k = 0; k < curr_n; k++) {
-// tmpvec[k] = 1.0;
-//}
-
-// for(int p = 0; p < div_part1; p++) {
-// current_pos = current_pos - (tmpcount[p] - 1) * (1 << (div_part1 - 1 - p));
-// for(int k = 0; k < curr_n; k++) {
-// tmpvec[k] = tmpvec[k] * orig_invcoeffvec[u][p][tmpcount[p]][((k + basicstep1 * (curr_n + current_pos)) % curr_n)];
-//}
-//}
-
-// for(int k = 0; k < curr_n; k++) {
-// invfftcoeff1[u][(pos + totlen1 + 1) % (totlen1 + 1)][k] += tmpvec[k];
-//}
-//}
-
-// tmpcount.clear();
-// tmpcount.resize(div_part2);
-// all_case_count = pow(3, div_part2);
-// for(int j = 0; j < all_case_count; j++) {
-// ind = j;
-// pos = 0;
-// for(int p = 0; p < div_part2; p++) {
-// ind_res = ind % 3;
-// pos += (ind_res - 1) * (1 << (div_part2 - 1 - p));
-// tmpcount[p] = ind_res;
-// ind = (ind - ind_res) / 3;
-//}
-// current_pos = pos;
-// for(int k = 0; k < curr_n; k++) {
-// tmpvec[k] = 1.0;
-//}
-// for(int p = 0; p < div_part2; p++) {
-// current_pos = current_pos - (tmpcount[p] - 1) * (1 << (div_part2 - 1 - p));
-// for(int k = 0; k < curr_n; k++) {
-// tmpvec[k] = tmpvec[k] * orig_invcoeffvec[u][p + div_part1][tmpcount[p]][((k + basicstep2 * (curr_n + current_pos)) % curr_n)];
-//}
-//}
-
-// for(int k = 0; k < curr_n; k++) {
-// invfftcoeff2[u][pos + totlen2][k] += tmpvec[k];
-//}
-//}
-
-// tmpcount.clear();
-// tmpcount.resize(div_part3);
-// all_case_count = pow(3, div_part3);
-// for(int j = 0; j < all_case_count; j++) {
-// ind = j;
-// pos = 0;
-// for(int p = 0; p < div_part3; p++) {
-// ind_res = ind % 3;
-// pos += (ind_res - 1) * (1 << (div_part3 - 1 - p));
-// tmpcount[p] = ind_res;
-// ind = (ind - ind_res) / 3;
-//}
-// current_pos = pos;
-// for(int k = 0; k < curr_n; k++) {
-// tmpvec[k] = 1.0;
-//}
-// for(int p = 0; p < div_part3; p++) {
-// current_pos = current_pos - (tmpcount[p] - 1) * (1 << (div_part3 - 1 - p));
-// for(int k = 0; k < curr_n; k++) {
-// tmpvec[k] = tmpvec[k] * orig_invcoeffvec[u][p + div_part1 + div_part2][tmpcount[p]][((k + basicstep3 * (curr_n + current_pos)) % curr_n)];
-//}
-//}
-
-// for(int k = 0; k < curr_n; k++) {
-// invfftcoeff3[u][pos + totlen3][k] += tmpvec[k];
-//}
-//}
-
-// for (int i = 0; i < totlen1 + 1; i++) {
-// for (int j = 0; j < curr_n; j++) invfftcoeff1[u][i][j] *= 1.0 / boundary_K;
-//}
-
-// for (int i = 0; i < 2*totlen3 + 1; i++) {
-// for (int j = 0; j < curr_n; j++) invfftcoeff3[u][i][j] *= 0.5;
-//}
-//}
-//}
-
 void Bootstrapper::generate_LT_coefficient() {
   genorigcoeff();
   if (logn == logNh) {
@@ -2364,7 +2230,7 @@ void Bootstrapper::sfl_full(PhantomCiphertext &rtncipher, PhantomCiphertext &cip
   bsgs_linear_transform(tmpct, cipher, totlen1, 1, logn, fftcoeff1[slot_index]);
   ckks->evaluator.rescale_to_next_inplace(tmpct);
 
-  const auto &modulus = ckks->context->first_context_data().parms().coeff_modulus();
+  const auto modulus = ckks->context->first_context_data().parms().coeff_modulus();
   auto curr_level = ckks->context->get_context_data(tmpct.params_id()).chain_depth();
 
   double mod_zero = (double)modulus[0].value();
@@ -2430,8 +2296,8 @@ void Bootstrapper::sfl_3(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher
   bsgs_linear_transform(tmpct2, tmpct, totlen2, basicstep2, logn + 1, fftcoeff2[slot_index]);
   ckks->evaluator.rescale_to_next_inplace(tmpct2);
 
-  const auto &modulus = ckks->context->first_context_data().parms().coeff_modulus();
-  auto curr_level = ckks->context->get_context_data(tmpct.params_id()).chain_depth();
+  const auto modulus = ckks->context->first_context_data().parms().coeff_modulus();
+  auto curr_level = ckks->context->get_context_data(tmpct2.params_id()).chain_depth();
 
   double mod_zero = (double)modulus[0].value();
   double curr_mod = (double)modulus[curr_level].value();
@@ -2470,8 +2336,8 @@ void Bootstrapper::sfl_full_3(PhantomCiphertext &rtncipher, PhantomCiphertext &c
   bsgs_linear_transform(tmpct2, tmpct, totlen2, basicstep2, logn, fftcoeff2[slot_index]);
   ckks->evaluator.rescale_to_next_inplace(tmpct2);
 
-  const auto &modulus = ckks->context->first_context_data().parms().coeff_modulus();
-  auto curr_level = ckks->context->get_context_data(tmpct.params_id()).chain_depth();
+  const auto modulus = ckks->context->first_context_data().parms().coeff_modulus();
+  auto curr_level = ckks->context->get_context_data(tmpct2.params_id()).chain_depth();
 
   double mod_zero = (double)modulus[0].value();
   double curr_mod = (double)modulus[curr_level].value();
@@ -2509,8 +2375,8 @@ void Bootstrapper::sfl_half_3(PhantomCiphertext &rtncipher, PhantomCiphertext &c
   bsgs_linear_transform(tmpct2, tmpct, totlen2, basicstep2, logn + 1, fftcoeff2[slot_index]);
   ckks->evaluator.rescale_to_next_inplace(tmpct2);
 
-  const auto &modulus = ckks->context->first_context_data().parms().coeff_modulus();
-  auto curr_level = ckks->context->get_context_data(tmpct.params_id()).chain_depth();
+  const auto modulus = ckks->context->first_context_data().parms().coeff_modulus();
+  auto curr_level = ckks->context->get_context_data(tmpct2.params_id()).chain_depth();
 
   double mod_zero = (double)modulus[0].value();
   double curr_mod = (double)modulus[curr_level].value();
@@ -2549,8 +2415,8 @@ void Bootstrapper::sfl_full_half_3(PhantomCiphertext &rtncipher, PhantomCipherte
   bsgs_linear_transform(tmpct2, tmpct, totlen2, basicstep2, logn, fftcoeff2[slot_index]);
   ckks->evaluator.rescale_to_next_inplace(tmpct2);
 
-  const auto &modulus = ckks->context->first_context_data().parms().coeff_modulus();
-  auto curr_level = ckks->context->get_context_data(tmpct.params_id()).chain_depth();
+  const auto modulus = ckks->context->first_context_data().parms().coeff_modulus();
+  auto curr_level = ckks->context->get_context_data(tmpct2.params_id()).chain_depth();
 
   double mod_zero = (double)modulus[0].value();
   double curr_mod = (double)modulus[curr_level].value();
@@ -2930,7 +2796,7 @@ void Bootstrapper::coefftoslot_full_mul_first(PhantomCiphertext &rtncipher1, Pha
   ckks->evaluator.add_reduced_error(tmpct2, tmpct4, rtncipher2);
 }
 
-// TODO: Verify its correctness
+// TODO: Parallelize this
 void Bootstrapper::modraise_inplace(PhantomCiphertext &cipher) {
   if (cipher.size() != 2) {
     throw invalid_argument("Ciphertexts of size 2 are supported only!");
@@ -2940,108 +2806,65 @@ void Bootstrapper::modraise_inplace(PhantomCiphertext &cipher) {
     throw invalid_argument("Ciphertexts in the lowest level are supported only!");
   }
 
-  // Method 2: -----------------------------------------------------------------
-  // if (cipher.is_ntt_form()) {
-  //   ckks->evaluator.transform_from_ntt_inplace(cipher);
-  // }
-
-  // Method 1: -----------------------------------------------------------------
   const auto &stream = phantom::util::global_variables::default_stream->get_stream();
-  auto &rns_tool = ckks->context->get_context_data(cipher.params_id()).gpu_rns_tool();
-  const auto &key_context_data = ckks->context->key_context_data();
-  const auto &key_parms = key_context_data.parms();
-  auto &key_modulus = key_parms.coeff_modulus();
-  const auto data_parms = ckks->context->first_context_data().parms();
-  const auto scheme = key_parms.scheme();
+  auto N = cipher.poly_modulus_degree();
+  const auto modulus = ckks->context->first_context_data().parms().coeff_modulus();
+  auto mod_count = modulus.size();
+  auto rns_coeff_count = mod_count * N;
 
-  auto n = key_parms.poly_modulus_degree();
-  size_t size_P = key_parms.special_modulus_size();
-  size_t size_QP = key_modulus.size();
-
-  size_t size_Ql = rns_tool.base_Ql().size();
-  size_t size_QlP = size_Ql + size_P;
-
-  auto size_Ql_n = size_Ql * n;
-  auto size_QlP_n = size_QlP * n;
-
-  auto c0 = make_cuda_auto_ptr<uint64_t>(size_Ql_n, stream);
-  auto c1 = make_cuda_auto_ptr<uint64_t>(size_Ql_n, stream);
-
-  size_t beta = rns_tool.v_base_part_Ql_to_compl_part_QlP_conv().size();
-
-  auto modup_c0 = make_cuda_auto_ptr<uint64_t>(beta * size_QlP_n, stream);
-  auto modup_c1 = make_cuda_auto_ptr<uint64_t>(beta * size_QlP_n, stream);
-
-  // Method 2: -----------------------------------------------------------------
-  // // Make a copy of ciphertext
-  // PhantomCiphertext cipher_copy = cipher;
-
-  // Method 1: -----------------------------------------------------------------
   // Resize to the full level.
-  cipher.resize(*ckks->context, ckks->context->first_context_data().chain_index(), 2, stream);
+  cipher.resize(*ckks->context, ckks->context->get_first_index(), 2, stream);
 
-  cudaMemcpyAsync(
-      c0.get(), cipher.data(), size_Ql_n * sizeof(uint64_t), cudaMemcpyDeviceToDevice, stream);
-  cudaMemcpyAsync(
-      c1.get(), cipher.data() + size_Ql_n, size_Ql_n * sizeof(uint64_t), cudaMemcpyDeviceToDevice, stream);
+  ckks->evaluator.transform_from_ntt_inplace(cipher);
 
-  rns_tool.modup(modup_c0.get(), c0.get(), ckks->context->gpu_rns_tables(), scheme, stream);
-  rns_tool.modup(modup_c1.get(), c1.get() + size_Ql_n, ckks->context->gpu_rns_tables(), scheme, stream);
+  PhantomCiphertext cipher_copy = cipher;
 
-  cudaMemcpyAsync(cipher.data(), modup_c0.get(), size_Ql_n * sizeof(uint64_t), cudaMemcpyDeviceToDevice, stream);
-  cudaMemcpyAsync(cipher.data() + size_Ql_n, modup_c1.get(), size_Ql_n * sizeof(uint64_t), cudaMemcpyDeviceToDevice, stream);
+  auto ciphertext_size = cipher.size();
+  auto cipher_copy_data = new uint64_t[ciphertext_size * rns_coeff_count];
+  auto cipher_data = new uint64_t[ciphertext_size * rns_coeff_count];
 
-  // Method 2: -----------------------------------------------------------------
-  // auto ciphertext_size = cipher.size();
-  // const auto &modulus = ckks->context->first_context_data().parms().coeff_modulus();
-  // auto coeff_modulus_size = cipher.coeff_modulus_size();
-  // auto poly_modulus_degree = cipher.poly_modulus_degree();
+  cudaMemcpy(cipher_copy_data, cipher_copy.data(), sizeof(uint64_t) * ciphertext_size * rns_coeff_count, cudaMemcpyDeviceToHost);
+  cudaMemcpy(cipher_data, cipher.data(), sizeof(uint64_t) * ciphertext_size * rns_coeff_count, cudaMemcpyDeviceToHost);
 
-  // auto cipher_copy_data = new uint64_t[ciphertext_size * coeff_modulus_size * poly_modulus_degree];
-  // auto cipher_data = new uint64_t[ciphertext_size * coeff_modulus_size * poly_modulus_degree];
+  uint64_t q0 = modulus[0].value();
+  vector<uint64_t> minus_q0(mod_count);
+  minus_q0[0] = 0;
 
-  // cudaMemcpy(cipher_copy_data, cipher_copy.data(), sizeof(uint64_t) * ciphertext_size * coeff_modulus_size * poly_modulus_degree, cudaMemcpyDeviceToHost);
-  // cudaMemcpy(cipher_data, cipher.data(), sizeof(uint64_t) * ciphertext_size * coeff_modulus_size * poly_modulus_degree, cudaMemcpyDeviceToHost);
+  for (size_t l = 1; l < mod_count; l++) {
+    minus_q0[l] = modulus[l].value() - q0 % modulus[l].value();
+  }
 
-  // uint64_t q0 = modulus[0].value();
-  // vector<uint64_t> minus_q0(coeff_modulus_size);
-  // minus_q0[0] = 0;
+  for (size_t poly_idx = 0; poly_idx < ciphertext_size; poly_idx++) {
+    const auto rns_poly_src = cipher_copy_data + poly_idx * rns_coeff_count;
+    const auto rns_poly_dest = cipher_data + poly_idx * rns_coeff_count;
+    const auto poly_src_zero = rns_poly_src;
 
-  // for (size_t l = 1; l < coeff_modulus_size; l++) {
-  //   minus_q0[l] = modulus[l].value() - q0 % modulus[l].value();
-  // }
+    for (size_t j = 0; j < mod_count; j++) {
+      const auto poly_dest = rns_poly_dest + j * N;
+      for (size_t i = 0; i < N; i++) {
+        auto q = modulus[j].value();
+        poly_dest[i] = poly_src_zero[i] % q;
+        if (poly_src_zero[i] > (q0 >> 1)) {
+          poly_dest[i] += minus_q0[j];
+          poly_dest[i] -= (poly_dest[i] >= q) ? q : 0;
+        }
+      }
+    }
+  }
 
-  // for (size_t poly_idx = 0; poly_idx < ciphertext_size; poly_idx++) {
-  //   const auto rns_poly_src = cipher_copy_data + poly_idx * coeff_modulus_size * poly_modulus_degree;
-  //   const auto rns_poly_dest = cipher_data + poly_idx * coeff_modulus_size * poly_modulus_degree;
-  //   const auto poly_src_zero = rns_poly_src;
+  cudaMemcpy(cipher.data(), cipher_data, sizeof(uint64_t) * ciphertext_size * rns_coeff_count, cudaMemcpyHostToDevice);
 
-  //   for (size_t j = 0; j < coeff_modulus_size - 1; j++) {
-  //     const auto &poly_dest = rns_poly_dest + j * poly_modulus_degree;
-  //     for (size_t i = 0; i < poly_modulus_degree; i++) {
-  //       auto q = modulus[j].value();
-  //       poly_dest[i] = poly_src_zero[i] % q;
-  //       if (poly_src_zero[i] > (q0 >> 1)) {
-  //         poly_dest[i] += minus_q0[j];
-  //         poly_dest[i] -= (poly_dest[i] >= q) ? q : 0;
-  //       }
-  //     }
-  //   }
-  // }
+  // Wipe cipher_copy data
+  cudaMemset(cipher_copy.data(), 0, sizeof(uint64_t) * ciphertext_size * rns_coeff_count);
 
-  // cudaMemcpy(cipher.data(), cipher_data, sizeof(uint64_t) * ciphertext_size * coeff_modulus_size * poly_modulus_degree, cudaMemcpyHostToDevice);
-
-  // // Wipe cipher_copy data
-  // cudaMemset(cipher_copy.data(), 0, sizeof(uint64_t) * ciphertext_size * coeff_modulus_size * poly_modulus_degree);
-
-  // ckks->evaluator.transform_to_ntt_inplace(cipher);
+  ckks->evaluator.transform_to_ntt_inplace(cipher);
 }
 
 void Bootstrapper::bootstrap_sparse(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher) {
   std::cout << "Modulus Raising..." << endl;
   modraise_inplace(cipher);
 
-  const auto &modulus = ckks->context->first_context_data().parms().coeff_modulus();
+  const auto modulus = ckks->context->first_context_data().parms().coeff_modulus();
   cipher.scale() = ((double)modulus[0].value());
 
   std::cout << "Subsum..." << endl;
@@ -3070,7 +2893,7 @@ void Bootstrapper::bootstrap_sparse(PhantomCiphertext &rtncipher, PhantomCiphert
   }
 
   else {
-    std::cout << "Coefftoslot...1" << endl;
+    std::cout << "Coefftoslot..." << endl;
     coefftoslot(rtn, cipher);
   }
 
@@ -3080,7 +2903,7 @@ void Bootstrapper::bootstrap_sparse(PhantomCiphertext &rtncipher, PhantomCiphert
   std::cout << "mod end" << endl;
 
   if (logn == 0) {
-    const auto &modulus = ckks->context->first_context_data().parms().coeff_modulus();
+    const auto modulus = ckks->context->first_context_data().parms().coeff_modulus();
     auto curr_level = ckks->context->get_context_data(modrtn.params_id()).chain_depth();
 
     double mod_zero = (double)modulus[0].value();
@@ -3124,7 +2947,7 @@ void Bootstrapper::bootstrap_full(PhantomCiphertext &rtncipher, PhantomCiphertex
   // diff = chrono::duration_cast<chrono::milliseconds>(end - start);
   // std::cout << "mod raise time : " << diff.count() / 1000 << " ms" << endl;
 
-  const auto &modulus = ckks->context->first_context_data().parms().coeff_modulus();
+  const auto modulus = ckks->context->first_context_data().parms().coeff_modulus();
   cipher.scale() = ((double)modulus[0].value());
 
   // // for debugging
@@ -3162,13 +2985,16 @@ void Bootstrapper::bootstrap_full(PhantomCiphertext &rtncipher, PhantomCiphertex
   rtncipher.scale() = final_scale;
 }
 
+// NOTE:: main
 void Bootstrapper::bootstrap_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher) {
+  ckks->print_decrypted_ct(cipher, 10);
+
   std::cout << "Modulus Raising..." << endl;
   modraise_inplace(cipher);
 
   ckks->print_decrypted_ct(cipher, 10);
 
-  const auto &modulus = ckks->context->first_context_data().parms().coeff_modulus();
+  const auto modulus = ckks->context->first_context_data().parms().coeff_modulus();
   cipher.scale() = ((double)modulus[0].value());
 
   std::cout << "Subsum..." << endl;
@@ -3195,7 +3021,9 @@ void Bootstrapper::bootstrap_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphe
     PhantomCiphertext conjrtn;
     ckks->evaluator.complex_conjugate(rtn, *(ckks->galois_keys), conjrtn);
     ckks->evaluator.add_inplace_reduced_error(rtn, conjrtn);
-  } else {
+  }
+
+  else {
     std::cout << "Coefftoslot..." << endl;
     coefftoslot_3(rtn, cipher);
     ckks->print_decrypted_ct(rtn, 10);
@@ -3208,7 +3036,7 @@ void Bootstrapper::bootstrap_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphe
   ckks->print_decrypted_ct(modrtn, 10);
 
   if (logn == 0) {
-    const auto &modulus = ckks->context->first_context_data().parms().coeff_modulus();
+    const auto modulus = ckks->context->first_context_data().parms().coeff_modulus();
     auto curr_level = ckks->context->get_context_data(modrtn.params_id()).chain_depth();
 
     double mod_zero = (double)modulus[0].value();
@@ -3241,7 +3069,7 @@ void Bootstrapper::bootstrap_full_3(PhantomCiphertext &rtncipher, PhantomCiphert
   std::cout << "Modulus Raising..." << endl;
   modraise_inplace(cipher);
 
-  const auto &modulus = ckks->context->first_context_data().parms().coeff_modulus();
+  const auto modulus = ckks->context->first_context_data().parms().coeff_modulus();
   cipher.scale() = ((double)modulus[0].value());
 
   std::cout << "Coefftoslot...4" << endl;
@@ -3263,7 +3091,7 @@ void Bootstrapper::bootstrap_sparse_real_3(PhantomCiphertext &rtncipher, Phantom
   std::cout << "Modulus Raising..." << endl;
   modraise_inplace(cipher);
 
-  const auto &modulus = ckks->context->first_context_data().parms().coeff_modulus();
+  const auto modulus = ckks->context->first_context_data().parms().coeff_modulus();
   cipher.scale() = ((double)modulus[0].value());
 
   std::cout << "Subsum..." << endl;
@@ -3301,7 +3129,7 @@ void Bootstrapper::bootstrap_sparse_real_3(PhantomCiphertext &rtncipher, Phantom
   mod_reducer->modular_reduction(modrtn, rtn);
 
   if (logn == 0) {
-    const auto &modulus = ckks->context->first_context_data().parms().coeff_modulus();
+    const auto modulus = ckks->context->first_context_data().parms().coeff_modulus();
     auto curr_level = ckks->context->get_context_data(modrtn.params_id()).chain_depth();
 
     double mod_zero = (double)modulus[0].value();

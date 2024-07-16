@@ -264,22 +264,17 @@ class Evaluator {
   }
 
   inline void transform_from_ntt_inplace(PhantomCiphertext &ct) {
-    auto &context_data = context->get_context_data(ct.chain_index());
-    auto &parms = context_data.parms();
-    auto &coeff_modulus = parms.coeff_modulus();
-    const size_t coeff_modulus_size = coeff_modulus.size();
-    auto &rns_tool = context_data.gpu_rns_tool();
-
     auto rns_coeff_count = ct.poly_modulus_degree() * ct.coeff_modulus_size();
 
     const auto &stream = phantom::util::global_variables::default_stream->get_stream();
 
     for (size_t i = 0; i < ct.size(); i++) {
       uint64_t *ci = ct.data() + i * rns_coeff_count;
-      nwt_2d_radix8_backward_inplace(ci, context->gpu_rns_tables(), coeff_modulus_size, 0, stream);
+      nwt_2d_radix8_backward_inplace(ci, context->gpu_rns_tables(), ct.coeff_modulus_size(), 0, stream);
     }
 
     ct.set_ntt_form(false);
+    cudaStreamSynchronize(stream);
   }
 
   inline void transform_to_ntt(const PhantomCiphertext &ct, PhantomCiphertext &dest) {
@@ -288,21 +283,16 @@ class Evaluator {
   }
 
   inline void transform_to_ntt_inplace(PhantomCiphertext &ct) {
-    auto &context_data = context->get_context_data(ct.chain_index());
-    auto &parms = context_data.parms();
-    auto &coeff_modulus = parms.coeff_modulus();
-    const size_t coeff_modulus_size = coeff_modulus.size();
-
     auto rns_coeff_count = ct.poly_modulus_degree() * ct.coeff_modulus_size();
-
     const auto &stream = phantom::util::global_variables::default_stream->get_stream();
 
     for (size_t i = 0; i < ct.size(); i++) {
       uint64_t *ci = ct.data() + i * rns_coeff_count;
-      nwt_2d_radix8_forward_inplace(ci, context->gpu_rns_tables(), coeff_modulus_size, 0, stream);
+      nwt_2d_radix8_forward_inplace(ci, context->gpu_rns_tables(), ct.coeff_modulus_size(), 0, stream);
     }
 
     ct.set_ntt_form(true);
+    cudaStreamSynchronize(stream);
   }
 
   // Bootstrapping
