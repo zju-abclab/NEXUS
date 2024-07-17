@@ -18,21 +18,22 @@ using namespace troy::utils;
 using namespace nexus;
 
 // Choose test target here:
-int TEST_TARGET_IDX = 0;
+int TEST_TARGET_IDX = 1;
 
 size_t N = 1ULL << 16;
 size_t MM_LOG_N = 13;
 size_t MM_N = 1ULL << MM_LOG_N;
 
-double SCALE = pow(2.0, 40);
+double SCALE = pow(2.0, 30);
 
 vector<string> TEST_TARGETS = {"MatMul", "MatMul_Phantom", "SoftMax", "LayerNorm", "GELU"};
 vector<vector<int>> COEFF_MODULI =
     {
         {60, 40, 60},                                                                      // MatMul (0)
-        {58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58},          // SoftMax (1)
-        {58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58},  // LayerNorm (2)
-        {58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58}   // GELU (3)
+        {60, 40, 60},                                                                      // MatMul_Phantom (1)
+        {58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58},          // SoftMax (2)
+        {58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58},  // LayerNorm (3)
+        {58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58}   // GELU (4)
 };
 
 string TEST_TARGET = TEST_TARGETS[TEST_TARGET_IDX];
@@ -129,19 +130,19 @@ void MM_test_p() {
   parms.set_coeff_modulus(phantom::arith::CoeffModulus::Create(MM_N, TEST_COEFF_MODULI));
 
   PhantomContext context(parms);
+  PhantomCKKSEncoder encoder(context);
 
   PhantomSecretKey secret_key(context);
   PhantomPublicKey public_key = secret_key.gen_publickey(context);
   PhantomRelinKey relin_keys = secret_key.gen_relinkey(context);
 
-  std::vector<uint32_t> rots;
+  std::vector<std::uint32_t> galois_elts;
   for (int i = 0; i < MM_LOG_N; i++) {
-    rots.push_back((MM_N + exponentiate_uint(2, i)) / exponentiate_uint(2, i));
+    galois_elts.push_back((MM_N + pow(2, i)) / pow(2, i));
   }
-  PhantomGaloisKey galois_keys = secret_key.create_galois_keys_from_elts(context, rots);
+  PhantomGaloisKey galois_keys = secret_key.create_galois_keys_from_elts(context, galois_elts);
 
-  PhantomCKKSEncoder encoder(context);
-  CKKSEvaluator ckks_evaluator(&context, &public_key, &secret_key, &encoder, &relin_keys, &galois_keys, SCALE, rots);
+  CKKSEvaluator ckks_evaluator(&context, &public_key, &secret_key, &encoder, &relin_keys, &galois_keys, SCALE, galois_elts);
   MMEvaluator mme(ckks_evaluator);
 
   std::vector<std::vector<double>> matrix_4096x768 = mme.read_matrix("../../data/input/matrixmul_input_m_128_n_768_k_64_batch_128.txt", 4096, 768);
@@ -165,23 +166,25 @@ void MM_test_p() {
   }
 
   auto timer = Timer();
+
   mme.matrix_mul(matrix_4096x768_T, row_pack, res);
+
   timer.stop();
   cout << "[MatMul] 4096x768 x 768x64 takes: " << timer.duration<milliseconds>() << " milliseconds" << endl;
 
   std::vector<std::vector<double>> matrix_4096x64 = mme.read_matrix("../../data/calibration/matrix_output_m_128_k_64_batch_128.txt", 4096, 64);
   auto matrix_4096x64_T = mme.transpose_matrix(matrix_4096x64);
 
-  double average_err = 0.0;
-
   // err of the first col
   PhantomPlaintext res_pt;
   vector<double> mm_res;
   ckks_evaluator.decryptor.decrypt(res[0], res_pt);
   ckks_evaluator.encoder.decode(res_pt, mm_res);
+
+  double average_err = 0.0;
   for (auto i = 0; i < 4096; i++) {
     average_err += fabs(mm_res[i] / 2.0 - matrix_4096x64_T[0][i]);
-    // printf("%+.10lf %+.10lf\n", mm_res[i] / 2.0, matrix_4096x64_T[0][i]);
+    if (i < 10) printf("%+.10lf <- %+.10lf\n", mm_res[i] / 2.0, matrix_4096x64_T[0][i]);
   }
   std::cout << "average_err: " << average_err / 4096.0 << std::endl;
 }

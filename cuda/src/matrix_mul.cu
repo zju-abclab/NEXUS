@@ -162,8 +162,6 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
   ckks->troy_encoder->encode_complex64_simd(zero_input, std::nullopt, ckks->scale, zero_pt);
   ckks->troy_encryptor->encrypt_asymmetric(zero_pt, zero);
 
-  Ciphertext temp;
-
   for (int i = 0; i < 64; i++) {
     Ciphertext res_col_ct = zero;
     vector<Ciphertext> temp_cts(768);

@@ -22,7 +22,9 @@ class Encoder {
     this->encoder = encoder;
   }
 
+  // TODO: consider removing this
   inline size_t message_length() { return encoder->message_length(); }
+  inline size_t slot_count() { return encoder->slot_count(); }
 
   inline void reset_sparse_slots() { encoder->reset_sparse_slots(); }
 
@@ -32,7 +34,8 @@ class Encoder {
       encode(values[0], chain_index, scale, plain);
       return;
     }
-    values.resize(encoder->message_length(), 0.0);
+    values.resize(encoder->slot_count(), 0.0);
+    // if (values.size() != encoder->message_length()) encoder->reset_sparse_slots();
     encoder->encode(*context, values, scale, plain, chain_index);
   }
 
@@ -41,7 +44,8 @@ class Encoder {
       encode(values[0], scale, plain);
       return;
     }
-    values.resize(encoder->message_length(), 0.0);
+    values.resize(encoder->slot_count(), 0.0);
+    // if (values.size() != encoder->message_length()) encoder->reset_sparse_slots();
     encoder->encode(*context, values, scale, plain);
   }
 
@@ -50,23 +54,25 @@ class Encoder {
       encode(complex_values[0], scale, plain);
       return;
     }
-    complex_values.resize(encoder->message_length(), 0.0 + 0.0i);
+    complex_values.resize(encoder->slot_count(), 0.0 + 0.0i);
+    // if (complex_values.size() != encoder->message_length()) encoder->reset_sparse_slots();
     encoder->encode(*context, complex_values, scale, plain);
   }
 
   // Value inputs (fill all slots with that value)
   inline void encode(double value, size_t chain_index, double scale, PhantomPlaintext &plain) {
-    vector<double> values(encoder->message_length(), value);
+    // vector<double> values(encoder->message_length(), value);
+    vector<double> values(encoder->slot_count(), value);
     encoder->encode(*context, values, scale, plain, chain_index);
   }
 
   inline void encode(double value, double scale, PhantomPlaintext &plain) {
-    vector<double> values(encoder->message_length(), value);
+    vector<double> values(encoder->slot_count(), value);
     encoder->encode(*context, values, scale, plain);
   }
 
   inline void encode(complex<double> complex_value, double scale, PhantomPlaintext &plain) {
-    vector<complex<double>> complex_values(encoder->message_length(), complex_value);
+    vector<complex<double>> complex_values(encoder->slot_count(), complex_value);
     encoder->encode(*context, complex_values, scale, plain);
   }
 
@@ -304,7 +310,7 @@ class Evaluator {
   inline void multiply_const_inplace(PhantomCiphertext &ct, double value) {
     PhantomPlaintext const_plain;
 
-    vector<double> values(encoder->message_length(), value);
+    vector<double> values(encoder->slot_count(), value);
     encoder->encode(*context, values, ct.scale(), const_plain);
     mod_switch_to_inplace(const_plain, ct.params_id());
     multiply_plain_inplace(ct, const_plain);
@@ -318,7 +324,7 @@ class Evaluator {
   inline void add_const_inplace(PhantomCiphertext &ct, double value) {
     PhantomPlaintext const_plain;
 
-    vector<double> values(encoder->message_length(), value);
+    vector<double> values(encoder->slot_count(), value);
     encoder->encode(*context, values, ct.scale(), const_plain);
     mod_switch_to_inplace(const_plain, ct.params_id());
     add_plain_inplace(ct, const_plain);
@@ -370,7 +376,8 @@ class Evaluator {
   inline void multiply_vector_inplace_reduced_error(PhantomCiphertext &ct, vector<double> &values) {
     PhantomPlaintext plain;
 
-    values.resize(encoder->message_length(), 0.0);
+    values.resize(encoder->slot_count(), 0.0);
+    // if (values.size() != encoder->message_length()) encoder->reset_sparse_slots();
     encoder->encode(*context, values, ct.scale(), plain);
     mod_switch_to_inplace(plain, ct.params_id());
     multiply_plain_inplace(ct, plain);
@@ -379,7 +386,8 @@ class Evaluator {
   inline void multiply_vector_inplace_reduced_error(PhantomCiphertext &ct, vector<complex<double>> &values) {
     PhantomPlaintext plain;
 
-    values.resize(encoder->message_length(), 0.0 + 0.0i);
+    values.resize(encoder->slot_count(), 0.0 + 0.0i);
+    // if (values.size() != encoder->message_length()) encoder->reset_sparse_slots();
     encoder->encode(*context, values, ct.scale(), plain);
     mod_switch_to_inplace(plain, ct.params_id());
     multiply_plain_inplace(ct, plain);

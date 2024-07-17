@@ -57,8 +57,6 @@ void ModularReducer::modular_reduction(PhantomCiphertext &rtn, PhantomCiphertext
 
   sin_cos_polynomial.homomorphic_poly_evaluation(ckks, tmp2, tmp1);
 
-  ckks->print_decrypted_ct(tmp2, 10);
-
   if (inverse_deg == 1) {
     double curr_scale = scale_inverse_coeff;
     for (int i = 0; i < num_double_formula; i++) {

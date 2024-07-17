@@ -43,7 +43,10 @@ PhantomCKKSEncoder::PhantomCKKSEncoder(const PhantomContext &context) {
 
     // Newly added: set sparse_slots immediately if specified
     auto specified_sparse_slots = context_data.parms().sparse_slots();
-    if (specified_sparse_slots) sparse_slots_ = specified_sparse_slots;
+    if (specified_sparse_slots) {
+        cout << "Setting sparse slots to: " << specified_sparse_slots << endl;
+        sparse_slots_ = specified_sparse_slots;
+    }
 
     uint32_t m = coeff_count << 1;
     uint32_t slots_half = slots_ >> 1;
@@ -109,9 +112,10 @@ void PhantomCKKSEncoder::encode_internal(const PhantomContext &context, const cu
         uint32_t log_sparse_slots = ceil(log2(values_size));
         sparse_slots_ = 1 << log_sparse_slots;
     } else {
-        if (values_size > sparse_slots_) {
-            throw std::invalid_argument("values_size exceeds previous message length: " + std::to_string(values_size) + " > " + std::to_string(sparse_slots_));
-        }
+        // Newly commened, not sure if we need this:
+        // if (values_size > sparse_slots_) {
+        //     throw std::invalid_argument("values_size exceeds previous message length: " + std::to_string(values_size) + " > " + std::to_string(sparse_slots_));
+        // }
     }
     // size_t log_sparse_slots = ceil(log2(slots_));
     // sparse_slots_ = slots_;

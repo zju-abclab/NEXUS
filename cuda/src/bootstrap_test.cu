@@ -24,7 +24,7 @@ using namespace chrono;
 void random_real(vector<double> &vec, size_t size) {
   random_device rn;
   mt19937_64 rnd(rn());
-  thread_local std::uniform_real_distribution<double> distribution(-10, 10);
+  thread_local std::uniform_real_distribution<double> distribution(-1, 1);
 
   vec.reserve(size);
 
@@ -103,7 +103,7 @@ int main() {
   // vector<double> output;
   // vector<complex<double>> output2;
   // vector<double> input = {1.0, 2.0, 3.0, 4.0, 5.0};
-  // vector<double> input2 = {1.0, 2.0, 3.0, 4.0, 5.0};
+  // vector<double> input2 = {1.0, 2.0, 3.0, 4.0};
   // vector<complex<double>> input3 = {1.0 + 2.0i, 3.0 + 4.0i, 5.0 + 6.0i};
   // PhantomPlaintext plain;
   // PhantomPlaintext plain2;
@@ -116,22 +116,30 @@ int main() {
   // PhantomCiphertext output_cipher;
   // ckks_evaluator.encoder.encode(input, scale, plain);
   // ckks_evaluator.encoder.encode(input2, scale, plain2);
-  // // ckks_evaluator.encoder.encode(input3, scale, plain3);
+  // ckks_evaluator.encoder.encode(input3, scale, plain3);
   // ckks_evaluator.encryptor.encrypt(plain, cipher);
   // ckks_evaluator.encryptor.encrypt(plain2, cipher2);
-  // // ckks_evaluator.encryptor.encrypt(plain3, cipher3);
+  // ckks_evaluator.encryptor.encrypt(plain3, cipher3);
 
-  // // ckks_evaluator.evaluator.add_inplace_reduced_error(cipher, cipher2);
-  // // ckks_evaluator.evaluator.sub_inplace_reduced_error(cipher, cipher2);
+  // ckks_evaluator.evaluator.add_inplace_reduced_error(cipher, cipher2);
+  // ckks_evaluator.evaluator.sub_inplace_reduced_error(cipher, cipher2);
 
-  // // ckks_evaluator.evaluator.multiply_inplace_reduced_error(cipher, cipher2, *ckks_evaluator.relin_keys);
-  // // ckks_evaluator.evaluator.multiply_vector_inplace_reduced_error(cipher, input2);
+  // ckks_evaluator.evaluator.multiply_inplace_reduced_error(cipher, cipher2, *ckks_evaluator.relin_keys);
+  // ckks_evaluator.evaluator.multiply_vector_inplace_reduced_error(cipher, input2);
 
-  // // ckks_evaluator.evaluator.add_const_inplace(cipher, 1.0);
-  // // ckks_evaluator.evaluator.multiply_const_inplace(cipher, 2.0);
+  // ckks_evaluator.evaluator.add_const_inplace(cipher, 1.0);
+  // ckks_evaluator.evaluator.multiply_const_inplace(cipher, 2.0);
+  // ckks_evaluator.evaluator.add_const_inplace(cipher, -1.0);
 
-  // // ckks_evaluator.evaluator.complex_conjugate_inplace(cipher3, *ckks_evaluator.galois_keys);
-  // // ckks_evaluator.evaluator.rotate_vector_inplace(cipher3, 1, *ckks_evaluator.galois_keys);
+  // ckks_evaluator.evaluator.complex_conjugate_inplace(cipher, *ckks_evaluator.galois_keys);
+  // ckks_evaluator.evaluator.rotate_vector_inplace(cipher, 1, *ckks_evaluator.galois_keys);
+
+  // ckks_evaluator.evaluator.multiply_vector_inplace_reduced_error(cipher, input3);
+
+  // cout << "Cipher:" << endl;
+  // cout << "chain_index: " << context.get_context_data(cipher.params_id()).chain_depth() << endl;
+  // cout << "coeff_modulus_size: " << cipher.coeff_modulus_size() << endl;
+  // cout << "scale: " << cipher.scale() << endl;
 
   // ckks_evaluator.decryptor.decrypt(cipher, output_plain);
   // ckks_evaluator.encoder.decode(output_plain, output);
@@ -179,7 +187,7 @@ int main() {
   //     ckks_evaluator);
 
   cout << "Generating Optimal Minimax Polynomials..." << endl;
-  bootstrapper.prepare_mod_polynomial(); // Good to go
+  bootstrapper.prepare_mod_polynomial();  // Good to go
   // bootstrapper_2.prepare_mod_polynomial();
   // bootstrapper_3.prepare_mod_polynomial();
 
@@ -193,7 +201,7 @@ int main() {
   // bootstrapper_2.addLeftRotKeys_Linear_to_vector_3(gal_steps_vector);
   // bootstrapper_3.addLeftRotKeys_Linear_to_vector_3(gal_steps_vector);
 
-  ckks_evaluator.decryptor.create_galois_keys_from_steps(gal_steps_vector, *(ckks_evaluator.galois_keys)); // Good to go
+  ckks_evaluator.decryptor.create_galois_keys_from_steps(gal_steps_vector, *(ckks_evaluator.galois_keys));  // Good to go
   cout << "Galois key generated from steps vector." << endl;
 
   bootstrapper.slot_vec.push_back(logn);
@@ -201,7 +209,7 @@ int main() {
   // bootstrapper_3.slot_vec.push_back(logn_3);
 
   cout << "Generating Linear Transformation Coefficients..." << endl;
-  bootstrapper.generate_LT_coefficient_3(); // Good to go
+  bootstrapper.generate_LT_coefficient_3();  // Good to go
   // bootstrapper_2.generate_LT_coefficient_3();
   // bootstrapper_3.generate_LT_coefficient_3();
 

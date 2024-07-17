@@ -1861,7 +1861,6 @@ void Bootstrapper::bsgs_linear_transform(
   int giantlast1 = floor((2 * totlen + 0.0) / (gs1 + 0.0)) + giantfirst1;
 
   vector<PhantomCiphertext> babyct(gs1, PhantomCiphertext());
-  // PhantomCiphertext* babyct = new PhantomCiphertext[gs1];
   PhantomCiphertext giantct, tmpct;
   bool giantbool = false, tmpctbool = false;
   PhantomCiphertext tmptmpct;
@@ -1926,7 +1925,6 @@ void Bootstrapper::rotated_bsgs_linear_transform(
   int giantlast2 = floor((totlen + 0.0) / (gs2 + 0.0));
 
   vector<PhantomCiphertext> babyct(gs2, PhantomCiphertext());
-  // PhantomCiphertext* babyct = new PhantomCiphertext[gs2];
   PhantomCiphertext giantct, tmpct;
   bool giantbool = false, tmpctbool = false;
   PhantomCiphertext tmptmpct;
@@ -2301,6 +2299,7 @@ void Bootstrapper::sfl_3(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher
 
   double mod_zero = (double)modulus[0].value();
   double curr_mod = (double)modulus[curr_level].value();
+
   vector<vector<complex<double>>> fftcoeff3_scale(2 * totlen3 + 1);
   for (int i = 0; i < 2 * totlen3 + 1; i++)
     fftcoeff3_scale[i].resize(2 * n);
@@ -2578,6 +2577,8 @@ void Bootstrapper::slottocoeff_full(PhantomCiphertext &rtncipher, PhantomCiphert
 
   sfl_full(rtncipher, tmpct3);
 }
+
+// NOTE:
 void Bootstrapper::coefftoslot_3(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher) {
   PhantomCiphertext tmpct1, tmpct2, tmpct3;
   sflinv_3(tmpct1, cipher);
@@ -2585,6 +2586,7 @@ void Bootstrapper::coefftoslot_3(PhantomCiphertext &rtncipher, PhantomCiphertext
   ckks->evaluator.add_reduced_error(tmpct1, tmpct2, rtncipher);
 }
 
+// NOTE:
 void Bootstrapper::slottocoeff_3(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher) {
   PhantomCiphertext tmpct1, tmpct2, tmpct3;
   sfl_3(tmpct1, cipher);
@@ -3032,7 +3034,6 @@ void Bootstrapper::bootstrap_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphe
   std::cout << "Modular reduction..." << endl;
   PhantomCiphertext modrtn;
   mod_reducer->modular_reduction(modrtn, rtn);
-
   ckks->print_decrypted_ct(modrtn, 10);
 
   if (logn == 0) {

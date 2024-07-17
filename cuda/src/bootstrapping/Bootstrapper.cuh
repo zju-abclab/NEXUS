@@ -57,7 +57,6 @@ class Bootstrapper {
   void addLeftRotKeys_Linear_to_vector(vector<int> &gal_steps_vector);
   void addLeftRotKeys_Linear_to_vector_3(vector<int> &gal_steps_vector);
 
-  void addLeftRotKeys_Linear_to_vector_other_slots(vector<int> &gal_steps_vector, long other_logn);
   void addLeftRotKeys_Linear_to_vector_3_other_slots(vector<int> &gal_steps_vector, long other_logn);
 
   void addLeftRotKeys_Linear_to_vector_one_depth(vector<int> &gal_steps_vector);
@@ -69,7 +68,6 @@ class Bootstrapper {
   void addBootKeys_other_keys(PhantomGaloisKey &gal_keys, vector<int> &other_keys);
   void addBootKeys_3_other_keys(PhantomGaloisKey &gal_keys, vector<int> &other_keys);
 
-  void addBootKeys_other_slots(PhantomGaloisKey &gal_keys, vector<long> &other_logn_vec);
   void addBootKeys_3_other_slots(PhantomGaloisKey &gal_keys, vector<long> &other_logn_vec);
   void addBootKeys_3_other_slots_keys(PhantomGaloisKey &gal_keys, vector<long> &other_logn_vec, vector<int> &other_keys);
 
@@ -81,8 +79,6 @@ class Bootstrapper {
 
   // Prepare the FFT coefficients
   void genorigcoeff();
-  void merge_coeff(vector<vector<complex<double>>> merged_coeff, vector<vector<vector<complex<double>>>> orig_coeff);
-  void rotated_merge_coeff(complex<double> **merged_coeff, complex<double> ***orig_coeff);
   void genfftcoeff_one_depth();
   void genfftcoeff_full_one_depth();
   void geninvfftcoeff_one_depth();
@@ -94,9 +90,7 @@ class Bootstrapper {
   void geninvfftcoeff_full();
 
   void genfftcoeff_3();
-  void genfftcoeff_full_3();
   void geninvfftcoeff_3();
-  void geninvfftcoeff_full_3();
   void generate_LT_coefficient();
   void generate_LT_coefficient_3();
 
@@ -169,7 +163,6 @@ class Bootstrapper {
 
   // mul_first bootstrapping
   void coefftoslot_full_mul_first(PhantomCiphertext &rtncipher1, PhantomCiphertext &rtncipher2, PhantomCiphertext &cipher);
-  void slottocoeff_full_mul_first(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher1, PhantomCiphertext &cipher2);
   void modraise_inplace(PhantomCiphertext &cipher);
 
   // API bootstrapping

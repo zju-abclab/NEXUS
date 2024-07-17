@@ -15,7 +15,6 @@ using namespace troy;
 class MMEvaluator {
  private:
   CKKSEvaluator *ckks = nullptr;
-  int print_count = 0;
 
   void enc_compress_ciphertext(vector<double> &values, PhantomCiphertext &ct);
   void enc_compress_ciphertext(vector<double> &values, Ciphertext &ct);
