@@ -400,7 +400,7 @@ namespace seal
         inline void decode(
             const Plaintext &plain, std::vector<T> &destination, MemoryPoolHandle pool = MemoryManager::GetPool()) const
         {
-            destination.resize(slots_);
+            destination.resize(sparse_slots_);
             decode_internal(plain, destination.data(), std::move(pool));
         }
 #ifdef SEAL_USE_MSGSL
@@ -438,6 +438,15 @@ namespace seal
         SEAL_NODISCARD inline std::size_t slot_count() const noexcept
         {
             return slots_;
+        }
+
+        /*
+        E.-S. Lee
+        */
+        inline void set_sparse_slots(std::size_t sparse_slots)
+        {
+            // Set the degree
+            sparse_slots_= sparse_slots;
         }
 
     private:
@@ -692,6 +701,17 @@ namespace seal
             // CRT-compose the polynomial
             context_data.rns_tool()->base_q()->compose_array(plain_copy.get(), coeff_count, pool);
 
+            if (sparse_slots_ != slots_) {
+                std::size_t sparsity = slots_ / sparse_slots_;
+                for (std::size_t i = 0; i < coeff_count; i++) {
+                    if (((i - 1) & (sparsity - 1)) != sparsity - 1) {
+                        for (std::size_t j = 0; j < coeff_modulus_size; j++) {
+                            plain_copy[i * coeff_modulus_size + j] = 0;
+                        }
+                    }
+                }
+            }
+
             // Create floating-point representations of the multi-precision integer coefficients
             double two_pow_64 = std::pow(2.0, 64);
             auto res(util::allocate<std::complex<double>>(coeff_count, pool));
@@ -734,7 +754,7 @@ namespace seal
 
             fft_handler_.transform_to_rev(res.get(), logn, root_powers_.get());
 
-            for (std::size_t i = 0; i < slots_; i++)
+            for (std::size_t i = 0; i < sparse_slots_; i++)
             {
                 destination[i] = from_complex<T>(res[static_cast<std::size_t>(matrix_reps_index_map_[i])]);
             }
@@ -758,6 +778,8 @@ namespace seal
         SEALContext context_;
 
         std::size_t slots_;
+
+        std::size_t sparse_slots_;
 
         std::shared_ptr<util::ComplexRoots> complex_roots_;
 
