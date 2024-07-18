@@ -1832,7 +1832,7 @@ void Bootstrapper::generate_LT_coefficient_3() {
 void Bootstrapper::prepare_mod_polynomial() {
   mod_reducer->generate_sin_cos_polynomial();
   mod_reducer->generate_inverse_sine_polynomial();
-  // mod_reducer->write_polynomials();
+  mod_reducer->write_polynomials();
 }
 
 void Bootstrapper::subsum(double scale, PhantomCiphertext &cipher) {
@@ -2810,24 +2810,23 @@ void Bootstrapper::modraise_inplace(PhantomCiphertext &cipher) {
 
   const auto &stream = phantom::util::global_variables::default_stream->get_stream();
   auto N = cipher.poly_modulus_degree();
-  const auto modulus = ckks->context->first_context_data().parms().coeff_modulus();
+  const auto &context_data = ckks->context->first_context_data();
+  const auto &modulus = context_data.parms().coeff_modulus();
   auto mod_count = modulus.size();
   auto rns_coeff_count = mod_count * N;
 
+  // Resize to the full level.
+  cipher.resize(*ckks->context, context_data.chain_index(), 2, stream);
+
   cudaStreamSynchronize(stream);
 
-  // Resize to the full level.
-  cipher.resize(*ckks->context, ckks->context->get_first_index(), 2, stream);
-
   ckks->evaluator.transform_from_ntt_inplace(cipher);
-
-  PhantomCiphertext cipher_copy = cipher;
 
   auto ciphertext_size = cipher.size();
   auto cipher_copy_data = new uint64_t[ciphertext_size * rns_coeff_count];
   auto cipher_data = new uint64_t[ciphertext_size * rns_coeff_count];
 
-  cudaMemcpy(cipher_copy_data, cipher_copy.data(), sizeof(uint64_t) * ciphertext_size * rns_coeff_count, cudaMemcpyDeviceToHost);
+  cudaMemcpy(cipher_copy_data, cipher.data(), sizeof(uint64_t) * ciphertext_size * rns_coeff_count, cudaMemcpyDeviceToHost);
   cudaMemcpy(cipher_data, cipher.data(), sizeof(uint64_t) * ciphertext_size * rns_coeff_count, cudaMemcpyDeviceToHost);
 
   uint64_t q0 = modulus[0].value();
@@ -2859,7 +2858,7 @@ void Bootstrapper::modraise_inplace(PhantomCiphertext &cipher) {
   cudaMemcpy(cipher.data(), cipher_data, sizeof(uint64_t) * ciphertext_size * rns_coeff_count, cudaMemcpyHostToDevice);
 
   // Wipe cipher_copy data
-  cudaMemset(cipher_copy.data(), 0, sizeof(uint64_t) * ciphertext_size * rns_coeff_count);
+  delete[] cipher_copy_data;
 
   ckks->evaluator.transform_to_ntt_inplace(cipher);
 }

@@ -29,8 +29,8 @@ void random_real(vector<double> &vec, size_t size) {
   vec.reserve(size);
 
   for (size_t i = 0; i < size; i++) {
-    vec[i] = distribution(rnd);
-    // vec[i] = 0.5;
+    // vec[i] = distribution(rnd);
+    vec[i] = 0.5;
   }
 }
 

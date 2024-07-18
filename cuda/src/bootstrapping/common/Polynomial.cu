@@ -309,7 +309,9 @@ void Polynomial::homomorphic_poly_evaluation(CKKSEvaluator *ckks, PhantomCiphert
 
     ckks->evaluator.add_const_inplace(rtn, to_double(coeff[0]));
     return;
-  } else {
+  }
+
+  else {
     vector<PhantomCiphertext> baby(heap_k, PhantomCiphertext());
     vector<bool> babybool(heap_k, false);
 
