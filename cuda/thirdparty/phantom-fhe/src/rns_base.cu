@@ -257,6 +257,8 @@ namespace phantom::arith {
                 dst[tid].x = res;
             else
                 dst[tid - (sparse_coeff_count >> 1)].y = res;
+            // TODO: FIXME: Temporary hack to fix bug on AGX Xavier (use printf to block threads), may affect performance
+            printf("");
         }
     }
 
@@ -361,15 +363,35 @@ namespace phantom::arith {
 
         uint64_t gridDimGlb = ceil(sparse_coeff_count / blockDimGlb.x);
 
+        compose_kernel<<<gridDimGlb, blockDimGlb, 0, stream>>>(
+                dst, temp_prod_array.get(), acc_mod_array.get(), src, size(), base(),
+                big_modulus(), big_qiHat(), QHatInvModq(), QHatInvModq_shoup(),
+                upper_half_threshold, inv_scale, coeff_count, sparse_coeff_count, sparse_ratio);
+    }
+
+    void DRNSBase::compose_array(cuDoubleComplex *dst, const uint64_t *src, const uint64_t *upper_half_threshold,
+                                 const double inv_scale, const uint32_t coeff_count, const uint32_t sparse_coeff_count,
+                                 const uint32_t sparse_ratio, const uint32_t decoding_sparse_ratio, const cudaStream_t &stream) const {
+        if (!src) {
+            throw invalid_argument("input array cannot be null");
+        }
+
+        uint32_t rns_poly_uint64_count = sparse_coeff_count * size();
+        auto temp_prod_array = make_cuda_auto_ptr<uint64_t>(rns_poly_uint64_count, stream);
+        auto acc_mod_array = make_cuda_auto_ptr<uint64_t>(rns_poly_uint64_count, stream);
+        cudaMemsetAsync(acc_mod_array.get(), 0, rns_poly_uint64_count * sizeof(uint64_t), stream);
+
+        uint64_t gridDimGlb = ceil(sparse_coeff_count / blockDimGlb.x);
+
         compose_kernel_step1<<<gridDimGlb, blockDimGlb, 0, stream>>>(
                 dst, temp_prod_array.get(), acc_mod_array.get(), src, size(), base(),
                 big_modulus(), big_qiHat(), QHatInvModq(), QHatInvModq_shoup(),
                 upper_half_threshold, inv_scale, coeff_count, sparse_coeff_count, sparse_ratio);
         
-        // Newly added to handle sparse_slots_ != slots_
-        if (sparse_ratio != 1) {
+        // Newly added to handle decoding_sparse_slots_ != slots_
+        if (decoding_sparse_ratio != 1) {
             int numBlocks = (coeff_count + blockDimGlb.x - 1) / blockDimGlb.x;
-            compose_kernel_step1_1<<<numBlocks, blockDimGlb, 0, stream>>>(sparse_ratio, coeff_count, size(), acc_mod_array.get());
+            compose_kernel_step1_1<<<numBlocks, blockDimGlb, 0, stream>>>(decoding_sparse_ratio, coeff_count, size(), acc_mod_array.get());
         }
         
         compose_kernel_step2<<<gridDimGlb, blockDimGlb, 0, stream>>>(

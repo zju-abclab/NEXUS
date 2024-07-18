@@ -47,5 +47,9 @@ namespace phantom::arith {
         void compose_array(cuDoubleComplex *dst, const uint64_t *src, const uint64_t *upper_half_threshold,
                            double inv_scale, uint32_t coeff_count, uint32_t sparse_coeff_count,
                            uint32_t sparse_ratio, const cudaStream_t &stream) const;
+        
+        void compose_array(cuDoubleComplex *dst, const uint64_t *src, const uint64_t *upper_half_threshold,
+                           double inv_scale, uint32_t coeff_count, uint32_t sparse_coeff_count,
+                           uint32_t sparse_ratio, uint32_t decoding_sparse_ratio, const cudaStream_t &stream) const;
     };
 }

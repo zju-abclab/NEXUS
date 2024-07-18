@@ -44,8 +44,8 @@ PhantomCKKSEncoder::PhantomCKKSEncoder(const PhantomContext &context) {
     // Newly added: set sparse_slots immediately if specified
     auto specified_sparse_slots = context_data.parms().sparse_slots();
     if (specified_sparse_slots) {
-        cout << "Setting sparse slots to: " << specified_sparse_slots << endl;
-        sparse_slots_ = specified_sparse_slots;
+        cout << "Setting decoding sparse slots to: " << specified_sparse_slots << endl;
+        decoding_sparse_slots_ = specified_sparse_slots;
     }
 
     uint32_t m = coeff_count << 1;
@@ -140,10 +140,12 @@ void PhantomCKKSEncoder::encode_internal(const PhantomContext &context, const cu
     // same as SEAL's fft_handler_.transform_from_rev
     special_fft_backward(*gpu_ckks_msg_vec_, fix, stream);
 
-    // TODO to opt this
+    // TODO: boundary check on GPU
     vector<cuDoubleComplex> temp2(sparse_slots_);
     PHANTOM_CHECK_CUDA(cudaMemcpyAsync(temp2.data(), gpu_ckks_msg_vec_->in(), sparse_slots_ * sizeof(cuDoubleComplex),
                                        cudaMemcpyDeviceToHost, stream));
+    // explicit stream synchronize to avoid error
+    cudaStreamSynchronize(stream);
 
     double max_coeff = 0;
     for (std::size_t i = 0; i < sparse_slots_; i++) {
@@ -213,8 +215,14 @@ void PhantomCKKSEncoder::decode_internal(const PhantomContext &context, const Ph
     nwt_2d_radix8_backward_inplace(plain_copy.get(), context.gpu_rns_tables(), coeff_modulus_size, 0, stream);
 
     // CRT-compose the polynomial
-    rns_tool.base_Ql().compose_array(gpu_ckks_msg_vec().in(), plain_copy.get(), gpu_upper_half_threshold.get(),
-                                     inv_scale, coeff_count, sparse_slots_ << 1, slots_ / sparse_slots_, stream);
+    if (decoding_sparse_slots_) {
+        rns_tool.base_Ql().compose_array(gpu_ckks_msg_vec().in(), plain_copy.get(), gpu_upper_half_threshold.get(),
+                                         inv_scale, coeff_count, sparse_slots_ << 1, slots_ / sparse_slots_,
+                                         slots_ / decoding_sparse_slots_, stream);
+    } else {
+        rns_tool.base_Ql().compose_array(gpu_ckks_msg_vec().in(), plain_copy.get(), gpu_upper_half_threshold.get(),
+                                         inv_scale, coeff_count, sparse_slots_ << 1, slots_ / sparse_slots_, stream);
+    }
 
     special_fft_forward(*gpu_ckks_msg_vec_, stream);
 
@@ -224,7 +232,12 @@ void PhantomCKKSEncoder::decode_internal(const PhantomContext &context, const Ph
     uint64_t gridDimGlb = ceil(sparse_slots_ / blockDimGlb.x);
     bit_reverse<<<gridDimGlb, blockDimGlb, 0, stream>>>(
             out.get(), gpu_ckks_msg_vec_->in(), sparse_slots_, log_sparse_n);
-    cudaMemcpyAsync(destination, out.get(), sparse_slots_ * sizeof(cuDoubleComplex), cudaMemcpyDeviceToHost, stream);
+
+    if (decoding_sparse_slots_) {
+        cudaMemcpyAsync(destination, out.get(), decoding_sparse_slots_ * sizeof(cuDoubleComplex), cudaMemcpyDeviceToHost, stream);
+    } else {
+        cudaMemcpyAsync(destination, out.get(), sparse_slots_ * sizeof(cuDoubleComplex), cudaMemcpyDeviceToHost, stream);
+    }
 
     // explicit synchronization in case user wants to use the result immediately
     cudaStreamSynchronize(stream);

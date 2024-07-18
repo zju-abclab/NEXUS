@@ -2814,6 +2814,8 @@ void Bootstrapper::modraise_inplace(PhantomCiphertext &cipher) {
   auto mod_count = modulus.size();
   auto rns_coeff_count = mod_count * N;
 
+  cudaStreamSynchronize(stream);
+
   // Resize to the full level.
   cipher.resize(*ckks->context, ckks->context->get_first_index(), 2, stream);
 

@@ -901,6 +901,9 @@ int PhantomSecretKey::invariant_noise_budget(const PhantomContext &context,
     std::vector<uint64_t> host_noise_poly(coeff_mod_size * poly_degree);
     cudaMemcpyAsync(host_noise_poly.data(), c0, coeff_mod_size * poly_degree * sizeof(uint64_t), cudaMemcpyDeviceToHost,
                     s);
+    
+    // explicit stream synchronize to avoid error
+    cudaStreamSynchronize(s);
 
     // CRT-compose the noise
     auto &base_q = context.get_context_data_rns_tool(chain_index).host_base_Ql();

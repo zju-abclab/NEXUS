@@ -115,7 +115,7 @@ void MMEvaluator::enc_compress_ciphertext(vector<double> &values, PhantomCiphert
 
   // Coefficients of the two RNS polynomails should be the same except with different mod
   for (auto i = 0; i < poly_modulus_degree; i++) {
-    auto coeffd = std::round(values[i] * ckks->scale);
+    auto coeffd = std::round(values[i] * 10000000000);
     bool is_negative = std::signbit(coeffd);
     auto coeffu = static_cast<std::uint64_t>(std::fabs(coeffd));
     if (is_negative) {
@@ -142,7 +142,9 @@ void MMEvaluator::enc_compress_ciphertext(vector<double> &values, PhantomCiphert
 
   // Update plaintext parameters
   p.set_chain_index(context_data.chain_index());
-  p.scale() = ckks->scale;
+  p.scale() = 10000000000;
+
+  zero.scale() = p.scale();
 
   ckks->evaluator.add_plain(zero, p, ct);
 }
@@ -243,6 +245,7 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
 
     ckks->evaluator.add_many(temp_cts, res_col_ct);
 
+    res_col_ct.scale() *= 4096;
     res.push_back(res_col_ct);
   }
 

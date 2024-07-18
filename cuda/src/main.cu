@@ -24,7 +24,7 @@ size_t N = 1ULL << 16;
 size_t MM_LOG_N = 13;
 size_t MM_N = 1ULL << MM_LOG_N;
 
-double SCALE = pow(2.0, 30);
+double SCALE = pow(2.0, 40);
 
 vector<string> TEST_TARGETS = {"MatMul", "MatMul_Phantom", "SoftMax", "LayerNorm", "GELU"};
 vector<vector<int>> COEFF_MODULI =

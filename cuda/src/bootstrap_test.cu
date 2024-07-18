@@ -216,10 +216,10 @@ int main() {
   double tot_err = 0, mean_err;
   size_t iterations = 1;
 
-  vector<double> sparse(sparse_slots);
-  vector<double> input(slot_count);
-  vector<double> before(slot_count);
-  vector<double> after(slot_count);
+  vector<double> sparse(sparse_slots, 0.0);
+  vector<double> input(slot_count, 0.0);
+  vector<double> before(slot_count, 0.0);
+  vector<double> after(slot_count, 0.0);
 
   random_real(sparse, sparse_slots);
 

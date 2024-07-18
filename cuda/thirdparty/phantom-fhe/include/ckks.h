@@ -15,6 +15,7 @@ private:
 
     uint32_t slots_{};
     uint32_t sparse_slots_ = 0;
+    uint32_t decoding_sparse_slots_ = 0;
     std::unique_ptr<phantom::util::ComplexRoots> complex_roots_;
     std::vector<cuDoubleComplex> root_powers_;
     std::vector<uint32_t> rotation_group_;
@@ -60,9 +61,10 @@ private:
                                 const PhantomPlaintext &plain,
                                 double *destination,
                                 const cudaStream_t &stream) {
-        std::vector<cuDoubleComplex> output(sparse_slots_);
+        auto decoding_sparse_slots = decoding_sparse_slots_ == 0 ? sparse_slots_ : decoding_sparse_slots_;
+        std::vector<cuDoubleComplex> output(decoding_sparse_slots);
         decode_internal(context, plain, output.data(), stream);
-        for (size_t i = 0; i < sparse_slots_; i++)
+        for (size_t i = 0; i < decoding_sparse_slots; i++)
             destination[i] = output[i].x;
     }
 
@@ -109,7 +111,8 @@ public:
                        std::vector<T> &destination,
                        const phantom::util::cuda_stream_wrapper &stream_wrapper = *phantom::util::global_variables::default_stream) {
         const auto &s = stream_wrapper.get_stream();
-        destination.resize(sparse_slots_);
+        auto decoding_sparse_slots = decoding_sparse_slots_ == 0 ? sparse_slots_ : decoding_sparse_slots_;
+        destination.resize(decoding_sparse_slots);
         decode_internal(context, plain, destination.data(), s);
     }
 
@@ -118,12 +121,13 @@ public:
                        std::vector<std::complex<double>> &destination,
                        const phantom::util::cuda_stream_wrapper &stream_wrapper = *phantom::util::global_variables::default_stream) {
         const auto &s = stream_wrapper.get_stream();
-        destination.resize(sparse_slots_);
+        auto decoding_sparse_slots = decoding_sparse_slots_ == 0 ? sparse_slots_ : decoding_sparse_slots_;
+        destination.resize(decoding_sparse_slots);
 
-        std::vector<cuDoubleComplex> output(sparse_slots_);
+        std::vector<cuDoubleComplex> output(decoding_sparse_slots);
         decode_internal(context, plain, output.data(), s);
 
-        for (size_t i = 0; i < sparse_slots_; i++) {
+        for (size_t i = 0; i < decoding_sparse_slots; i++) {
             destination[i] = std::complex<double>(output[i].x, output[i].y);
         }
         output.clear();
@@ -141,6 +145,7 @@ public:
         return slots_;
     }
 
+    // TODO: we may not need this
     // Newly added to provide information about the length of additional messages
     // allowed for encoding after the first call to `encode`
     [[nodiscard]] inline std::size_t message_length() const noexcept {
