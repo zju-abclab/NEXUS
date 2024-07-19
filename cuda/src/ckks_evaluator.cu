@@ -10,6 +10,11 @@ void CKKSEvaluator::print_decrypted_ct(PhantomCiphertext &ct, int num) {
   PhantomPlaintext temp;
   vector<double> v;
 
+  if (!ct.chain_index()) {
+    cout << endl;
+    return;
+  }
+
   decryptor.decrypt(ct, temp);
   encoder.decode(temp, v);
 

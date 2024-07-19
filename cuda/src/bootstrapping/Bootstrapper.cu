@@ -2990,8 +2990,6 @@ void Bootstrapper::bootstrap_full(PhantomCiphertext &rtncipher, PhantomCiphertex
 
 // NOTE:: main
 void Bootstrapper::bootstrap_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher) {
-  ckks->print_decrypted_ct(cipher, 10);
-
   std::cout << "Modulus Raising..." << endl;
   modraise_inplace(cipher);
 

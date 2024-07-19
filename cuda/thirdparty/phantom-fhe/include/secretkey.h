@@ -1,4 +1,5 @@
 #pragma once
+#include <fstream>
 
 #include "context.cuh"
 
@@ -273,4 +274,24 @@ public:
     */
     [[nodiscard]] int invariant_noise_budget(const PhantomContext &context, const PhantomCiphertext &cipher,
                                              const phantom::util::cuda_stream_wrapper &stream_wrapper = *phantom::util::global_variables::default_stream);
+
+    inline void load_secret_key(const PhantomContext &context, std::ifstream &sk_in) {
+				std::string line;
+				size_t total_line_count = 0;
+
+				auto new_sk_array_data = new uint64_t[context.coeff_mod_size_ * context.poly_degree_];
+
+				while (std::getline(sk_in, line)) {
+					uint64_t value = std::stoull(line);
+					new_sk_array_data[total_line_count] = value;
+					total_line_count++;
+				}
+
+				if (total_line_count != context.coeff_mod_size_ * context.poly_degree_) {
+					throw std::invalid_argument("Invalid secret key input.");
+				}
+
+				cudaMemcpy(secret_key_array_.get(), new_sk_array_data, context.coeff_mod_size_ * context.poly_degree_ * sizeof(uint64_t), cudaMemcpyHostToDevice);
+				delete[] new_sk_array_data;
+    }
 };

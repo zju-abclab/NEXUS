@@ -82,31 +82,49 @@ class Encoder {
   }
 };
 
+// class Encryptor {
+//  private:
+//   PhantomContext *context;
+//   PhantomPublicKey *encryptor;
+
+//  public:
+//   Encryptor() = default;
+
+//   Encryptor(PhantomContext *context, PhantomPublicKey *encryptor) {
+//     this->context = context;
+//     this->encryptor = encryptor;
+//   }
+
+//   inline void encrypt(PhantomPlaintext &plain, PhantomCiphertext &ct) {
+//     encryptor->encrypt_asymmetric(*context, plain, ct);
+//   }
+
+//   inline void encrypt_zero(PhantomCiphertext &ct, size_t chain_index) {
+//     const phantom::util::cuda_stream_wrapper &stream_wrapper = *phantom::util::global_variables::default_stream;
+//     const auto &stream = stream_wrapper.get_stream();
+
+//     ct.set_correction_factor(1);
+//     ct.set_scale(1.0);
+
+//     encryptor->encrypt_zero_asymmetric_internal(*context, ct, chain_index, stream);
+//   }
+// };
+
 class Encryptor {
  private:
   PhantomContext *context;
-  PhantomPublicKey *encryptor;
+  PhantomSecretKey *encryptor;
 
  public:
   Encryptor() = default;
 
-  Encryptor(PhantomContext *context, PhantomPublicKey *encryptor) {
+  Encryptor(PhantomContext *context, PhantomSecretKey *encryptor) {
     this->context = context;
     this->encryptor = encryptor;
   }
 
   inline void encrypt(PhantomPlaintext &plain, PhantomCiphertext &ct) {
-    encryptor->encrypt_asymmetric(*context, plain, ct);
-  }
-
-  inline void encrypt_zero(PhantomCiphertext &ct, size_t chain_index) {
-    const phantom::util::cuda_stream_wrapper &stream_wrapper = *phantom::util::global_variables::default_stream;
-    const auto &stream = stream_wrapper.get_stream();
-
-    ct.set_correction_factor(1);
-    ct.set_scale(1.0);
-
-    encryptor->encrypt_zero_asymmetric_internal(*context, ct, chain_index, stream);
+    encryptor->encrypt_symmetric(*context, plain, ct);
   }
 };
 
@@ -331,7 +349,7 @@ class Evaluator {
   }
 
   inline void add_reduced_error(const PhantomCiphertext &ct1, const PhantomCiphertext &ct2, PhantomCiphertext &dest) {
-    if (&ct1 == &dest) {
+    if (&ct2 == &dest) {
       add_inplace_reduced_error(dest, ct1);
     } else {
       dest = ct1;
@@ -342,7 +360,7 @@ class Evaluator {
   void add_inplace_reduced_error(PhantomCiphertext &ct1, const PhantomCiphertext &ct2);
 
   inline void sub_reduced_error(const PhantomCiphertext &ct1, const PhantomCiphertext &ct2, PhantomCiphertext &dest) {
-    if (&ct1 == &dest) {
+    if (&ct2 == &dest) {
       sub_inplace_reduced_error(dest, ct1);
     } else {
       dest = ct1;
@@ -481,7 +499,7 @@ class CKKSEvaluator {
     Encoder ckks_encoder(context, encoder);
     this->encoder = ckks_encoder;
 
-    Encryptor ckks_encryptor(context, encryptor);
+    Encryptor ckks_encryptor(context, decryptor);
     this->encryptor = ckks_encryptor;
 
     Evaluator ckks_evaluator(context, encoder);

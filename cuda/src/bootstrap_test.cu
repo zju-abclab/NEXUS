@@ -29,8 +29,7 @@ void random_real(vector<double> &vec, size_t size) {
   vec.reserve(size);
 
   for (size_t i = 0; i < size; i++) {
-    // vec[i] = distribution(rnd);
-    vec[i] = 0.5;
+    vec[i] = distribution(rnd);
   }
 }
 
@@ -88,6 +87,9 @@ int main() {
   PhantomContext context(parms);
 
   PhantomSecretKey secret_key(context);
+  std::ifstream sk_in("../../sk.txt");
+  secret_key.load_secret_key(context, sk_in);
+
   PhantomPublicKey public_key = secret_key.gen_publickey(context);
   PhantomRelinKey relin_keys = secret_key.gen_relinkey(context);
   PhantomGaloisKey galois_keys;
@@ -115,11 +117,18 @@ int main() {
   // PhantomCiphertext cipher3;
   // PhantomCiphertext output_cipher;
   // ckks_evaluator.encoder.encode(input, scale, plain);
-  // ckks_evaluator.encoder.encode(input2, scale, plain2);
-  // ckks_evaluator.encoder.encode(input3, scale, plain3);
+  // // ckks_evaluator.encoder.encode(input2, scale, plain2);
+  // // ckks_evaluator.encoder.encode(input3, scale, plain3);
   // ckks_evaluator.encryptor.encrypt(plain, cipher);
-  // ckks_evaluator.encryptor.encrypt(plain2, cipher2);
-  // ckks_evaluator.encryptor.encrypt(plain3, cipher3);
+  // // ckks_evaluator.encryptor.encrypt(plain2, cipher2);
+  // // ckks_evaluator.encryptor.encrypt(plain3, cipher3);
+
+  // auto cipher_data = new uint64_t[cipher.poly_modulus_degree() * cipher.coeff_modulus_size()];
+  // cudaMemcpy(cipher_data, cipher.data(), cipher.poly_modulus_degree() * cipher.coeff_modulus_size() * sizeof(uint64_t), cudaMemcpyDeviceToHost);
+  // for (int i = 0; i < 10; i++) {
+  //   cout << cipher_data[i] << " ";
+  // }
+  // cout << endl;
 
   // ckks_evaluator.evaluator.add_inplace_reduced_error(cipher, cipher2);
   // ckks_evaluator.evaluator.sub_inplace_reduced_error(cipher, cipher2);
