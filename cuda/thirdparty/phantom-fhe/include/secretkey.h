@@ -129,9 +129,9 @@ public:
 
     PhantomGaloisKey() = default;
 
-    PhantomGaloisKey(const PhantomGaloisKey &) = delete;
+    PhantomGaloisKey(const PhantomGaloisKey &) = default;
 
-    PhantomGaloisKey &operator=(const PhantomGaloisKey &) = delete;
+    PhantomGaloisKey &operator=(const PhantomGaloisKey &) = default;
 
     PhantomGaloisKey(PhantomGaloisKey &&) = default;
 
@@ -172,15 +172,6 @@ private:
     }
 
     void gen_secretkey(const PhantomContext &context, const cudaStream_t &stream);
-
-    /** Encrypt zero using the secret key, the ciphertext is in NTT form
-     * @param[in] context PhantomContext
-     * @param[inout] cipher The generated ciphertext
-     * @param[in] chain_index The index of the context data
-     * @param[in] is_ntt_form Whether the ciphertext needs to be in NTT form
-     */
-    void encrypt_zero_symmetric(const PhantomContext &context, PhantomCiphertext &cipher, const uint8_t *prng_seed_a,
-                                size_t chain_index, bool is_ntt_form, const cudaStream_t &stream) const;
 
     /** Generate one public key for this secret key
      * Return PhantomPublicKey
@@ -229,6 +220,15 @@ public:
 
     [[nodiscard]] PhantomGaloisKey create_galois_keys_from_steps(PhantomContext &context, const std::vector<int> &steps) const; 
 
+    /** Encrypt zero using the secret key, the ciphertext is in NTT form
+     * @param[in] context PhantomContext
+     * @param[inout] cipher The generated ciphertext
+     * @param[in] chain_index The index of the context data
+     * @param[in] is_ntt_form Whether the ciphertext needs to be in NTT form
+     */
+    void encrypt_zero_symmetric(const PhantomContext &context, PhantomCiphertext &cipher, const uint8_t *prng_seed_a,
+                                size_t chain_index, bool is_ntt_form, const cudaStream_t &stream) const;
+
     /** Symmetric encryption, the plaintext and ciphertext are in NTT form
      * @param[in] context PhantomContext
      * @param[in] plain The data to be encrypted
@@ -275,23 +275,24 @@ public:
     [[nodiscard]] int invariant_noise_budget(const PhantomContext &context, const PhantomCiphertext &cipher,
                                              const phantom::util::cuda_stream_wrapper &stream_wrapper = *phantom::util::global_variables::default_stream);
 
+    // Newly added for debugging purposes
     inline void load_secret_key(const PhantomContext &context, std::ifstream &sk_in) {
-				std::string line;
-				size_t total_line_count = 0;
-
-				auto new_sk_array_data = new uint64_t[context.coeff_mod_size_ * context.poly_degree_];
-
-				while (std::getline(sk_in, line)) {
-					uint64_t value = std::stoull(line);
-					new_sk_array_data[total_line_count] = value;
-					total_line_count++;
-				}
-
-				if (total_line_count != context.coeff_mod_size_ * context.poly_degree_) {
-					throw std::invalid_argument("Invalid secret key input.");
-				}
-
-				cudaMemcpy(secret_key_array_.get(), new_sk_array_data, context.coeff_mod_size_ * context.poly_degree_ * sizeof(uint64_t), cudaMemcpyHostToDevice);
-				delete[] new_sk_array_data;
+      std::string line;
+      size_t total_line_count = 0;
+    
+      auto new_sk_array_data = new uint64_t[context.coeff_mod_size_ * context.poly_degree_];
+    
+      while (std::getline(sk_in, line)) {
+        uint64_t value = std::stoull(line);
+        new_sk_array_data[total_line_count] = value;
+        total_line_count++;
+      }
+    
+      if (total_line_count != context.coeff_mod_size_ * context.poly_degree_) {
+        throw std::invalid_argument("Invalid secret key input.");
+      }
+    
+      cudaMemcpy(secret_key_array_.get(), new_sk_array_data, context.coeff_mod_size_ * context.poly_degree_ * sizeof(uint64_t), cudaMemcpyHostToDevice);
+      delete[] new_sk_array_data;
     }
 };

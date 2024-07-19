@@ -322,8 +322,8 @@ void Polynomial::homomorphic_poly_evaluation(CKKSEvaluator *ckks, PhantomCiphert
     baby[1] = cipher;
     babybool[1] = true;
 
-    cout << endl;
-    cout << "heap_k: " << heap_k << endl;  // 8
+    // cout << endl;
+    // cout << "heap_k: " << heap_k << endl;  // 8
 
     // i = 2, 4, 8
     for (int i = 2; i < heap_k; i *= 2) {
@@ -336,12 +336,12 @@ void Polynomial::homomorphic_poly_evaluation(CKKSEvaluator *ckks, PhantomCiphert
       babybool[i] = true;
     }
 
-    cout << "Baby step 1: " << endl;
-    for (int i = 0; i < baby.size(); i++) {
-      cout << i << " ";
-      ckks->print_decrypted_ct(baby[i], 10);
-    }
-    cout << endl;
+    // cout << "Baby step 1: " << endl;
+    // for (int i = 0; i < baby.size(); i++) {
+    //   cout << i << " ";
+    //   ckks->print_decrypted_ct(baby[i], 10);
+    // }
+    // cout << endl;
 
     long lpow2, res, diff;
     PhantomCiphertext tmp;
@@ -353,7 +353,7 @@ void Polynomial::homomorphic_poly_evaluation(CKKSEvaluator *ckks, PhantomCiphert
         res = i - lpow2;
         diff = abs(lpow2 - res);
 
-        cout << "lpow2: " << lpow2 << " res: " << res << " diff: " << diff << endl;
+        // cout << "lpow2: " << lpow2 << " res: " << res << " diff: " << diff << endl;
 
         ckks->evaluator.multiply_reduced_error(baby[lpow2], baby[res], *(ckks->relin_keys), baby[i]);
         ckks->evaluator.rescale_to_next_inplace(baby[i]);
@@ -364,12 +364,12 @@ void Polynomial::homomorphic_poly_evaluation(CKKSEvaluator *ckks, PhantomCiphert
       }
     }
 
-    cout << "Baby step 2: " << endl;
-    for (int i = 0; i < baby.size(); i++) {
-      cout << i << " ";
-      ckks->print_decrypted_ct(baby[i], 10);
-    }
-    cout << endl;
+    // cout << "Baby step 2: " << endl;
+    // for (int i = 0; i < baby.size(); i++) {
+    //   cout << i << " ";
+    //   ckks->print_decrypted_ct(baby[i], 10);
+    // }
+    // cout << endl;
 
     vector<PhantomCiphertext> giant(heap_m, PhantomCiphertext());
     vector<bool> giantbool(heap_m, false);
@@ -409,11 +409,11 @@ void Polynomial::homomorphic_poly_evaluation(CKKSEvaluator *ckks, PhantomCiphert
       ckks->evaluator.add_const_inplace(giant[i], -1.0);
     }
 
-    cout << "giant: " << endl;
-    for (auto &giant_ct : giant) {
-      ckks->print_decrypted_ct(giant_ct, 10);
-    }
-    cout << endl;
+    // cout << "giant: " << endl;
+    // for (auto &giant_ct : giant) {
+    //   ckks->print_decrypted_ct(giant_ct, 10);
+    // }
+    // cout << endl;
 
     vector<PhantomCiphertext> cipherheap((1 << (heap_m + 1)) - 1, PhantomCiphertext());
     vector<bool> cipherheapbool((1 << (heap_m + 1)) - 1, false);

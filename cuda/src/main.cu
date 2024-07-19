@@ -133,17 +133,21 @@ void MM_test_p() {
   PhantomCKKSEncoder encoder(context);
 
   PhantomSecretKey secret_key(context);
+  std::ifstream sk_in("../../sk.txt");
+  secret_key.load_secret_key(context, sk_in);
   PhantomPublicKey public_key = secret_key.gen_publickey(context);
   PhantomRelinKey relin_keys = secret_key.gen_relinkey(context);
+  PhantomGaloisKey galois_keys;
 
   std::vector<std::uint32_t> galois_elts;
   for (int i = 0; i < MM_LOG_N; i++) {
-    galois_elts.push_back((MM_N + pow(2, i)) / pow(2, i));
+    galois_elts.push_back((MM_N + exponentiate_uint(2, i)) / exponentiate_uint(2, i));
   }
-  PhantomGaloisKey galois_keys = secret_key.create_galois_keys_from_elts(context, galois_elts);
 
   CKKSEvaluator ckks_evaluator(&context, &public_key, &secret_key, &encoder, &relin_keys, &galois_keys, SCALE, galois_elts);
   MMEvaluator mme(ckks_evaluator);
+
+  ckks_evaluator.decryptor.create_galois_keys_from_elts(galois_elts, *(ckks_evaluator.galois_keys));
 
   std::vector<std::vector<double>> matrix_4096x768 = mme.read_matrix("../../data/input/matrixmul_input_m_128_n_768_k_64_batch_128.txt", 4096, 768);
   std::vector<std::vector<double>> matrix_768x64 = mme.read_matrix("../../data/input/matrix_input_n_768_k_64.txt", 768, 64);

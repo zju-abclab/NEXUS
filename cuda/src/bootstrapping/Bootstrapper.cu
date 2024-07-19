@@ -1832,7 +1832,7 @@ void Bootstrapper::generate_LT_coefficient_3() {
 void Bootstrapper::prepare_mod_polynomial() {
   mod_reducer->generate_sin_cos_polynomial();
   mod_reducer->generate_inverse_sine_polynomial();
-  mod_reducer->write_polynomials();
+  // mod_reducer->write_polynomials();
 }
 
 void Bootstrapper::subsum(double scale, PhantomCiphertext &cipher) {
@@ -1842,7 +1842,6 @@ void Bootstrapper::subsum(double scale, PhantomCiphertext &cipher) {
   for (int i = 0; i < logNh - logn; i++) {
     step = (1 << (logn + i));
     ckks->evaluator.rotate_vector(cipher, step, *(ckks->galois_keys), tmp);
-    // ckks->evaluator.add_inplace(cipher, tmp);
     ckks->evaluator.add_inplace_reduced_error(cipher, tmp);
   }
 
@@ -2798,7 +2797,19 @@ void Bootstrapper::coefftoslot_full_mul_first(PhantomCiphertext &rtncipher1, Pha
   ckks->evaluator.add_reduced_error(tmpct2, tmpct4, rtncipher2);
 }
 
-// TODO: Parallelize this
+__global__ void modraise_inplace_kernel(uint64_t *poly_dest, const uint64_t *poly_src_zero, const uint64_t modulus,
+                                        const uint64_t minus_q0_modulus, size_t N, uint64_t q0) {
+  size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i < N) {
+    auto q = modulus;
+    poly_dest[i] = poly_src_zero[i] % q;
+    if (poly_src_zero[i] > (q0 >> 1)) {
+      poly_dest[i] += minus_q0_modulus;
+      poly_dest[i] -= (poly_dest[i] >= q) ? q : 0;
+    }
+  }
+}
+
 void Bootstrapper::modraise_inplace(PhantomCiphertext &cipher) {
   if (cipher.size() != 2) {
     throw invalid_argument("Ciphertexts of size 2 are supported only!");
@@ -2808,26 +2819,16 @@ void Bootstrapper::modraise_inplace(PhantomCiphertext &cipher) {
     throw invalid_argument("Ciphertexts in the lowest level are supported only!");
   }
 
+  if (cipher.is_ntt_form()) {
+    ckks->evaluator.transform_from_ntt_inplace(cipher);
+  }
+
   const auto &stream = phantom::util::global_variables::default_stream->get_stream();
   auto N = cipher.poly_modulus_degree();
   const auto &context_data = ckks->context->first_context_data();
   const auto &modulus = context_data.parms().coeff_modulus();
   auto mod_count = modulus.size();
   auto rns_coeff_count = mod_count * N;
-
-  // Resize to the full level.
-  cipher.resize(*ckks->context, context_data.chain_index(), 2, stream);
-
-  cudaStreamSynchronize(stream);
-
-  ckks->evaluator.transform_from_ntt_inplace(cipher);
-
-  auto ciphertext_size = cipher.size();
-  auto cipher_copy_data = new uint64_t[ciphertext_size * rns_coeff_count];
-  auto cipher_data = new uint64_t[ciphertext_size * rns_coeff_count];
-
-  cudaMemcpy(cipher_copy_data, cipher.data(), sizeof(uint64_t) * ciphertext_size * rns_coeff_count, cudaMemcpyDeviceToHost);
-  cudaMemcpy(cipher_data, cipher.data(), sizeof(uint64_t) * ciphertext_size * rns_coeff_count, cudaMemcpyDeviceToHost);
 
   uint64_t q0 = modulus[0].value();
   vector<uint64_t> minus_q0(mod_count);
@@ -2837,28 +2838,23 @@ void Bootstrapper::modraise_inplace(PhantomCiphertext &cipher) {
     minus_q0[l] = modulus[l].value() - q0 % modulus[l].value();
   }
 
+  // Resize to the full level.
+  cipher.resize(*ckks->context, context_data.chain_index(), 2, stream);
+
+  auto ciphertext_size = cipher.size();
+  PhantomCiphertext cipher_copy = cipher;
+
+  uint64_t gridDimGlb = N / blockDimGlb.x;
   for (size_t poly_idx = 0; poly_idx < ciphertext_size; poly_idx++) {
-    const auto rns_poly_src = cipher_copy_data + poly_idx * rns_coeff_count;
-    const auto rns_poly_dest = cipher_data + poly_idx * rns_coeff_count;
-    const auto poly_src_zero = rns_poly_src;
+    const auto rns_poly_src = cipher_copy.data() + poly_idx * rns_coeff_count;
+    const auto rns_poly_dest = cipher.data() + poly_idx * rns_coeff_count;
 
     for (size_t j = 0; j < mod_count; j++) {
       const auto poly_dest = rns_poly_dest + j * N;
-      for (size_t i = 0; i < N; i++) {
-        auto q = modulus[j].value();
-        poly_dest[i] = poly_src_zero[i] % q;
-        if (poly_src_zero[i] > (q0 >> 1)) {
-          poly_dest[i] += minus_q0[j];
-          poly_dest[i] -= (poly_dest[i] >= q) ? q : 0;
-        }
-      }
+      modraise_inplace_kernel<<<gridDimGlb, blockDimGlb, 0, stream>>>(
+          poly_dest, rns_poly_src, modulus[j].value(), minus_q0[j], N, q0);
     }
   }
-
-  cudaMemcpy(cipher.data(), cipher_data, sizeof(uint64_t) * ciphertext_size * rns_coeff_count, cudaMemcpyHostToDevice);
-
-  // Wipe cipher_copy data
-  delete[] cipher_copy_data;
 
   ckks->evaluator.transform_to_ntt_inplace(cipher);
 }
@@ -2990,22 +2986,33 @@ void Bootstrapper::bootstrap_full(PhantomCiphertext &rtncipher, PhantomCiphertex
 
 // NOTE:: main
 void Bootstrapper::bootstrap_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher) {
-  std::cout << "Modulus Raising..." << endl;
+  // ModRaise
+  auto timer = Timer();
+
+  std::cout << "Modulus Raising... ";
   modraise_inplace(cipher);
 
-  ckks->print_decrypted_ct(cipher, 10);
+  timer.stop();
+  std::cout << timer.duration<milliseconds>() << "ms" << endl;
+
+  // ckks->print_decrypted_ct(cipher, 10);
 
   const auto modulus = ckks->context->first_context_data().parms().coeff_modulus();
   cipher.scale() = ((double)modulus[0].value());
 
-  std::cout << "Subsum..." << endl;
+  timer.start();
+
+  std::cout << "Subsum... ";
   PhantomCiphertext rot;
   for (auto i = logn; i < logNh; i++) {
     ckks->evaluator.rotate_vector(cipher, (1 << i), *(ckks->galois_keys), rot);
     ckks->evaluator.add_inplace(cipher, rot);
   }
 
-  ckks->print_decrypted_ct(cipher, 10);
+  timer.stop();
+  std::cout << timer.duration<milliseconds>() << "ms" << endl;
+
+  // ckks->print_decrypted_ct(cipher, 10);
 
   PhantomCiphertext rtn;
   if (logn == 0) {
@@ -3024,16 +3031,30 @@ void Bootstrapper::bootstrap_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphe
     ckks->evaluator.add_inplace_reduced_error(rtn, conjrtn);
   }
 
+  // Coefficient to Slots
   else {
-    std::cout << "Coefftoslot..." << endl;
+    timer.start();
+
+    std::cout << "Coeff-to-slot... ";
     coefftoslot_3(rtn, cipher);
-    ckks->print_decrypted_ct(rtn, 10);
+
+    // ckks->print_decrypted_ct(rtn, 10);
+
+    timer.stop();
+    std::cout << timer.duration<milliseconds>() << "ms" << endl;
   }
 
-  std::cout << "Modular reduction..." << endl;
+  // Modular Reduction
+  timer.start();
+
+  std::cout << "Modular reduction... ";
   PhantomCiphertext modrtn;
   mod_reducer->modular_reduction(modrtn, rtn);
-  ckks->print_decrypted_ct(modrtn, 10);
+
+  // ckks->print_decrypted_ct(modrtn, 10);
+
+  timer.stop();
+  std::cout << timer.duration<milliseconds>() << "ms" << endl;
 
   if (logn == 0) {
     const auto modulus = ckks->context->first_context_data().parms().coeff_modulus();
@@ -3057,11 +3078,21 @@ void Bootstrapper::bootstrap_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphe
     PhantomCiphertext rotrtncipher;
     ckks->evaluator.rotate_vector(rtncipher, 1, *(ckks->galois_keys), rotrtncipher);
     ckks->evaluator.add_inplace_reduced_error(rtncipher, rotrtncipher);
-  } else {
-    std::cout << "Slottocoeff..." << endl;
-    slottocoeff_3(rtncipher, modrtn);
-    ckks->print_decrypted_ct(rtncipher, 10);
   }
+
+  // Slots to Coefficients
+  else {
+    timer.start();
+
+    std::cout << "Slot-to-coeff... ";
+    slottocoeff_3(rtncipher, modrtn);
+
+    // ckks->print_decrypted_ct(rtncipher, 10);
+
+    timer.stop();
+    std::cout << timer.duration<milliseconds>() << "ms" << endl;
+  }
+
   rtncipher.scale() = final_scale;
 }
 

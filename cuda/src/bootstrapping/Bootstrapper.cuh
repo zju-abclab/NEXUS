@@ -6,6 +6,7 @@
 #include <iostream>
 
 #include "ModularReducer.cuh"
+#include "../utils.cuh"
 
 using namespace std;
 using namespace nexus;

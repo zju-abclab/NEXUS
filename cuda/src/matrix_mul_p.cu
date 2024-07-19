@@ -146,7 +146,26 @@ void MMEvaluator::enc_compress_ciphertext(vector<double> &values, PhantomCiphert
 
   zero.scale() = p.scale();
 
+  // auto zero_data = new uint64_t[2 * rns_coeff_count];
+  // cudaMemcpy(zero_data, zero.data(), 2 * rns_coeff_count * sizeof(uint64_t), cudaMemcpyDeviceToHost);
+
+  // for (int i = 0; i < 10; i++) {
+  //   cout << zero_data[i] << " ";
+  // }
+  // cout << endl;
+
   ckks->evaluator.add_plain(zero, p, ct);
+
+  cudaStreamSynchronize(stream);
+
+  cout << "ct data:" << endl;
+  auto ct_data = new uint64_t[2 * rns_coeff_count];
+  cudaMemcpy(ct_data, ct.data(), 2 * rns_coeff_count * sizeof(uint64_t), cudaMemcpyDeviceToHost);
+
+  for (int i = 0; i < 10; i++) {
+    cout << ct_data[i] << " ";
+  }
+  cout << endl;
 }
 
 vector<PhantomCiphertext> MMEvaluator::decompress_ciphertext(const PhantomCiphertext &encrypted) {
@@ -170,11 +189,17 @@ vector<PhantomCiphertext> MMEvaluator::decompress_ciphertext(const PhantomCipher
     // cout << i << " => " << temp.size() << endl;
 
     for (uint32_t a = 0; a < temp.size(); a++) {
+      if (temp.size() == 1) ckks->print_decrypted_ct(temp[a], 10);
       ckks->evaluator.apply_galois(temp[a], galois_elt, *(ckks->galois_keys), tempctxt_rotated);  // sub
+      if (temp.size() == 1) ckks->print_decrypted_ct(tempctxt_rotated, 10);
       ckks->evaluator.add(temp[a], tempctxt_rotated, newtemp[a]);
+      // if (temp.size() == 1) ckks->print_decrypted_ct(newtemp[a], 10);
       multiply_power_of_x(temp[a], tempctxt_shifted, index_raw);  // x**-1
+      // if (temp.size() == 1) ckks->print_decrypted_ct(tempctxt_shifted, 10);
       multiply_power_of_x(tempctxt_rotated, tempctxt_rotatedshifted, index);
+      // if (temp.size() == 1) ckks->print_decrypted_ct(tempctxt_rotatedshifted, 10);
       ckks->evaluator.add(tempctxt_shifted, tempctxt_rotatedshifted, newtemp[a + temp.size()]);
+      // if (temp.size() == 1) ckks->print_decrypted_ct(newtemp[a + temp.size()], 10);
     }
 
     temp = newtemp;
@@ -184,6 +209,9 @@ vector<PhantomCiphertext> MMEvaluator::decompress_ciphertext(const PhantomCipher
 }
 
 void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &y, vector<PhantomCiphertext> &res) {
+  const phantom::util::cuda_stream_wrapper &stream_wrapper = *phantom::util::global_variables::default_stream;
+  const auto &stream = stream_wrapper.get_stream();
+
   auto timer = Timer();
 
   // Encode plaintext
@@ -194,6 +222,7 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
     PhantomPlaintext pt;
     ckks->encoder.encode(x[i], ckks->scale, pt);
     a_pts.emplace_back(pt);
+    cudaStreamSynchronize(stream);
   }
 
   // Ciphertext encoding & compression
@@ -205,8 +234,17 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
 
   for (int i = 0; i < b_cts_count; i++) {
     PhantomCiphertext ct;
+    cout << "values: ";
+    for (int k = 0; k < 10; k++) {
+      cout << y[i][k] << " ";
+    }
+    cout << endl;
     enc_compress_ciphertext(y[i], ct);
+    cout << "decrypted: " << endl;
+    ckks->print_decrypted_ct(ct, 10);
+    cout << endl;
     b_compressed_cts.push_back(ct);
+    cudaStreamSynchronize(stream);
   }
 
   timer.stop();

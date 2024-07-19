@@ -20,7 +20,7 @@ This should produce a binary file `bin/main` under `build` directory.
 <br>
 
 ## TO-DO
-- Bootstrapping
-  - `Bootstrapper::modraise_inplace` (verify)
 - Matrix Multiplication
   - Parallelize `multiply_power_of_x`
+- Clean up
+- Use an environment variable to indicate which GPU to use

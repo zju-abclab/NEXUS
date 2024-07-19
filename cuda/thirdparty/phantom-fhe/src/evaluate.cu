@@ -144,41 +144,41 @@ void add_inplace(const PhantomContext &context, PhantomCiphertext &encrypted1, c
 
     uint64_t gridDimGlb = rns_coeff_count / blockDimGlb.x;
 
-    // if (encrypted1.correction_factor() != encrypted2.correction_factor()) {
-    //     // Balance correction factors and multiply by scalars before addition in BGV
-    //     auto factors = balance_correction_factors(encrypted1.correction_factor(), encrypted2.correction_factor(),
-    //                                               plain_modulus);
-    //     for (size_t i = 0; i < encrypted1.size(); i++) {
-    //         multiply_scalar_rns_poly<<<gridDimGlb, blockDimGlb, 0, s>>>(
-    //                 encrypted1.data() + i * rns_coeff_count, get<1>(factors), base_rns,
-    //                 encrypted1.data() + i * rns_coeff_count, poly_degree, coeff_modulus_size);
-    //     }
+    if (encrypted1.correction_factor() != encrypted2.correction_factor()) {
+        // Balance correction factors and multiply by scalars before addition in BGV
+        auto factors = balance_correction_factors(encrypted1.correction_factor(), encrypted2.correction_factor(),
+                                                  plain_modulus);
+        for (size_t i = 0; i < encrypted1.size(); i++) {
+            multiply_scalar_rns_poly<<<gridDimGlb, blockDimGlb, 0, s>>>(
+                    encrypted1.data() + i * rns_coeff_count, get<1>(factors), base_rns,
+                    encrypted1.data() + i * rns_coeff_count, poly_degree, coeff_modulus_size);
+        }
 
-    //     PhantomCiphertext encrypted2_copy = encrypted2;
-    //     for (size_t i = 0; i < encrypted2.size(); i++) {
-    //         multiply_scalar_rns_poly<<<gridDimGlb, blockDimGlb, 0, s>>>(
-    //                 encrypted2_copy.data() + i * rns_coeff_count, get<2>(factors), base_rns,
-    //                 encrypted2_copy.data() + i * rns_coeff_count, poly_degree, coeff_modulus_size);
-    //     }
+        PhantomCiphertext encrypted2_copy = encrypted2;
+        for (size_t i = 0; i < encrypted2.size(); i++) {
+            multiply_scalar_rns_poly<<<gridDimGlb, blockDimGlb, 0, s>>>(
+                    encrypted2_copy.data() + i * rns_coeff_count, get<2>(factors), base_rns,
+                    encrypted2_copy.data() + i * rns_coeff_count, poly_degree, coeff_modulus_size);
+        }
 
-    //     // Set new correction factor
-    //     encrypted1.set_correction_factor(get<0>(factors));
-    //     encrypted2_copy.set_correction_factor(get<0>(factors));
+        // Set new correction factor
+        encrypted1.set_correction_factor(get<0>(factors));
+        encrypted2_copy.set_correction_factor(get<0>(factors));
 
-    //     // Prepare destination
-    //     encrypted1.resize(context, context_data.chain_index(), max_size, s);
-    //     for (size_t i = 0; i < min_size; i++) {
-    //         add_rns_poly<<<gridDimGlb, blockDimGlb, 0, s>>>(
-    //                 encrypted1.data() + i * rns_coeff_count, encrypted2_copy.data() + i * rns_coeff_count, base_rns,
-    //                 encrypted1.data() + i * rns_coeff_count, poly_degree, coeff_modulus_size);
-    //     }
-    //     if (encrypted1_size < encrypted2_size) {
-    //         cudaMemcpyAsync(encrypted1.data() + min_size * rns_coeff_count,
-    //                         encrypted2_copy.data() + min_size * rns_coeff_count,
-    //                         (encrypted2_size - encrypted1_size) * rns_coeff_count * sizeof(uint64_t),
-    //                         cudaMemcpyDeviceToDevice, s);
-    //     }
-    // } else {
+        // Prepare destination
+        encrypted1.resize(context, context_data.chain_index(), max_size, s);
+        for (size_t i = 0; i < min_size; i++) {
+            add_rns_poly<<<gridDimGlb, blockDimGlb, 0, s>>>(
+                    encrypted1.data() + i * rns_coeff_count, encrypted2_copy.data() + i * rns_coeff_count, base_rns,
+                    encrypted1.data() + i * rns_coeff_count, poly_degree, coeff_modulus_size);
+        }
+        if (encrypted1_size < encrypted2_size) {
+            cudaMemcpyAsync(encrypted1.data() + min_size * rns_coeff_count,
+                            encrypted2_copy.data() + min_size * rns_coeff_count,
+                            (encrypted2_size - encrypted1_size) * rns_coeff_count * sizeof(uint64_t),
+                            cudaMemcpyDeviceToDevice, s);
+        }
+    } else {
         // Prepare destination
         encrypted1.resize(context, context_data.chain_index(), max_size, s);
         for (size_t i = 0; i < min_size; i++) {
@@ -192,7 +192,7 @@ void add_inplace(const PhantomContext &context, PhantomCiphertext &encrypted1, c
                             (encrypted2_size - encrypted1_size) * rns_coeff_count * sizeof(uint64_t),
                             cudaMemcpyDeviceToDevice, s);
         }
-    // }
+    }
 }
 
 // TODO: fixme

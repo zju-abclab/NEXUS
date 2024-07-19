@@ -87,8 +87,8 @@ int main() {
   PhantomContext context(parms);
 
   PhantomSecretKey secret_key(context);
-  std::ifstream sk_in("../../sk.txt");
-  secret_key.load_secret_key(context, sk_in);
+  // std::ifstream sk_in("../../bs_sk.txt");
+  // secret_key.load_secret_key(context, sk_in);
 
   PhantomPublicKey public_key = secret_key.gen_publickey(context);
   PhantomRelinKey relin_keys = secret_key.gen_relinkey(context);
@@ -196,7 +196,7 @@ int main() {
   //     ckks_evaluator);
 
   cout << "Generating Optimal Minimax Polynomials..." << endl;
-  bootstrapper.prepare_mod_polynomial();  // Good to go
+  bootstrapper.prepare_mod_polynomial();
   // bootstrapper_2.prepare_mod_polynomial();
   // bootstrapper_3.prepare_mod_polynomial();
 
@@ -210,7 +210,7 @@ int main() {
   // bootstrapper_2.addLeftRotKeys_Linear_to_vector_3(gal_steps_vector);
   // bootstrapper_3.addLeftRotKeys_Linear_to_vector_3(gal_steps_vector);
 
-  ckks_evaluator.decryptor.create_galois_keys_from_steps(gal_steps_vector, *(ckks_evaluator.galois_keys));  // Good to go
+  ckks_evaluator.decryptor.create_galois_keys_from_steps(gal_steps_vector, *(ckks_evaluator.galois_keys));
   cout << "Galois key generated from steps vector." << endl;
 
   bootstrapper.slot_vec.push_back(logn);
@@ -218,7 +218,7 @@ int main() {
   // bootstrapper_3.slot_vec.push_back(logn_3);
 
   cout << "Generating Linear Transformation Coefficients..." << endl;
-  bootstrapper.generate_LT_coefficient_3();  // Good to go
+  bootstrapper.generate_LT_coefficient_3();
   // bootstrapper_2.generate_LT_coefficient_3();
   // bootstrapper_3.generate_LT_coefficient_3();
 
@@ -243,7 +243,7 @@ int main() {
     // else if (_ == 2)
     // sparse_slots = (1 << logn_3);
 
-    cout << _ << "-th iteration : sparse_slots = " << sparse_slots << endl;
+    cout << _ + 1 << "-th iteration : sparse_slots = " << sparse_slots << endl;
 
     // Create input cipher
     for (size_t i = 0; i < slot_count; i++) {
