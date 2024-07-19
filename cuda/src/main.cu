@@ -135,9 +135,14 @@ void MM_test_p() {
   PhantomSecretKey secret_key(context);
   std::ifstream sk_in("../../sk.txt");
   secret_key.load_secret_key(context, sk_in);
+
   PhantomPublicKey public_key = secret_key.gen_publickey(context);
   PhantomRelinKey relin_keys = secret_key.gen_relinkey(context);
+
   PhantomGaloisKey galois_keys;
+
+  // Tests ---------------------------------------------------------------------
+  // PhantomGaloisKey galois_keys = secret_key.create_galois_keys(context);
 
   std::vector<std::uint32_t> galois_elts;
   for (int i = 0; i < MM_LOG_N; i++) {
@@ -145,7 +150,30 @@ void MM_test_p() {
   }
 
   CKKSEvaluator ckks_evaluator(&context, &public_key, &secret_key, &encoder, &relin_keys, &galois_keys, SCALE, galois_elts);
+
+  // Tests ---------------------------------------------------------------------
+  // CKKSEvaluator ckks_evaluator(&context, &public_key, &secret_key, &encoder, &relin_keys, &galois_keys, SCALE);
+
   MMEvaluator mme(ckks_evaluator);
+
+  // Tests ---------------------------------------------------------------------
+  // vector<double> output;
+  // vector<double> input = {1.0, 2.0, 3.0, 4.0, 5.0};
+  // PhantomPlaintext plain;
+  // PhantomCiphertext cipher;
+  // ckks_evaluator.encoder.encode(input, SCALE, plain);
+  // ckks_evaluator.encryptor.encrypt(plain, cipher);
+
+  // ckks_evaluator.evaluator.apply_galois_inplace(cipher, 0, galois_keys);
+
+  // ckks_evaluator.decryptor.decrypt(cipher, plain);
+  // ckks_evaluator.encoder.decode(plain, output);
+
+  // for (auto i = 0; i < 5; i++) {
+  //   cout << output[i] << " ";
+  // }
+  // cout << endl;
+  // ---------------------------------------------------------------------------
 
   ckks_evaluator.decryptor.create_galois_keys_from_elts(galois_elts, *(ckks_evaluator.galois_keys));
 

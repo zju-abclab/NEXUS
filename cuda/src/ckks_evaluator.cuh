@@ -281,6 +281,9 @@ class Evaluator {
   }
 
   inline void apply_galois_inplace(PhantomCiphertext &ct, int step, PhantomGaloisKey &galois_keys) {
+    auto elt = context->key_galois_tool_->get_elt_from_step(step);
+    auto elt_idx = context->key_galois_tool_->get_index_from_elt(elt);
+
     ::apply_galois_inplace(*context, ct, step, galois_keys);
   }
 

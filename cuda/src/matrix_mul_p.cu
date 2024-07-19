@@ -100,6 +100,7 @@ void MMEvaluator::enc_compress_ciphertext(vector<double> &values, PhantomCiphert
 
   auto &context_data = ckks->context->first_context_data();
   auto param = context_data.parms();
+  auto moduli = param.coeff_modulus();
   auto coeff_modulus_size = param.coeff_modulus().size();
   auto poly_modulus_degree = param.poly_modulus_degree();
   auto rns_coeff_count = poly_modulus_degree * coeff_modulus_size;
@@ -115,30 +116,25 @@ void MMEvaluator::enc_compress_ciphertext(vector<double> &values, PhantomCiphert
 
   // Coefficients of the two RNS polynomails should be the same except with different mod
   for (auto i = 0; i < poly_modulus_degree; i++) {
-    auto coeffd = std::round(values[i] * 10000000000);
+    auto coeffd = std::round((values[i] ? values[i] : 0.0) * 10000000000);
     bool is_negative = std::signbit(coeffd);
     auto coeffu = static_cast<std::uint64_t>(std::fabs(coeffd));
     if (is_negative) {
       for (std::size_t j = 0; j < 2; j++) {
-        p_data[i + (j * poly_modulus_degree)] = negate_uint_mod(
-            barrett_reduce_64(coeffu, param.coeff_modulus()[j]), param.coeff_modulus()[j]);
+        p_data[i + (j * poly_modulus_degree)] = negate_uint_mod(barrett_reduce_64(coeffu, moduli[j]), moduli[j]);
       }
     } else {
       for (std::size_t j = 0; j < 2; j++) {
-        p_data[i + (j * poly_modulus_degree)] = barrett_reduce_64(coeffu, param.coeff_modulus()[j]);
+        p_data[i + (j * poly_modulus_degree)] = barrett_reduce_64(coeffu, moduli[j]);
       }
     }
   }
 
-  cudaStreamSynchronize(stream);
-
   // Copy plaintext data to GPU (synchronous)
-  cudaMemcpy(p.data(), p_data, rns_coeff_count * sizeof(uint64_t), cudaMemcpyHostToDevice);
+  cudaMemcpyAsync(p.data(), p_data, rns_coeff_count * sizeof(uint64_t), cudaMemcpyHostToDevice, stream);
 
   // Transform all 2 RNS polynomials to the NTT domain
   nwt_2d_radix8_forward_inplace(p.data(), ckks->context->gpu_rns_tables(), coeff_modulus_size, 0, stream);
-
-  cudaStreamSynchronize(stream);
 
   // Update plaintext parameters
   p.set_chain_index(context_data.chain_index());
@@ -146,26 +142,7 @@ void MMEvaluator::enc_compress_ciphertext(vector<double> &values, PhantomCiphert
 
   zero.scale() = p.scale();
 
-  // auto zero_data = new uint64_t[2 * rns_coeff_count];
-  // cudaMemcpy(zero_data, zero.data(), 2 * rns_coeff_count * sizeof(uint64_t), cudaMemcpyDeviceToHost);
-
-  // for (int i = 0; i < 10; i++) {
-  //   cout << zero_data[i] << " ";
-  // }
-  // cout << endl;
-
   ckks->evaluator.add_plain(zero, p, ct);
-
-  cudaStreamSynchronize(stream);
-
-  cout << "ct data:" << endl;
-  auto ct_data = new uint64_t[2 * rns_coeff_count];
-  cudaMemcpy(ct_data, ct.data(), 2 * rns_coeff_count * sizeof(uint64_t), cudaMemcpyDeviceToHost);
-
-  for (int i = 0; i < 10; i++) {
-    cout << ct_data[i] << " ";
-  }
-  cout << endl;
 }
 
 vector<PhantomCiphertext> MMEvaluator::decompress_ciphertext(const PhantomCiphertext &encrypted) {
@@ -222,7 +199,6 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
     PhantomPlaintext pt;
     ckks->encoder.encode(x[i], ckks->scale, pt);
     a_pts.emplace_back(pt);
-    cudaStreamSynchronize(stream);
   }
 
   // Ciphertext encoding & compression
@@ -234,17 +210,9 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
 
   for (int i = 0; i < b_cts_count; i++) {
     PhantomCiphertext ct;
-    cout << "values: ";
-    for (int k = 0; k < 10; k++) {
-      cout << y[i][k] << " ";
-    }
-    cout << endl;
     enc_compress_ciphertext(y[i], ct);
-    cout << "decrypted: " << endl;
     ckks->print_decrypted_ct(ct, 10);
-    cout << endl;
     b_compressed_cts.push_back(ct);
-    cudaStreamSynchronize(stream);
   }
 
   timer.stop();
