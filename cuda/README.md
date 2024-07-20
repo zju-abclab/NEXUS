@@ -15,12 +15,17 @@ cmake ..
 make
 ```
 
-This should produce a binary file `bin/main` under `build` directory.
+This should produce two binary executables under the `build` directory:
+  - `bin/main`
+  - `bin/bootstrapping`
 
 <br>
 
 ## TO-DO
-- Matrix Multiplication
-  - Parallelize `multiply_power_of_x`
+- Matrix Multiplication (Phantom)
+  - Parallelization
+  - Fix `apply_galois`
 - Clean up
+  - Comments and README
+  - Revert PRNG changes
 - Use an environment variable to indicate which GPU to use

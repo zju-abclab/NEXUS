@@ -274,17 +274,17 @@ class Evaluator {
   // Galois
   inline void apply_galois(PhantomCiphertext &ct, uint32_t elt, PhantomGaloisKey &galois_keys, PhantomCiphertext &dest) {
     auto &galois_elts = context->key_galois_tool_->galois_elts();
-    auto iter = find(galois_elts.begin(), galois_elts.end(), elt);
-    auto galois_elt_index = iter - galois_elts.begin();
+    size_t galois_elt_index = distance(galois_elts.begin(), find(galois_elts.begin(), galois_elts.end(), elt));
 
     dest = ::apply_galois(*context, ct, galois_elt_index, galois_keys);
   }
 
   inline void apply_galois_inplace(PhantomCiphertext &ct, int step, PhantomGaloisKey &galois_keys) {
+    auto &galois_elts = context->key_galois_tool_->galois_elts();
     auto elt = context->key_galois_tool_->get_elt_from_step(step);
-    auto elt_idx = context->key_galois_tool_->get_index_from_elt(elt);
+    size_t galois_elt_index = distance(galois_elts.begin(), find(galois_elts.begin(), galois_elts.end(), elt));
 
-    ::apply_galois_inplace(*context, ct, step, galois_keys);
+    ::apply_galois_inplace(*context, ct, galois_elt_index, galois_keys);
   }
 
   // Complex Conjugate

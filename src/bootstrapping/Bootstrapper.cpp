@@ -2005,7 +2005,7 @@ void Bootstrapper::prepare_mod_polynomial()
 {
     mod_reducer->generate_sin_cos_polynomial();
     mod_reducer->generate_inverse_sine_polynomial();
-    // mod_reducer->write_polynomials();
+    mod_reducer->write_polynomials();
 }
 
 void Bootstrapper::subsum(double scale, Ciphertext &cipher)
@@ -3193,10 +3193,25 @@ void Bootstrapper::bootstrap_full(Ciphertext &rtncipher, Ciphertext &cipher)
     rtncipher.scale() = final_scale;
 }
 
+void Bootstrapper::print_decrypted_ct(Ciphertext &ct, int num) {
+  Plaintext temp;
+  vector<double> v;
+
+  decryptor.decrypt(ct, temp);
+  encoder.decode(temp, v);
+
+  for (int i = 0; i < num; i++) {
+    cout << v[i] << " ";
+  }
+  cout << endl;
+}
+
 void Bootstrapper::bootstrap_sparse_3(Ciphertext &rtncipher, Ciphertext &cipher)
 {
     cout << "Modulus Raising..." << endl;
     modraise_inplace(cipher);
+
+    print_decrypted_ct(cipher, 10);
 
     const auto &modulus = iter(context.first_context_data()->parms().coeff_modulus());
     cipher.scale() = ((double)modulus[0].value());
@@ -3208,6 +3223,8 @@ void Bootstrapper::bootstrap_sparse_3(Ciphertext &rtncipher, Ciphertext &cipher)
         // evaluator.add_inplace_original(cipher, rot);
         evaluator.add_inplace(cipher, rot);
     }
+
+    print_decrypted_ct(cipher, 10);
 
     Ciphertext rtn;
     if (logn == 0) {
@@ -3229,11 +3246,14 @@ void Bootstrapper::bootstrap_sparse_3(Ciphertext &rtncipher, Ciphertext &cipher)
     else {
         cout << "Coefftoslot..." << endl;
         coefftoslot_3(rtn, cipher);
+        print_decrypted_ct(rtn, 10);
     }
 
     cout << "Modular reduction..." << endl;
     Ciphertext modrtn;
     mod_reducer->modular_reduction(modrtn, rtn);
+
+    print_decrypted_ct(modrtn, 10);
 
     if (logn == 0) {
         const auto &modulus = iter(context.first_context_data()->parms().coeff_modulus());
@@ -3262,6 +3282,7 @@ void Bootstrapper::bootstrap_sparse_3(Ciphertext &rtncipher, Ciphertext &cipher)
     else {
         cout << "Slottocoeff..." << endl;
         slottocoeff_3(rtncipher, modrtn);
+        print_decrypted_ct(rtncipher, 10);
     }
     rtncipher.scale() = final_scale;
 }

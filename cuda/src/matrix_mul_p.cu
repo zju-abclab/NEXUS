@@ -167,7 +167,9 @@ vector<PhantomCiphertext> MMEvaluator::decompress_ciphertext(const PhantomCipher
 
     for (uint32_t a = 0; a < temp.size(); a++) {
       if (temp.size() == 1) ckks->print_decrypted_ct(temp[a], 10);
+      // FIXME: not producing the right output
       ckks->evaluator.apply_galois(temp[a], galois_elt, *(ckks->galois_keys), tempctxt_rotated);  // sub
+      cudaStreamSynchronize(phantom::util::global_variables::default_stream->get_stream());
       if (temp.size() == 1) ckks->print_decrypted_ct(tempctxt_rotated, 10);
       ckks->evaluator.add(temp[a], tempctxt_rotated, newtemp[a]);
       // if (temp.size() == 1) ckks->print_decrypted_ct(newtemp[a], 10);

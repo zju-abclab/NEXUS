@@ -67,6 +67,8 @@ public:
         RelinKeys &_relin_keys,
         GaloisKeys &_gal_keys);
 
+    void print_decrypted_ct(Ciphertext &ct, int num);
+
     // Add rotation keys needed in bootstrapping (private function)
     void addLeftRotKeys_Linear_to_vector(vector<int> &gal_steps_vector);
     void addLeftRotKeys_Linear_to_vector_3(vector<int> &gal_steps_vector);
