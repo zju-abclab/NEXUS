@@ -117,12 +117,12 @@ int main() {
   */
   double num;
   vector<double> input, softmax_calibration;
-  ifstream input_file("data/input/softmax_input_128_128.txt");
+  ifstream input_file("../data/input/softmax_input_128_128.txt");
   while (input_file >> num) {
     input.push_back(num);
   }
   input_file.close();
-  ifstream calibration_file("data/calibration/softmax_calibration_128_128.txt");
+  ifstream calibration_file("../data/calibration/softmax_calibration_128_128.txt");
   while (calibration_file >> num) {
     softmax_calibration.push_back(num);
   }
@@ -147,7 +147,7 @@ void MM_test() {
   SEALContext context(parms, true, sec_level_type::none);
 
   ifstream sk_bytes_in;
-  sk_bytes_in.open("sk_bytes", ios::binary);
+  sk_bytes_in.open("../sk_bytes", ios::binary);
   SecretKey secret_key;
   secret_key.unsafe_load(context, sk_bytes_in);
 
@@ -181,9 +181,9 @@ void MM_test() {
 
   MMEvaluator mme(ckks_evaluator);
 
-  std::vector<std::vector<double>> matrix_4096x768 = mme.readMatrix("data/input/matrixmul_input_m_128_n_768_k_64_batch_128.txt", 4096, 768);
+  std::vector<std::vector<double>> matrix_4096x768 = mme.readMatrix("../data/input/matrixmul_input_m_128_n_768_k_64_batch_128.txt", 4096, 768);
 
-  std::vector<std::vector<double>> matrix_768x64 = mme.readMatrix("data/input/matrix_input_n_768_k_64.txt", 768, 64);
+  std::vector<std::vector<double>> matrix_768x64 = mme.readMatrix("../data/input/matrix_input_n_768_k_64.txt", 768, 64);
 
   vector<Ciphertext> res;
 
@@ -203,7 +203,7 @@ void MM_test() {
   }
   mme.matrix_mul(matrix_4096x768_T, row_pack, res);
 
-  std::vector<std::vector<double>> matrix_4096x64 = mme.readMatrix("data/calibration/matrix_output_m_128_k_64_batch_128.txt", 4096, 64);
+  std::vector<std::vector<double>> matrix_4096x64 = mme.readMatrix("../data/calibration/matrix_output_m_128_k_64_batch_128.txt", 4096, 64);
   auto matrix_4096x64_T = mme.transposeMatrix(matrix_4096x64);
 
   double average_err = 0.0;

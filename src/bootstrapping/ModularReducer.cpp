@@ -62,17 +62,6 @@ void ModularReducer::modular_reduction(Ciphertext &rtn, Ciphertext &cipher) {
 
   sin_cos_polynomial.homomorphic_poly_evaluation(context, encoder, encryptor, evaluator, relin_keys, tmp2, tmp1, decryptor);
 
-  Plaintext temp;
-  vector<double> v;
-
-  decryptor.decrypt(tmp2, temp);
-  encoder.decode(temp, v);
-
-  for (int i = 0; i < 10; i++) {
-    cout << v[i] << " ";
-  }
-  cout << endl;
-
   if (inverse_deg == 1) {
     double curr_scale = scale_inverse_coeff;
     for (int i = 0; i < num_double_formula; i++) {

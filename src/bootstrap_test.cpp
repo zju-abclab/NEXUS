@@ -93,7 +93,7 @@ int main() {
 
   // Load sk
   ifstream sk_bytes_in;
-  sk_bytes_in.open("bs_sk_bytes", ios::binary);
+  sk_bytes_in.open("../bs_sk_bytes", ios::binary);
   SecretKey secret_key;
   secret_key.unsafe_load(context, sk_bytes_in);
 

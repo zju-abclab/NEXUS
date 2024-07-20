@@ -339,9 +339,7 @@ Makefile
 *.cmake
 
 # Built targets.
-libsealpir.a
-
 /build
-/compile_commands.json
-
 /cuda/build
+
+compile_commands.json

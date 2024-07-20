@@ -15,7 +15,7 @@ cmake ..
 make
 ```
 
-This should produce two binary executables under the `build` directory:
+This should produce two binary executables inside the `build` directory:
   - `bin/main`
   - `bin/bootstrapping`
 

@@ -1,12 +1,20 @@
 cmake_minimum_required(VERSION 3.10)
+
+project(NEXUS VERSION 1.0)
+
+# CMAKE config
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
-set(CMAKE_BUILD_TYPE RELWITHDEBINFO)
-project(PrivateGPT VERSION 1.0)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
 
+# Debugging
+set(CMAKE_BUILD_TYPE RELWITHDEBINFO)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Add dependencies
 find_package(SEAL 4.1 REQUIRED)
+
+# Nexus
 add_executable(
     main
     ${CMAKE_SOURCE_DIR}/src/main.cpp
@@ -17,6 +25,9 @@ add_executable(
     ${CMAKE_SOURCE_DIR}/src/matrix_mul.cpp
 )
 
+target_link_libraries(main PRIVATE SEAL::seal)
+
+# Nexus Bootstrapping
 add_subdirectory(src/bootstrapping/common)
 add_subdirectory(src/bootstrapping)
 
@@ -32,9 +43,12 @@ add_executable(
     ${BOOTSTRAPPING_SOURCE_FILES}
 )
 
-target_include_directories(bootstrapping PUBLIC /usr/local/include /usr/local/include/NTL ${COMMON_HEADER_DIR} ${BOOTSTRAPPING_HEADER_DIR})
+target_include_directories(bootstrapping PUBLIC
+    /usr/local/include
+    /usr/local/include/NTL
+    ${COMMON_HEADER_DIR}
+    ${BOOTSTRAPPING_HEADER_DIR}
+)
 
-target_link_libraries(main PRIVATE SEAL::seal)
 target_link_libraries(bootstrapping PRIVATE ntl gmp m pthread SEAL::seal)
 
-# add_subdirectory(src)

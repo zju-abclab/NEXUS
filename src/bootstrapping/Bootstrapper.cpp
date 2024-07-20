@@ -2005,7 +2005,7 @@ void Bootstrapper::prepare_mod_polynomial()
 {
     mod_reducer->generate_sin_cos_polynomial();
     mod_reducer->generate_inverse_sine_polynomial();
-    mod_reducer->write_polynomials();
+    // mod_reducer->write_polynomials();
 }
 
 void Bootstrapper::subsum(double scale, Ciphertext &cipher)
