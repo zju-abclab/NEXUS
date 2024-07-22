@@ -254,11 +254,11 @@ class Evaluator {
 
   // Rotation
   inline void rotate_vector(const PhantomCiphertext &ct, int steps, PhantomGaloisKey &galois_keys, PhantomCiphertext &dest) {
-    dest = ::rotate_vector(*context, ct, steps, galois_keys);
+    dest = ::rotate(*context, ct, steps, galois_keys);
   }
 
   inline void rotate_vector_inplace(PhantomCiphertext &ct, int steps, PhantomGaloisKey &galois_keys) {
-    ::rotate_vector_inplace(*context, ct, steps, galois_keys);
+    ::rotate_inplace(*context, ct, steps, galois_keys);
   }
 
   // Negation
@@ -273,18 +273,7 @@ class Evaluator {
 
   // Galois
   inline void apply_galois(PhantomCiphertext &ct, uint32_t elt, PhantomGaloisKey &galois_keys, PhantomCiphertext &dest) {
-    auto &galois_elts = context->key_galois_tool_->galois_elts();
-    size_t galois_elt_index = distance(galois_elts.begin(), find(galois_elts.begin(), galois_elts.end(), elt));
-
-    dest = ::apply_galois(*context, ct, galois_elt_index, galois_keys);
-  }
-
-  inline void apply_galois_inplace(PhantomCiphertext &ct, int step, PhantomGaloisKey &galois_keys) {
-    auto &galois_elts = context->key_galois_tool_->galois_elts();
-    auto elt = context->key_galois_tool_->get_elt_from_step(step);
-    size_t galois_elt_index = distance(galois_elts.begin(), find(galois_elts.begin(), galois_elts.end(), elt));
-
-    ::apply_galois_inplace(*context, ct, galois_elt_index, galois_keys);
+    dest = ::apply_galois(*context, ct, elt, galois_keys);
   }
 
   // Complex Conjugate
@@ -563,6 +552,7 @@ class CKKSEvaluator {
 
   void re_encrypt(PhantomCiphertext &ct);
   void print_decrypted_ct(PhantomCiphertext &ct, int num);
+  void print_decoded_pt(PhantomPlaintext &pt, int num);
 
   // Evaluation functions
   PhantomCiphertext sgn_eval(PhantomCiphertext x, int d_g, int d_f);
