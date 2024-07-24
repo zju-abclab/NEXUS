@@ -3,75 +3,70 @@
 #include "matrix_mul.cuh"
 #include "utils.cuh"
 
-using namespace std;
 using namespace phantom::util;
 using namespace phantom::arith;
 using namespace nexus;
 
-__global__ void kernel_compress_ciphertext(uint64_t *plain_data, size_t degree, const DModulus *moduli, const double *values) {
-  int i = blockIdx.x * blockDim.x + threadIdx.x;
+// __global__ void negacyclic_shift_poly_coeffmod_kernel(
+//     const uint64_t *d_poly, size_t poly_degree, size_t shift, DModulus *modulus, size_t coeff_mod_size, uint64_t *d_result) {
+//   for (size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
+//        tid < poly_degree * coeff_mod_size;
+//        tid += blockDim.x * gridDim.x) {
+//     size_t twr = tid / poly_degree;
+//     DModulus mod = modulus[twr];
 
-  if (i < degree) {
-    auto coeffd = std::round(values[i] * 10000000000);
-    bool is_negative = std::signbit(coeffd);
-    auto coeffu = static_cast<std::uint64_t>(std::fabs(coeffd));
+//     uint64_t index_raw = shift + tid;
+//     uint64_t coeff_count_mod_mask = static_cast<uint64_t>(poly_degree) - 1;
+//     uint64_t index = index_raw & coeff_count_mod_mask;
 
-    if (is_negative) {
-      for (std::size_t j = 0; j < 2; j++) {
-        plain_data[i + (j * degree)] = negate_uint64_mod(
-            barrett_reduce_uint64_uint64(coeffu, moduli[j].value(), moduli[j].const_ratio()[1]), moduli[j].value());
-      }
-    } else {
-      for (std::size_t j = 0; j < 2; j++) {
-        plain_data[i + (j * degree)] = barrett_reduce_uint64_uint64(coeffu, moduli[j].value(), moduli[j].const_ratio()[1]);
-      }
-    }
-  }
-}
+//     if (!(index_raw & static_cast<uint64_t>(poly_degree)) || !*(d_poly + tid)) {
+//       *(d_result + index) = *(d_poly + tid);
+//     } else {
+//       *(d_result + index) = mod.value() - *(d_poly + tid);
+//     }
+//   }
+// }
 
-__global__ void kernel_negacyclic_shift(const uint64_t *cipher_data, size_t cipher_count, uint64_t coeff_count, size_t mod_count,
-                                        int shift, const DModulus *moduli, uint64_t *result) {
-  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+// __global__ void expand_encode_kernel(const double *d_val, size_t poly_modulus_degree, DModulus *modulus, uint64_t *d_p) {
+//   size_t i = blockIdx.x * blockDim.x + threadIdx.x;
 
-  if (idx < cipher_count * mod_count * coeff_count) {
-    int i = idx / (mod_count * coeff_count);
-    int j = (idx / coeff_count) % mod_count;
-    size_t k = idx % coeff_count;
-    uint64_t mask = coeff_count - 1;
+//   if (i < poly_modulus_degree) {
+//     auto coeffd = round(d_val[i] * 10000000000);
+//     bool is_negative = signbit(coeffd);
+//     auto coeffu = static_cast<uint64_t>(fabs(coeffd));
 
-    uint64_t index = (shift + k) & mask;
-    uint64_t result_index = i * mod_count * coeff_count + j * coeff_count + index;
-    if (!cipher_data[idx] || !(static_cast<uint64_t>(shift + k) & coeff_count)) {
-      result[result_index] = cipher_data[idx];
-    } else {
-      result[result_index] = moduli[j].value() - cipher_data[idx];
-    }
-  }
-}
+//     if (is_negative) {
+//       for (size_t j = 0; j < 2; j++) {
+//         d_p[i + (j * poly_modulus_degree)] = negate_uint64_mod(
+//             barrett_reduce_uint64_uint64(coeffu, modulus[j].value(), modulus[j].const_ratio()[1]), modulus[j].value());
+//       }
+//     } else {
+//       for (size_t j = 0; j < 2; j++) {
+//         d_p[i + (j * poly_modulus_degree)] = barrett_reduce_uint64_uint64(coeffu, modulus[j].value(), modulus[j].const_ratio()[1]);
+//       }
+//     }
+//   }
+// }
 
 void MMEvaluator::multiply_power_of_x(PhantomCiphertext &encrypted, PhantomCiphertext &destination, int index) {
   auto context = ckks->context;
   auto coeff_count = ckks->degree;
   auto param = context->get_context_data(encrypted.params_id()).parms();
   auto moduli = param.coeff_modulus();
-  // auto moduli = context->gpu_rns_tables().modulus();
   auto coeff_mod_count = param.coeff_modulus().size();
   auto encrypted_count = encrypted.size();
   auto rns_coeff_count = coeff_count * coeff_mod_count;
 
   const auto &stream = phantom::util::global_variables::default_stream->get_stream();
 
+  cudaStreamSynchronize(stream);
   ckks->evaluator.transform_from_ntt_inplace(encrypted);
 
   destination = encrypted;
 
-  // uint64_t gridDimGlb = ceil_div<uint64_t>(encrypted_count * rns_coeff_count, blockDimGlb.x);
-  // kernel_negacyclic_shift<<<gridDimGlb, blockDimGlb, 0, stream>>>(
-  //     encrypted.data(), encrypted_count, coeff_count, coeff_mod_count, index, moduli, destination.data());
-
   auto dest_data = new uint64_t[rns_coeff_count * encrypted_count];
   auto ct_data = new uint64_t[rns_coeff_count * encrypted_count];
-  cudaMemcpyAsync(ct_data, encrypted.data(), encrypted_count * rns_coeff_count * sizeof(uint64_t), cudaMemcpyDeviceToHost, stream);
+  cudaMemcpy(ct_data, encrypted.data(), encrypted_count * rns_coeff_count * sizeof(uint64_t), cudaMemcpyDeviceToHost);
 
   for (int i = 0; i < encrypted_count; i++) {
     for (int j = 0; j < coeff_mod_count; j++) {
@@ -91,7 +86,7 @@ void MMEvaluator::multiply_power_of_x(PhantomCiphertext &encrypted, PhantomCiphe
     }
   }
 
-  cudaMemcpyAsync(destination.data(), dest_data, encrypted_count * rns_coeff_count * sizeof(uint64_t), cudaMemcpyHostToDevice, stream);
+  cudaMemcpy(destination.data(), dest_data, rns_coeff_count * encrypted_count * sizeof(uint64_t), cudaMemcpyHostToDevice);
 
   ckks->evaluator.transform_to_ntt_inplace(encrypted);
   ckks->evaluator.transform_to_ntt_inplace(destination);
@@ -100,13 +95,12 @@ void MMEvaluator::multiply_power_of_x(PhantomCiphertext &encrypted, PhantomCiphe
 void MMEvaluator::enc_compress_ciphertext(vector<double> &values, PhantomCiphertext &ct) {
   PhantomPlaintext zero_pt;
   PhantomCiphertext zero;
-  ckks->encoder.encode(0.0, 10000000000, zero_pt);
+  ckks->encoder.encode(0.0, ckks->scale, zero_pt);
   ckks->encryptor.encrypt(zero_pt, zero);
 
   auto &context_data = ckks->context->first_context_data();
   auto param = context_data.parms();
   auto moduli = param.coeff_modulus();
-  // auto moduli = ckks->context->gpu_rns_tables().modulus();
   auto coeff_modulus_size = param.coeff_modulus().size();
   auto poly_modulus_degree = param.poly_modulus_degree();
   auto rns_coeff_count = poly_modulus_degree * coeff_modulus_size;
@@ -118,17 +112,11 @@ void MMEvaluator::enc_compress_ciphertext(vector<double> &values, PhantomCiphert
   PhantomPlaintext p;
   p.resize(coeff_modulus_size, poly_modulus_degree, stream);
 
-  // auto gpu_values = make_cuda_auto_ptr<double>(values.size(), stream);
-  // cudaMemcpyAsync(gpu_values.get(), values.data(), values.size() * sizeof(double), cudaMemcpyHostToDevice, stream);
-
-  // kernel_compress_ciphertext<<<poly_modulus_degree / blockDimGlb.x, blockDimGlb, 0, stream>>>(
-  //     p.data(), poly_modulus_degree, moduli, gpu_values.get());
-
   auto p_data = new uint64_t[rns_coeff_count];
 
   // Coefficients of the two RNS polynomails should be the same except with different mod
   for (auto i = 0; i < poly_modulus_degree; i++) {
-    auto coeffd = std::round(values[i] * 10000000000);
+    auto coeffd = std::round((values[i] ? values[i] : 0.0) * 10000000000);
     bool is_negative = std::signbit(coeffd);
     auto coeffu = static_cast<std::uint64_t>(std::fabs(coeffd));
     if (is_negative) {
@@ -142,7 +130,7 @@ void MMEvaluator::enc_compress_ciphertext(vector<double> &values, PhantomCiphert
     }
   }
 
-  // Copy plaintext data to GPU
+  // Copy plaintext data to GPU (synchronous)
   cudaMemcpyAsync(p.data(), p_data, rns_coeff_count * sizeof(uint64_t), cudaMemcpyHostToDevice, stream);
 
   // Transform all 2 RNS polynomials to the NTT domain
@@ -151,6 +139,8 @@ void MMEvaluator::enc_compress_ciphertext(vector<double> &values, PhantomCiphert
   // Update plaintext parameters
   p.set_chain_index(context_data.chain_index());
   p.scale() = 10000000000;
+
+  zero.scale() = p.scale();
 
   ckks->evaluator.add_plain(zero, p, ct);
 }
@@ -176,11 +166,19 @@ vector<PhantomCiphertext> MMEvaluator::decompress_ciphertext(const PhantomCipher
     // cout << i << " => " << temp.size() << endl;
 
     for (uint32_t a = 0; a < temp.size(); a++) {
+      if (temp.size() == 1) ckks->print_decrypted_ct(temp[a], 10);
+      // FIXME: not producing the right output
       ckks->evaluator.apply_galois(temp[a], galois_elt, *(ckks->galois_keys), tempctxt_rotated);  // sub
+      cudaStreamSynchronize(phantom::util::global_variables::default_stream->get_stream());
+      if (temp.size() == 1) ckks->print_decrypted_ct(tempctxt_rotated, 10);
       ckks->evaluator.add(temp[a], tempctxt_rotated, newtemp[a]);
+      // if (temp.size() == 1) ckks->print_decrypted_ct(newtemp[a], 10);
       multiply_power_of_x(temp[a], tempctxt_shifted, index_raw);  // x**-1
+      // if (temp.size() == 1) ckks->print_decrypted_ct(tempctxt_shifted, 10);
       multiply_power_of_x(tempctxt_rotated, tempctxt_rotatedshifted, index);
+      // if (temp.size() == 1) ckks->print_decrypted_ct(tempctxt_rotatedshifted, 10);
       ckks->evaluator.add(tempctxt_shifted, tempctxt_rotatedshifted, newtemp[a + temp.size()]);
+      // if (temp.size() == 1) ckks->print_decrypted_ct(newtemp[a + temp.size()], 10);
     }
 
     temp = newtemp;
@@ -215,8 +213,8 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
   for (int i = 0; i < b_cts_count; i++) {
     PhantomCiphertext ct;
     enc_compress_ciphertext(y[i], ct);
-    b_compressed_cts.emplace_back(ct);
-    ckks->print_decrypted_ct(b_compressed_cts[i], 10);
+    ckks->print_decrypted_ct(ct, 10);
+    b_compressed_cts.push_back(ct);
   }
 
   timer.stop();
@@ -230,7 +228,7 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
   for (auto i = 0; i < b_compressed_cts.size(); i++) {
     vector<PhantomCiphertext> temp_cts = decompress_ciphertext(b_compressed_cts[i]);
     cout << "Expanded ciphertext #" << i + 1 << endl;
-    ckks->print_decrypted_ct(temp_cts[1], 10);
+    ckks->print_decrypted_ct(temp_cts[0], 10);
     b_expanded_cts.insert(b_expanded_cts.end(), make_move_iterator(temp_cts.begin()), make_move_iterator(temp_cts.end()));
   }
 
@@ -240,15 +238,19 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
   // Perform plain-cipher matrix multiplication
   timer.start();
 
+  PhantomPlaintext zero_pt;
+  PhantomCiphertext zero;
+  ckks->encoder.encode(0.0, ckks->scale, zero_pt);
+  ckks->encryptor.encrypt(zero_pt, zero);
+
   for (int i = 0; i < 64; i++) {
-    PhantomCiphertext res_col_ct;
+    PhantomCiphertext res_col_ct = zero;
     vector<PhantomCiphertext> temp_cts(768);
 
     for (int j = 0; j < 768; j++) {
       ckks->evaluator.multiply_plain(b_expanded_cts[i * 768 + j], a_pts[j], temp_cts[j]);
     }
 
-    res_col_ct.scale() = temp_cts[0].scale();
     ckks->evaluator.add_many(temp_cts, res_col_ct);
 
     res_col_ct.scale() *= 4096;

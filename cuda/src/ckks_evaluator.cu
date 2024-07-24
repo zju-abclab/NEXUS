@@ -24,17 +24,6 @@ void CKKSEvaluator::print_decrypted_ct(PhantomCiphertext &ct, int num) {
   cout << endl;
 }
 
-void CKKSEvaluator::print_decoded_pt(PhantomPlaintext &pt, int num) {
-  vector<double> v;
-
-  encoder.decode(pt, v);
-
-  for (int i = 0; i < num; i++) {
-    cout << v[i] << " ";
-  }
-  cout << endl;
-}
-
 vector<double> CKKSEvaluator::init_vec_with_value(double value) {
   // std::vector<double> vec(encoder.message_length(), value);
   std::vector<double> vec(encoder.slot_count(), value);

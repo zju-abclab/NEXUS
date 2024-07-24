@@ -2797,7 +2797,7 @@ void Bootstrapper::coefftoslot_full_mul_first(PhantomCiphertext &rtncipher1, Pha
   ckks->evaluator.add_reduced_error(tmpct2, tmpct4, rtncipher2);
 }
 
-__global__ void kernel_modraise_inplace(uint64_t *poly_dest, const uint64_t *poly_src_zero, const uint64_t modulus,
+__global__ void modraise_inplace_kernel(uint64_t *poly_dest, const uint64_t *poly_src_zero, const uint64_t modulus,
                                         const uint64_t minus_q0_modulus, size_t N, uint64_t q0) {
   size_t i = blockIdx.x * blockDim.x + threadIdx.x;
   if (i < N) {
@@ -2851,7 +2851,7 @@ void Bootstrapper::modraise_inplace(PhantomCiphertext &cipher) {
 
     for (size_t j = 0; j < mod_count; j++) {
       const auto poly_dest = rns_poly_dest + j * N;
-      kernel_modraise_inplace<<<gridDimGlb, blockDimGlb, 0, stream>>>(
+      modraise_inplace_kernel<<<gridDimGlb, blockDimGlb, 0, stream>>>(
           poly_dest, rns_poly_src, modulus[j].value(), minus_q0[j], N, q0);
     }
   }

@@ -40,9 +40,4 @@ class Timer {
     return duration_cast<T>(end_ - start_).count() / 1.0;
   }
 };
-
-template <typename T>
-inline T ceil_div(T a, T b) {
-  return (a + b - 1) / b;
-}
 }  // namespace nexus

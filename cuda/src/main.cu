@@ -141,13 +141,39 @@ void MM_test_p() {
 
   PhantomGaloisKey galois_keys;
 
+  // Tests ---------------------------------------------------------------------
+  // PhantomGaloisKey galois_keys = secret_key.create_galois_keys(context);
+
   std::vector<std::uint32_t> galois_elts;
   for (int i = 0; i < MM_LOG_N; i++) {
     galois_elts.push_back((MM_N + exponentiate_uint(2, i)) / exponentiate_uint(2, i));
   }
 
   CKKSEvaluator ckks_evaluator(&context, &public_key, &secret_key, &encoder, &relin_keys, &galois_keys, SCALE, galois_elts);
+
+  // Tests ---------------------------------------------------------------------
+  // CKKSEvaluator ckks_evaluator(&context, &public_key, &secret_key, &encoder, &relin_keys, &galois_keys, SCALE);
+
   MMEvaluator mme(ckks_evaluator);
+
+  // Tests ---------------------------------------------------------------------
+  // vector<double> output;
+  // vector<double> input = {1.0, 2.0, 3.0, 4.0, 5.0};
+  // PhantomPlaintext plain;
+  // PhantomCiphertext cipher;
+  // ckks_evaluator.encoder.encode(input, SCALE, plain);
+  // ckks_evaluator.encryptor.encrypt(plain, cipher);
+
+  // ckks_evaluator.evaluator.apply_galois_inplace(cipher, 0, galois_keys);
+
+  // ckks_evaluator.decryptor.decrypt(cipher, plain);
+  // ckks_evaluator.encoder.decode(plain, output);
+
+  // for (auto i = 0; i < 5; i++) {
+  //   cout << output[i] << " ";
+  // }
+  // cout << endl;
+  // ---------------------------------------------------------------------------
 
   ckks_evaluator.decryptor.create_galois_keys_from_elts(galois_elts, *(ckks_evaluator.galois_keys));
 
@@ -161,12 +187,12 @@ void MM_test_p() {
 
   std::vector<std::vector<double>> row_pack;
 
-  std::vector<double> row_ct(MM_N, 0.0);
+  std::vector<double> row_ct(4096, 0.0);
   for (auto i = 0; i < 64 * 768; i++) {
     int row = i / 768;
     int col = i % 768;
-    row_ct[i % MM_N] = matrix_768x64_T[row][col];
-    if ((i % MM_N) == (MM_N - 1)) {
+    row_ct[i % 4096] = matrix_768x64_T[row][col];
+    if (i % 4096 == 4095) {
       row_pack.push_back(row_ct);
     }
   }
@@ -192,7 +218,7 @@ void MM_test_p() {
     average_err += fabs(mm_res[i] / 2.0 - matrix_4096x64_T[0][i]);
     if (i < 10) printf("%+.10lf <- %+.10lf\n", mm_res[i] / 2.0, matrix_4096x64_T[0][i]);
   }
-  std::cout << "Average Error: " << average_err / 4096.0 << std::endl;
+  std::cout << "average_err: " << average_err / 4096.0 << std::endl;
 }
 
 int main() {

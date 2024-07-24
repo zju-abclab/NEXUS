@@ -691,19 +691,20 @@ __global__ static void moddown_kernel(uint64_t *dst, const uint64_t *cx, const u
 __global__ static void moddown_bconv_single_p_kernel(uint64_t *dst, const uint64_t *src, size_t n,
                                                      const DModulus *base_QlP, uint64_t size_QlP) {
     const size_t size_Ql = size_QlP - 1;
-    size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
-    const size_t out_prime_idx = tid / n;
-    const size_t coeff_idx = tid % n;
-    const uint64_t in_prime = base_QlP[size_Ql].value(); // special prime
-    const uint64_t out_prime = base_QlP[out_prime_idx].value();
-    const uint64_t barret_ratio = base_QlP[out_prime_idx].const_ratio()[1];
-    const uint64_t coeff = src[coeff_idx];
-    uint64_t result;
-    if (in_prime > out_prime)
-        result = barrett_reduce_uint64_uint64(coeff, out_prime, barret_ratio);
-    else
-        result = coeff;
-    dst[tid] = result;
+    for (size_t tid = blockIdx.x * blockDim.x + threadIdx.x; tid < n * size_Ql; tid += blockDim.x * gridDim.x) {
+        const size_t out_prime_idx = tid / n;
+        const size_t coeff_idx = tid % n;
+        const uint64_t in_prime = base_QlP[size_Ql].value(); // special prime
+        const uint64_t out_prime = base_QlP[out_prime_idx].value();
+        const uint64_t barret_ratio = base_QlP[out_prime_idx].const_ratio()[1];
+        const uint64_t coeff = src[coeff_idx];
+        uint64_t result;
+        if (in_prime > out_prime)
+            result = barrett_reduce_uint64_uint64(coeff, out_prime, barret_ratio);
+        else
+            result = coeff;
+        dst[tid] = result;
+    }
 }
 
 /*
@@ -741,7 +742,7 @@ void DRNSTool::moddown(uint64_t *ct_i, uint64_t *cx_i, const DNTTTable &ntt_tabl
                 n);
 
         nwt_2d_radix8_forward_inplace(ct_i, ntt_tables, size_Ql, 0, stream);
-    } else if (scheme == scheme_type::bfv || scheme == scheme_type::ckks) {
+    } else {
         // BFV and CKKS
         base_P_to_Ql_conv_.bConv_BEHZ(delta.get(), cx_i + size_Ql_n, n, stream);
 
@@ -755,8 +756,6 @@ void DRNSTool::moddown(uint64_t *ct_i, uint64_t *cx_i, const DNTTTable &ntt_tabl
         moddown_kernel<<<size_Ql_n / blockDimGlb.x, blockDimGlb, 0, stream>>>(
                 ct_i, cx_i, delta.get(), ntt_tables.modulus(),
                 bigPInv_mod_q(), bigPInv_mod_q_shoup(), n, size_Ql);
-    } else {
-        throw invalid_argument("unsupported scheme");
     }
 }
 
