@@ -334,9 +334,6 @@ void Polynomial::homomorphic_poly_evaluation(SEALContext &context, CKKSEncoder &
     baby[1] = cipher;
     babybool[1] = true;
 
-    cout << endl;
-    cout << "heap_k: " << heap_k << endl;
-
     for (int i = 2; i < heap_k; i *= 2) {
       // baby[i] = new Ciphertext();
 
@@ -349,27 +346,6 @@ void Polynomial::homomorphic_poly_evaluation(SEALContext &context, CKKSEncoder &
       babybool[i] = true;
     }
 
-    cout << "Baby step 1: " << endl;
-    for (int i = 0; i < baby.size(); i++) {
-      cout << i << " ";
-      Plaintext temp;
-      vector<double> v;
-
-      if (!baby[i].coeff_modulus_size()){
-				cout << endl;
-				continue;
-			}
-
-      decryptor.decrypt(baby[i], temp);
-      encoder.decode(temp, v);
-
-      for (int i = 0; i < 10; i++) {
-        cout << v[i] << " ";
-      }
-      cout << endl;
-    }
-    cout << endl;
-
     long lpow2, res, diff;
     Ciphertext tmp;
 
@@ -378,8 +354,6 @@ void Polynomial::homomorphic_poly_evaluation(SEALContext &context, CKKSEncoder &
         lpow2 = (1 << (int)floor(log(i) / log(2)));
         res = i - lpow2;
         diff = abs(lpow2 - res);
-
-        cout << "lpow2: " << lpow2 << " res: " << res << " diff: " << diff << endl;
 
         // baby[i] = new Ciphertext();
 
@@ -392,27 +366,6 @@ void Polynomial::homomorphic_poly_evaluation(SEALContext &context, CKKSEncoder &
         babybool[i] = true;
       }
     }
-
-    cout << "Baby step 2: " << endl;
-    for (int i = 0; i < baby.size(); i++) {
-      cout << i << " ";
-      Plaintext temp;
-      vector<double> v;
-
-      if (!baby[i].coeff_modulus_size()){
-				cout << endl;
-				continue;
-			}
-
-      decryptor.decrypt(baby[i], temp);
-      encoder.decode(temp, v);
-
-      for (int i = 0; i < 10; i++) {
-        cout << v[i] << " ";
-      }
-      cout << endl;
-    }
-    cout << endl;
 
     vector<Ciphertext> giant(heap_m, Ciphertext());
     vector<bool> giantbool(heap_m, false);
@@ -466,23 +419,6 @@ void Polynomial::homomorphic_poly_evaluation(SEALContext &context, CKKSEncoder &
 
       evaluator.add_const_inplace(giant[i], -1.0);
     }
-
-    cout << "giant: " << endl;
-    for (auto &giant_ct : giant) {
-      Plaintext temp;
-      vector<double> v;
-
-      if (!giant_ct.coeff_modulus_size()) continue;
-
-      decryptor.decrypt(giant_ct, temp);
-      encoder.decode(temp, v);
-
-      for (int i = 0; i < 10; i++) {
-        cout << v[i] << " ";
-      }
-      cout << endl;
-    }
-    cout << endl;
 
     vector<Ciphertext> cipherheap((1 << (heap_m + 1)) - 1, Ciphertext());
     vector<bool> cipherheapbool((1 << (heap_m + 1)) - 1, false);

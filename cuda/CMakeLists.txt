@@ -62,22 +62,26 @@ file(GLOB_RECURSE NEXUS_CUDA_SOURCE_FILES CONFIGURE_DEPENDS
   "src/matrix_mul.cu"
   "src/matrix_mul_p.cu"
   "src/ckks_evaluator.cu"
+  "src/argmax.cu"
+  "src/bootstrapping/*.cu"
   "thirdparty/phantom-fhe/src/*.cu"
   "thirdparty/troy-nova/src/*.cu"
   "thirdparty/troy-nova/src/*.cpp"
   "thirdparty/troy-nova/src/*.c"
 )
 add_executable(main ${NEXUS_CUDA_SOURCE_FILES})
+target_link_libraries(main PRIVATE ntl gmp m pthread)
+target_include_directories(main PRIVATE
+  /usr/local/include
+  /usr/local/include/NTL
+  src/bootstrapping/commmon
+  src/bootstrapping
+)
 
 # NexusCUDA Boostrapping
 file(GLOB_RECURSE NEXUS_CUDA_BOOTSTRAPING_SOURCE_FILES CONFIGURE_DEPENDS
   "src/bootstrap_test.cu"
   "src/bootstrapping/*.cu"
-  "src/gelu.cu"
-  "src/softmax.cu"
-  "src/layer_norm.cu"
-  "src/matrix_mul.cu"
-  "src/matrix_mul_p.cu"
   "src/ckks_evaluator.cu"
   "thirdparty/phantom-fhe/src/*.cu"
   "thirdparty/troy-nova/src/*.cu"

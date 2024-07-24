@@ -3211,8 +3211,6 @@ void Bootstrapper::bootstrap_sparse_3(Ciphertext &rtncipher, Ciphertext &cipher)
     cout << "Modulus Raising..." << endl;
     modraise_inplace(cipher);
 
-    print_decrypted_ct(cipher, 10);
-
     const auto &modulus = iter(context.first_context_data()->parms().coeff_modulus());
     cipher.scale() = ((double)modulus[0].value());
 
@@ -3223,8 +3221,6 @@ void Bootstrapper::bootstrap_sparse_3(Ciphertext &rtncipher, Ciphertext &cipher)
         // evaluator.add_inplace_original(cipher, rot);
         evaluator.add_inplace(cipher, rot);
     }
-
-    print_decrypted_ct(cipher, 10);
 
     Ciphertext rtn;
     if (logn == 0) {
@@ -3246,14 +3242,11 @@ void Bootstrapper::bootstrap_sparse_3(Ciphertext &rtncipher, Ciphertext &cipher)
     else {
         cout << "Coefftoslot..." << endl;
         coefftoslot_3(rtn, cipher);
-        print_decrypted_ct(rtn, 10);
     }
 
     cout << "Modular reduction..." << endl;
     Ciphertext modrtn;
     mod_reducer->modular_reduction(modrtn, rtn);
-
-    print_decrypted_ct(modrtn, 10);
 
     if (logn == 0) {
         const auto &modulus = iter(context.first_context_data()->parms().coeff_modulus());
@@ -3282,7 +3275,6 @@ void Bootstrapper::bootstrap_sparse_3(Ciphertext &rtncipher, Ciphertext &cipher)
     else {
         cout << "Slottocoeff..." << endl;
         slottocoeff_3(rtncipher, modrtn);
-        print_decrypted_ct(rtncipher, 10);
     }
     rtncipher.scale() = final_scale;
 }

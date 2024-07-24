@@ -15,6 +15,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(SEAL 4.1 REQUIRED)
 
 # Nexus
+add_subdirectory(src/bootstrapping/common)
+add_subdirectory(src/bootstrapping)
+
 add_executable(
     main
     ${CMAKE_SOURCE_DIR}/src/main.cpp
@@ -23,22 +26,25 @@ add_executable(
     ${CMAKE_SOURCE_DIR}/src/ckks_evaluator.cpp
     ${CMAKE_SOURCE_DIR}/src/softmax.cpp
     ${CMAKE_SOURCE_DIR}/src/matrix_mul.cpp
+    ${CMAKE_SOURCE_DIR}/src/argmax.cpp
+    ${COMMON_SOURCE_FILES}
+    ${BOOTSTRAPPING_SOURCE_FILES}
 )
 
-target_link_libraries(main PRIVATE SEAL::seal)
+target_include_directories(main PUBLIC
+    /usr/local/include
+    /usr/local/include/NTL
+    ${COMMON_HEADER_DIR}
+    ${BOOTSTRAPPING_HEADER_DIR}
+)
+
+target_link_libraries(main PRIVATE ntl gmp m pthread SEAL::seal)
 
 # Nexus Bootstrapping
-add_subdirectory(src/bootstrapping/common)
-add_subdirectory(src/bootstrapping)
-
 add_executable(
     bootstrapping
     ${CMAKE_SOURCE_DIR}/src/bootstrap_test.cpp
-    ${CMAKE_SOURCE_DIR}/src/gelu.cpp
-    ${CMAKE_SOURCE_DIR}/src/layer_norm.cpp
     ${CMAKE_SOURCE_DIR}/src/ckks_evaluator.cpp
-    ${CMAKE_SOURCE_DIR}/src/softmax.cpp
-    ${CMAKE_SOURCE_DIR}/src/matrix_mul.cpp
     ${COMMON_SOURCE_FILES}
     ${BOOTSTRAPPING_SOURCE_FILES}
 )

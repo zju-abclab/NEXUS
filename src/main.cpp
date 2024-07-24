@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include "argmax.h"
 #include "gelu.h"
 #include "layer_norm.h"
 #include "matrix_mul.h"
@@ -21,8 +22,12 @@ using namespace seal::util;
 using namespace std::chrono;
 
 void MM_test();
+void argmax_test();
 
 int main() {
+  argmax_test();
+  exit(0);
+
   MM_test();
   exit(0);
 
@@ -115,26 +120,130 @@ int main() {
   /*
       Softmax
   */
+  // double num;
+  // vector<double> input, softmax_calibration;
+  // ifstream input_file("../data/input/softmax_input_128_128.txt");
+  // while (input_file >> num) {
+  //   input.push_back(num);
+  // }
+  // input_file.close();
+  // ifstream calibration_file("../data/calibration/softmax_calibration_128_128.txt");
+  // while (calibration_file >> num) {
+  //   softmax_calibration.push_back(num);
+  // }
+  // calibration_file.close();
+  // ckks_evaluator.encoder->encode(input, scale, plain_input);
+  // ckks_evaluator.encryptor->encrypt(plain_input, cipher_input);
+  // auto start = high_resolution_clock::now();
+  // softmax_evaluator.softmax(cipher_input, cipher_output, 128);
+  // auto end = high_resolution_clock::now();
+  // cout << "[Softmax] 128 x 128 takes: " << duration_cast<milliseconds>(end - start).count() << " milliseconds"
+  //      << endl;
+  // cout << "Mean Absolute Error: " << ckks_evaluator.calculateMAE(softmax_calibration, cipher_output, 128) << endl;
+}
+
+void argmax_test() {
+  long logN = 15;
+  long logn = logN - 2;
+  long sparse_slots = (1 << logn);
+
+  int logp = 46;
+  int logq = 51;
+  int log_special_prime = 58;
+
+  // QuickMax: 17
+  int main_mod_count = 17;
+
+  // Must be greater than 14: subsum 1 + coefftoslot 2 + ModReduction 9 + slottocoeff 2
+  int bs_mod_count = 14;
+
+  int secret_key_hamming_weight = 192;
+
+  vector<int> coeff_bit_vec;
+
+  coeff_bit_vec.push_back(logq);
+
+  for (int i = 0; i < main_mod_count; i++) {
+    coeff_bit_vec.push_back(logp);
+  }
+
+  for (int i = 0; i < bs_mod_count; i++) {
+    coeff_bit_vec.push_back(logq);
+  }
+
+  coeff_bit_vec.push_back(log_special_prime);
+
+  EncryptionParameters parms(scheme_type::ckks);
+  size_t poly_modulus_degree = (size_t)(1 << logN);
+  double scale = pow(2.0, logp);
+
+  parms.set_poly_modulus_degree(poly_modulus_degree);
+  parms.set_coeff_modulus(CoeffModulus::Create(poly_modulus_degree, coeff_bit_vec));
+  parms.set_secret_key_hamming_weight(secret_key_hamming_weight);
+  parms.set_sparse_slots(sparse_slots);
+
+  SEALContext context(parms, true, sec_level_type::none);
+  KeyGenerator keygen(context);
+  SecretKey secret_key = keygen.secret_key();
+  PublicKey public_key;
+  keygen.create_public_key(public_key);
+  RelinKeys relin_keys;
+  keygen.create_relin_keys(relin_keys);
+  GaloisKeys galois_keys;
+  keygen.create_galois_keys(galois_keys);
+
+  CKKSEncoder encoder(context);
+  Encryptor encryptor(context, public_key);
+  Evaluator evaluator(context, encoder);
+  Decryptor decryptor(context, secret_key);
+
+  CKKSEvaluator ckks_evaluator(context, encryptor, decryptor, encoder, evaluator, scale, relin_keys, galois_keys);
+  ArgmaxEvaluator argmax_evaluator(ckks_evaluator, keygen, main_mod_count);
+
+  size_t slot_count = encoder.slot_count();
+
+  Plaintext plain_input;
+  Ciphertext cipher_input;
+  Ciphertext cipher_output;
+  vector<double> output;
+  vector<double> input(slot_count, 0.0);
+
   double num;
-  vector<double> input, softmax_calibration;
-  ifstream input_file("../data/input/softmax_input_128_128.txt");
+  int argmax_input_size = 0;
+  vector<double> argmax_input(sparse_slots, 0.0), argmax_calibration;
+
+  ifstream input_file("../data/input/argmax_input_8.txt");
   while (input_file >> num) {
-    input.push_back(num);
+    argmax_input[argmax_input_size] = num;
+    argmax_input_size++;
   }
   input_file.close();
-  ifstream calibration_file("../data/calibration/softmax_calibration_128_128.txt");
+
+  ifstream calibration_file("../data/calibration/argmax_calibration_8.txt");
   while (calibration_file >> num) {
-    softmax_calibration.push_back(num);
+    argmax_calibration.push_back(num);
   }
   calibration_file.close();
+
+  // Spare input (TODO: create a dedicated encoding function: encode_sparse in ckks evaluator)
+  for (size_t i = 0; i < slot_count; i++) {
+    input[i] = argmax_input[i % sparse_slots];
+  }
+
   ckks_evaluator.encoder->encode(input, scale, plain_input);
   ckks_evaluator.encryptor->encrypt(plain_input, cipher_input);
+
+  // Mod switch to remaining level
+  for (int i = 0; i < bs_mod_count; i++) {
+    ckks_evaluator.evaluator->mod_switch_to_next_inplace(cipher_input);
+  }
+
   auto start = high_resolution_clock::now();
-  softmax_evaluator.softmax(cipher_input, cipher_output, 128);
+  argmax_evaluator.argmax(cipher_input, cipher_output, argmax_input_size);
   auto end = high_resolution_clock::now();
-  cout << "[Softmax] 128 x 128 takes: " << duration_cast<milliseconds>(end - start).count() << " milliseconds"
+  cout << "[Argmax] 32768 takes: " << duration_cast<milliseconds>(end - start).count() << " milliseconds"
        << endl;
-  cout << "Mean Absolute Error: " << ckks_evaluator.calculateMAE(softmax_calibration, cipher_output, 128) << endl;
+  cout << "Mean Absolute Error: " << ckks_evaluator.calculateMAE(argmax_calibration, cipher_output, argmax_input_size) << endl;
 }
 
 void MM_test() {
@@ -150,12 +259,12 @@ void MM_test() {
   sk_bytes_in.open("../sk_bytes", ios::binary);
   SecretKey secret_key;
   secret_key.unsafe_load(context, sk_bytes_in);
-
   KeyGenerator keygen(context, secret_key);
 
+  // KeyGenerator keygen(context);
   // SecretKey secret_key = keygen.secret_key();
-//   PublicKey public_key;
-//   keygen.create_public_key(public_key);
+  // PublicKey public_key;
+  // keygen.create_public_key(public_key);
 
   Encryptor encryptor(context, secret_key);
   CKKSEncoder encoder(context);
@@ -170,10 +279,6 @@ void MM_test() {
   for (int i = 0; i < logN; i++) {
     rots.push_back((poly_modulus_degree + exponentiate_uint(2, i)) / exponentiate_uint(2, i));
   }
-  for (auto elt : rots) {
-    cout << elt << " ";
-  }
-  cout << endl;
 
   keygen.create_galois_keys(rots, galois_keys);
 
@@ -192,12 +297,12 @@ void MM_test() {
 
   std::vector<std::vector<double>> row_pack;
 
-  std::vector<double> row_ct(4096, 0.0);
+  std::vector<double> row_ct(poly_modulus_degree, 0.0);
   for (auto i = 0; i < 64 * 768; i++) {
     int row = i / 768;
     int col = i % 768;
-    row_ct[i % 4096] = matrix_768x64_T[row][col];
-    if (i % 4096 == 4095) {
+    row_ct[i % poly_modulus_degree] = matrix_768x64_T[row][col];
+    if (i % poly_modulus_degree == (poly_modulus_degree - 1)) {
       row_pack.push_back(row_ct);
     }
   }

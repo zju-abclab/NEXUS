@@ -8,12 +8,8 @@
 #include "Bootstrapper.h"
 #include "ModularReducer.h"
 #include "Polynomial.h"
-#include "gelu.h"
-#include "layer_norm.h"
-#include "matrix_mul.h"
 #include "seal/seal.h"
-#include "softmax.h"
-// #include "ScaleInvEvaluator.h"
+#include "ckks_evaluator.h"
 #include <chrono>
 #include <random>
 
@@ -206,7 +202,19 @@ int main() {
   bootstrapper.addLeftRotKeys_Linear_to_vector_3(gal_steps_vector);
   // bootstrapper_2.addLeftRotKeys_Linear_to_vector_3(gal_steps_vector);
   // bootstrapper_3.addLeftRotKeys_Linear_to_vector_3(gal_steps_vector);
+
+  for(int i = 0; i < gal_steps_vector.size(); i++) {
+    cout << gal_steps_vector[i] << " ";
+  }
+  cout << endl;
+  
   keygen.create_galois_keys(gal_steps_vector, gal_keys);
+
+  auto elts = context.key_context_data()->galois_tool()->get_elts_from_steps(gal_steps_vector);
+  for(auto elt: elts) {
+        cout << elt << " ";
+    }
+    cout << endl;
 
   bootstrapper.slot_vec.push_back(logn);
   // bootstrapper_2.slot_vec.push_back(logn_2);

@@ -6,6 +6,17 @@ using namespace phantom::arith;
 using namespace phantom::util;
 using namespace nexus;
 
+void CKKSEvaluator::print_decoded_pt(PhantomPlaintext &pt, int num) {
+  vector<double> v;
+
+  encoder.decode(pt, v);
+
+  for (int i = 0; i < num; i++) {
+    cout << v[i] << " ";
+  }
+  cout << endl;
+}
+
 void CKKSEvaluator::print_decrypted_ct(PhantomCiphertext &ct, int num) {
   PhantomPlaintext temp;
   vector<double> v;
@@ -361,7 +372,21 @@ void CKKSEvaluator::eval_odd_deg9_poly(vector<double> &a, PhantomCiphertext &x, 
   // cout << "Poly eval took " << duration_cast<milliseconds>(time_end - time_start).count() << " ms" << endl;
 }
 
-PhantomCiphertext CKKSEvaluator::sgn_eval(PhantomCiphertext x, int d_g, int d_f) {
+PhantomCiphertext CKKSEvaluator::sgn_eval(PhantomCiphertext x, int d_g, int d_f, double sgn_factor) {
+  // Compute sign function coefficients
+  vector<double> f4_coeffs = F4_COEFFS;
+  vector<double> g4_coeffs = G4_COEFFS;
+  vector<double> f4_coeffs_last(10, 0.0);
+  vector<double> g4_coeffs_last(10, 0.0);
+
+  for (int i = 0; i <= 9; i++) {
+    f4_coeffs[i] /= F4_SCALE;
+    f4_coeffs_last[i] = f4_coeffs[i] * sgn_factor;
+
+    g4_coeffs[i] /= G4_SCALE;
+    g4_coeffs_last[i] = g4_coeffs[i] * sgn_factor;
+  }
+
   PhantomCiphertext dest = x;
 
   for (int i = 0; i < d_g; i++) {
@@ -392,6 +417,7 @@ double CKKSEvaluator::calculate_MAE(vector<double> &y_true, PhantomCiphertext &c
 
   double sum_absolute_errors = 0.0;
   for (size_t i = 0; i < N; ++i) {
+    cout << y_true[i] << " -> " << y_pred[i] << endl;
     sum_absolute_errors += abs(y_true[i] - y_pred[i]);
   }
 

@@ -273,18 +273,12 @@ class Evaluator {
 
   // Galois
   inline void apply_galois(PhantomCiphertext &ct, uint32_t elt, PhantomGaloisKey &galois_keys, PhantomCiphertext &dest) {
-    auto &galois_elts = context->key_galois_tool_->galois_elts();
-    size_t galois_elt_index = distance(galois_elts.begin(), find(galois_elts.begin(), galois_elts.end(), elt));
-
-    dest = ::apply_galois(*context, ct, galois_elt_index, galois_keys);
+    dest = ::apply_galois(*context, ct, elt, galois_keys);
   }
 
   inline void apply_galois_inplace(PhantomCiphertext &ct, int step, PhantomGaloisKey &galois_keys) {
-    auto &galois_elts = context->key_galois_tool_->galois_elts();
     auto elt = context->key_galois_tool_->get_elt_from_step(step);
-    size_t galois_elt_index = distance(galois_elts.begin(), find(galois_elts.begin(), galois_elts.end(), elt));
-
-    ::apply_galois_inplace(*context, ct, galois_elt_index, galois_keys);
+    ::apply_galois_inplace(*context, ct, elt, galois_keys);
   }
 
   // Complex Conjugate
@@ -432,12 +426,14 @@ class Decryptor {
  private:
   PhantomContext *context;
   PhantomSecretKey *decryptor;
+  vector<uint32_t> original_galois_elts;
 
  public:
   Decryptor() = default;
   Decryptor(PhantomContext *context, PhantomSecretKey *decryptor) {
     this->context = context;
     this->decryptor = decryptor;
+    this->original_galois_elts = context->key_galois_tool_->galois_elts();
   }
 
   inline void decrypt(PhantomCiphertext &ct, PhantomPlaintext &plain) {
@@ -451,20 +447,19 @@ class Decryptor {
   inline void create_galois_keys_from_elts(vector<uint32_t> &elts, PhantomGaloisKey &galois_keys) {
     galois_keys = decryptor->create_galois_keys_from_elts(*context, elts);
   }
+
+  inline void reset_galois_keys(PhantomGaloisKey &galois_keys) {
+    galois_keys = decryptor->create_galois_keys_from_elts(*context, original_galois_elts);
+  }
 };
 
 class CKKSEvaluator {
  private:
   // Sign function coefficients
-  double sgn_factor = 0.5;
-
-  int g4_scale = (1 << 10);
-  vector<double> g4_coeffs = {0, 5850, 0, -34974, 0, 97015, 0, -113492, 0, 46623};
-  vector<double> g4_coeffs_last;
-
-  int f4_scale = (1 << 7);
-  vector<double> f4_coeffs = {0, 315, 0, -420, 0, 378, 0, -180, 0, 35};
-  vector<double> f4_coeffs_last;
+  vector<double> F4_COEFFS = {0, 315, 0, -420, 0, 378, 0, -180, 0, 35};
+  int F4_SCALE = (1 << 7);
+  vector<double> G4_COEFFS = {0, 5850, 0, -34974, 0, 97015, 0, -113492, 0, 46623};
+  int G4_SCALE = (1 << 10);
 
   // Helper functions
   uint64_t get_modulus(PhantomCiphertext &x, int k);
@@ -527,17 +522,6 @@ class CKKSEvaluator {
 
     Decryptor ckks_decryptor(context, decryptor);
     this->decryptor = ckks_decryptor;
-
-    // Compute sign function coefficients
-    f4_coeffs_last.resize(10, 0);
-    g4_coeffs_last.resize(10, 0);
-    for (int i = 0; i <= 9; i++) {
-      f4_coeffs[i] /= f4_scale;
-      f4_coeffs_last[i] = f4_coeffs[i] * sgn_factor;
-
-      g4_coeffs[i] /= g4_scale;
-      g4_coeffs_last[i] = g4_coeffs[i] * sgn_factor;
-    }
   }
 
   CKKSEvaluator(HeContextPointer context, troy::Encryptor *encryptor, troy::Decryptor *decryptor,
@@ -563,9 +547,10 @@ class CKKSEvaluator {
 
   void re_encrypt(PhantomCiphertext &ct);
   void print_decrypted_ct(PhantomCiphertext &ct, int num);
+  void print_decoded_pt(PhantomPlaintext &pt, int num);
 
   // Evaluation functions
-  PhantomCiphertext sgn_eval(PhantomCiphertext x, int d_g, int d_f);
+  PhantomCiphertext sgn_eval(PhantomCiphertext x, int d_g, int d_f, double sgn_factor = 0.5);
   PhantomCiphertext invert_sqrt(PhantomCiphertext x, int d_newt = 20, int d_gold = 1);
   PhantomCiphertext exp(PhantomCiphertext x);
   PhantomCiphertext inverse(PhantomCiphertext x, int iter = 4);

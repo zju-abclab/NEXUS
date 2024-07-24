@@ -231,15 +231,13 @@ inline auto mod_switch_to(const PhantomContext &context, const PhantomPlaintext 
     return destination;
 }
 
-void apply_galois_inplace(const PhantomContext &context, PhantomCiphertext &encrypted, size_t galois_elt_index,
-                          const PhantomGaloisKey &galois_keys,
+void apply_galois_inplace(const PhantomContext &context, PhantomCiphertext &encrypted, uint32_t galois_elt, const PhantomGaloisKey &galois_keys,
                           const phantom::util::cuda_stream_wrapper &stream_wrapper = *phantom::util::global_variables::default_stream);
 
-inline auto apply_galois(const PhantomContext &context, const PhantomCiphertext &encrypted, size_t galois_elt_index,
-                         const PhantomGaloisKey &galois_keys,
+inline auto apply_galois(const PhantomContext &context, const PhantomCiphertext &encrypted, uint32_t galois_elt, const PhantomGaloisKey &galois_keys,
                          const phantom::util::cuda_stream_wrapper &stream_wrapper = *phantom::util::global_variables::default_stream) {
     PhantomCiphertext destination = encrypted;
-    apply_galois_inplace(context, destination, galois_elt_index, galois_keys, stream_wrapper);
+    apply_galois_inplace(context, destination, galois_elt, galois_keys, stream_wrapper);
     return destination;
 }
 

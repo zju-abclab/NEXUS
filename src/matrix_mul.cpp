@@ -81,9 +81,9 @@ vector<Ciphertext> MMEvaluator::expand_ciphertext(
     // cout << "elt: " << galois_elts[i] << "|" << ckks->rots[i] << ", index_raw: " << index_raw << ", index: " << index << endl;
 
     for (uint32_t a = 0; a < temp.size(); a++) {
-      if (temp.size() == 1) ckks->print_decrypted_ct(temp[a], 10);
+      // if (temp.size() == 1) ckks->print_decrypted_ct(temp[a], 10);
       ckks->evaluator->apply_galois(temp[a], ckks->rots[i], *(ckks->galois_keys), tempctxt_rotated);  // sub
-      if (temp.size() == 1) ckks->print_decrypted_ct(tempctxt_rotated, 10);
+      // if (temp.size() == 1) ckks->print_decrypted_ct(tempctxt_rotated, 10);
       ckks->evaluator->add(temp[a], tempctxt_rotated, newtemp[a]);
       //   if(temp.size() == 1) ckks->print_decrypted_ct(newtemp[a], 10);
       multiply_power_of_X(temp[a], tempctxt_shifted, index_raw);  // x**-1
@@ -178,6 +178,10 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
   for (int i = 0; i < 768 * 64 / ckks->degree; i++) {
     Plaintext pt;
     Ciphertext ct;
+    // for (int j = 0; j < 10; j++) {
+    //   cout << y[i][j] << " ";
+    // }
+    // cout << endl;
     expandEncode(y[i], ct);
     ckks->print_decrypted_ct(ct, 10);
     b_compressed_cts.push_back(ct);
@@ -221,9 +225,16 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
     vector<Ciphertext> temp_cts(768);
     for (int j = 0; j < 768; j++) {
       ckks->evaluator->multiply_plain(b_expanded_cts[i * 768 + j], a_pts[j], temp_cts[j]);
+      // if (j == 0) {
+      //   ckks->print_decrypted_ct(b_expanded_cts[i * 768 + j], 10);
+      //   ckks->print_decoded_pt(a_pts[j], 10);
+      //   cout << endl;
+      // }
     }
     res_col_ct.scale() = temp_cts[0].scale();
     ckks->evaluator->add_many(temp_cts, res_col_ct);
+    ckks->print_decrypted_ct(res_col_ct, 10);
+
     res_col_ct.scale() *= 4096;
     res.push_back(res_col_ct);
   }
@@ -278,11 +289,19 @@ void MMEvaluator::expandEncode(vector<double> &val, Ciphertext &ct) {
     }
   }
 
+  // for (auto i = 0; i < 10; i++) {
+  //   cout << p[i] << " ";
+  // }
+  // cout << endl;
+
   for (std::size_t i = 0; i < 2; i++) {
     util::ntt_negacyclic_harvey(p.data(i * poly_modulus_degree), ntt_tables[i]);
   }
+
   p.parms_id() = context.first_parms_id();
   p.scale() = 10000000000;
+
+  // ckks->print_decoded_pt(p, 10);
 
   zero.scale() = p.scale();
 

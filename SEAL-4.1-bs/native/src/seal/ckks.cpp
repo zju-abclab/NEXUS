@@ -26,6 +26,8 @@ namespace seal
 
         size_t coeff_count = context_data.parms().poly_modulus_degree();
         slots_ = coeff_count >> 1;
+        sparse_slots_ = context_data.parms().sparse_slots();
+        if (sparse_slots_ == 0) sparse_slots_ = slots_;
         int logn = get_power_of_two(coeff_count);
 
         matrix_reps_index_map_ = allocate<size_t>(coeff_count, pool_);

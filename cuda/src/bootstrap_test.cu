@@ -1,23 +1,10 @@
-#include <NTL/RR.h>
-
 #include <chrono>
-#include <cmath>
-#include <complex>
-#include <fstream>
-#include <iostream>
 #include <random>
 
 #include "bootstrapping/Bootstrapper.cuh"
-#include "bootstrapping/ModularReducer.cuh"
-#include "bootstrapping/common/Polynomial.cuh"
-#include "gelu.cuh"
-#include "layer_norm.cuh"
-#include "matrix_mul.cuh"
 #include "phantom.h"
-#include "softmax.cuh"
 
 using namespace std;
-using namespace NTL;
 using namespace phantom;
 using namespace chrono;
 
@@ -68,7 +55,6 @@ int main() {
   for (int i = 0; i < remaining_level; i++) {
     coeff_bit_vec.push_back(logp);
   }
-
   for (int i = 0; i < boot_level; i++) {
     coeff_bit_vec.push_back(logq);
   }
@@ -200,7 +186,7 @@ int main() {
   // bootstrapper_2.prepare_mod_polynomial();
   // bootstrapper_3.prepare_mod_polynomial();
 
-  cout << "Generating Galois Keys..." << endl;
+  cout << "Adding Bootstrapping Keys..." << endl;
   vector<int> gal_steps_vector;
   gal_steps_vector.push_back(0);
   for (int i = 0; i < logN - 1; i++) {

@@ -1,6 +1,7 @@
 #include <fstream>
 #include <iostream>
 
+#include "argmax.cuh"
 #include "ckks_evaluator.cuh"
 #include "gelu.cuh"
 #include "layer_norm.cuh"
@@ -18,7 +19,7 @@ using namespace troy::utils;
 using namespace nexus;
 
 // Choose test target here:
-int TEST_TARGET_IDX = 1;
+int TEST_TARGET_IDX = 2;
 
 size_t N = 1ULL << 16;
 size_t MM_LOG_N = 13;
@@ -26,14 +27,15 @@ size_t MM_N = 1ULL << MM_LOG_N;
 
 double SCALE = pow(2.0, 40);
 
-vector<string> TEST_TARGETS = {"MatMul", "MatMul_Phantom", "SoftMax", "LayerNorm", "GELU"};
+vector<string> TEST_TARGETS = {"MatMul", "MatMul_Phantom", "Argmax", "SoftMax", "LayerNorm", "GELU"};
 vector<vector<int>> COEFF_MODULI =
     {
         {60, 40, 60},                                                                      // MatMul (0)
         {60, 40, 60},                                                                      // MatMul_Phantom (1)
-        {58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58},          // SoftMax (2)
-        {58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58},  // LayerNorm (3)
-        {58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58}   // GELU (4)
+        {17},                                                                              // Argmax (2) - Number of Moduli
+        {58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58},          // SoftMax (3)
+        {58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58},  // LayerNorm (4)
+        {58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58}   // GELU (5)
 };
 
 string TEST_TARGET = TEST_TARGETS[TEST_TARGET_IDX];
@@ -138,11 +140,7 @@ void MM_test_p() {
 
   PhantomPublicKey public_key = secret_key.gen_publickey(context);
   PhantomRelinKey relin_keys = secret_key.gen_relinkey(context);
-
   PhantomGaloisKey galois_keys;
-
-  // Tests ---------------------------------------------------------------------
-  // PhantomGaloisKey galois_keys = secret_key.create_galois_keys(context);
 
   std::vector<std::uint32_t> galois_elts;
   for (int i = 0; i < MM_LOG_N; i++) {
@@ -150,30 +148,7 @@ void MM_test_p() {
   }
 
   CKKSEvaluator ckks_evaluator(&context, &public_key, &secret_key, &encoder, &relin_keys, &galois_keys, SCALE, galois_elts);
-
-  // Tests ---------------------------------------------------------------------
-  // CKKSEvaluator ckks_evaluator(&context, &public_key, &secret_key, &encoder, &relin_keys, &galois_keys, SCALE);
-
   MMEvaluator mme(ckks_evaluator);
-
-  // Tests ---------------------------------------------------------------------
-  // vector<double> output;
-  // vector<double> input = {1.0, 2.0, 3.0, 4.0, 5.0};
-  // PhantomPlaintext plain;
-  // PhantomCiphertext cipher;
-  // ckks_evaluator.encoder.encode(input, SCALE, plain);
-  // ckks_evaluator.encryptor.encrypt(plain, cipher);
-
-  // ckks_evaluator.evaluator.apply_galois_inplace(cipher, 0, galois_keys);
-
-  // ckks_evaluator.decryptor.decrypt(cipher, plain);
-  // ckks_evaluator.encoder.decode(plain, output);
-
-  // for (auto i = 0; i < 5; i++) {
-  //   cout << output[i] << " ";
-  // }
-  // cout << endl;
-  // ---------------------------------------------------------------------------
 
   ckks_evaluator.decryptor.create_galois_keys_from_elts(galois_elts, *(ckks_evaluator.galois_keys));
 
@@ -187,12 +162,12 @@ void MM_test_p() {
 
   std::vector<std::vector<double>> row_pack;
 
-  std::vector<double> row_ct(4096, 0.0);
+  std::vector<double> row_ct(MM_N, 0.0);
   for (auto i = 0; i < 64 * 768; i++) {
     int row = i / 768;
     int col = i % 768;
-    row_ct[i % 4096] = matrix_768x64_T[row][col];
-    if (i % 4096 == 4095) {
+    row_ct[i % MM_N] = matrix_768x64_T[row][col];
+    if ((i % MM_N) == (MM_N - 1)) {
       row_pack.push_back(row_ct);
     }
   }
@@ -218,7 +193,105 @@ void MM_test_p() {
     average_err += fabs(mm_res[i] / 2.0 - matrix_4096x64_T[0][i]);
     if (i < 10) printf("%+.10lf <- %+.10lf\n", mm_res[i] / 2.0, matrix_4096x64_T[0][i]);
   }
-  std::cout << "average_err: " << average_err / 4096.0 << std::endl;
+  std::cout << "Average Error: " << average_err / 4096.0 << std::endl;
+}
+
+void argmax_test() {
+  long logN = 15;
+  long logn = logN - 2;
+  long sparse_slots = (1 << logn);
+
+  int logp = 46;
+  int logq = 51;
+  int log_special_prime = 51;
+
+  // QuickMax: 17
+  int main_mod_count = TEST_COEFF_MODULI[0];
+
+  // Must be greater than 14: subsum 1 + coefftoslot 2 + ModReduction 9 + slottocoeff 2
+  int bs_mod_count = 14;
+
+  int secret_key_hamming_weight = 192;
+
+  vector<int> coeff_bit_vec;
+
+  coeff_bit_vec.push_back(logq);
+
+  for (int i = 0; i < main_mod_count; i++) {
+    coeff_bit_vec.push_back(logp);
+  }
+
+  for (int i = 0; i < bs_mod_count; i++) {
+    coeff_bit_vec.push_back(logq);
+  }
+
+  coeff_bit_vec.push_back(log_special_prime);
+
+  phantom::EncryptionParameters parms(scheme_type::ckks);
+  size_t poly_modulus_degree = (size_t)(1 << logN);
+  double scale = pow(2.0, logp);
+
+  parms.set_poly_modulus_degree(poly_modulus_degree);
+  parms.set_coeff_modulus(phantom::arith::CoeffModulus::Create(poly_modulus_degree, coeff_bit_vec));
+  parms.set_secret_key_hamming_weight(secret_key_hamming_weight);
+  parms.set_sparse_slots(sparse_slots);
+
+  PhantomContext context(parms);
+
+  PhantomSecretKey secret_key(context);
+  PhantomPublicKey public_key = secret_key.gen_publickey(context);
+  PhantomRelinKey relin_keys = secret_key.gen_relinkey(context);
+  PhantomGaloisKey galois_keys = secret_key.create_galois_keys(context);
+
+  PhantomCKKSEncoder encoder(context);
+
+  CKKSEvaluator ckks_evaluator(&context, &public_key, &secret_key, &encoder, &relin_keys, &galois_keys, scale);
+  ArgmaxEvaluator argmax_evaluator(ckks_evaluator, main_mod_count);
+
+  size_t slot_count = encoder.slot_count();
+
+  PhantomPlaintext plain_input;
+  PhantomCiphertext cipher_input;
+  PhantomCiphertext cipher_output;
+  vector<double> input(slot_count, 0.0);
+
+  double num;
+  int argmax_input_size = 0;
+  vector<double> argmax_input(sparse_slots, 0.0), argmax_calibration;
+
+  ifstream input_file("../../data/input/argmax_input_8.txt");
+  while (input_file >> num) {
+    argmax_input[argmax_input_size] = num;
+    argmax_input_size++;
+  }
+  input_file.close();
+
+  ifstream calibration_file("../../data/calibration/argmax_calibration_8.txt");
+  while (calibration_file >> num) {
+    argmax_calibration.push_back(num);
+  }
+  calibration_file.close();
+
+  // Spare input
+  for (size_t i = 0; i < slot_count; i++) {
+    input[i] = argmax_input[i % sparse_slots];
+  }
+
+  ckks_evaluator.encoder.encode(input, scale, plain_input);
+  ckks_evaluator.encryptor.encrypt(plain_input, cipher_input);
+
+  // Mod switch to remaining level
+  for (int i = 0; i < bs_mod_count; i++) {
+    ckks_evaluator.evaluator.mod_switch_to_next_inplace(cipher_input);
+  }
+
+  auto timer = Timer();
+  argmax_evaluator.argmax(cipher_input, cipher_output, argmax_input_size);
+  timer.stop();
+
+  cout << "[Argmax] " << argmax_input_size << " takes: "
+       << timer.duration<milliseconds>() << " milliseconds" << endl;
+  ckks_evaluator.calculate_MAE(argmax_calibration, cipher_output, argmax_input_size);
 }
 
 int main() {
@@ -232,6 +305,11 @@ int main() {
 
   if (TEST_TARGET == "MatMul_Phantom") {
     MM_test_p();
+    return 0;
+  }
+
+  if (TEST_TARGET == "Argmax") {
+    argmax_test();
     return 0;
   }
 
