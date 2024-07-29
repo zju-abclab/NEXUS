@@ -129,9 +129,9 @@ public:
 
     PhantomGaloisKey() = default;
 
-    PhantomGaloisKey(const PhantomGaloisKey &) = default;
+    PhantomGaloisKey(const PhantomGaloisKey &) = delete;
 
-    PhantomGaloisKey &operator=(const PhantomGaloisKey &) = default;
+    PhantomGaloisKey &operator=(const PhantomGaloisKey &) = delete;
 
     PhantomGaloisKey(PhantomGaloisKey &&) = default;
 

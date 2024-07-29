@@ -253,12 +253,14 @@ class Evaluator {
   }
 
   // Rotation
-  inline void rotate_vector(const PhantomCiphertext &ct, int steps, PhantomGaloisKey &galois_keys, PhantomCiphertext &dest) {
+  inline void rotate_vector(PhantomCiphertext &ct, int steps, PhantomGaloisKey &galois_keys, PhantomCiphertext &dest) {
     dest = ::rotate_vector(*context, ct, steps, galois_keys);
+    cudaStreamSynchronize(ct.data_ptr().get_stream());  // this is currently required, rotation is unstable
   }
 
   inline void rotate_vector_inplace(PhantomCiphertext &ct, int steps, PhantomGaloisKey &galois_keys) {
     ::rotate_vector_inplace(*context, ct, steps, galois_keys);
+    cudaStreamSynchronize(ct.data_ptr().get_stream());  // this is currently required, rotation is unstable
   }
 
   // Negation

@@ -539,7 +539,8 @@ PhantomGaloisKey PhantomSecretKey::create_galois_keys_from_elts(PhantomContext &
 
     int log_n = phantom::arith::get_power_of_two(context.poly_degree_);
     bool is_bfv = (context.first_context_data().parms().scheme() == phantom::scheme_type::bfv);
-
+    
+    context.key_galois_tool_.reset();
     context.key_galois_tool_ = std::make_unique<PhantomGaloisTool>(elts, log_n, s, is_bfv);
 
     return create_galois_keys(context);
@@ -552,6 +553,7 @@ PhantomGaloisKey PhantomSecretKey::create_galois_keys_from_steps(PhantomContext 
     int log_n = phantom::arith::get_power_of_two(context.poly_degree_);
     bool is_bfv = (context.first_context_data().parms().scheme() == phantom::scheme_type::bfv);
     
+    context.key_galois_tool_.reset();
     context.key_galois_tool_ = std::make_unique<PhantomGaloisTool>(elts, log_n, s, is_bfv);
 
     return create_galois_keys(context);

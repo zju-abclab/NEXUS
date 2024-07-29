@@ -1,27 +1,21 @@
 #include "argmax.cuh"
 
 void ArgmaxEvaluator::argmax(PhantomCiphertext &x, PhantomCiphertext &res, int len) {
-  auto start = high_resolution_clock::now();
-
-  PhantomCiphertext tmp, a, b, sign, a_plus_b, a_minus_b, a_minus_b_sgn;
+  PhantomCiphertext tmp, b, sign, a_plus_b, a_minus_b, a_minus_b_sgn;
   PhantomPlaintext one, half;
 
   int log_step = log2(len);
 
   // Transform x = [a_0, ..., a_n, 0, ..., 0] to [a_0, ..., a_n, a_0, ..., a_n, 0, ..., 0]
-  ckks->evaluator.rotate_vector(x, -len, *ckks->galois_keys, tmp);
+  ckks->evaluator.rotate_vector(x, -len, *(ckks->galois_keys), tmp);
   ckks->evaluator.add_inplace(x, tmp);
-
-  a = x;
 
   // QuickMax
   for (int i = 0; i < log_step; ++i) {
-    ckks->evaluator.rotate_vector(a, pow(2, i), *ckks->galois_keys, b);
+    ckks->evaluator.rotate_vector(x, pow(2, i), *ckks->galois_keys, b);
 
-    cout << "a level before: " << a.coeff_modulus_size() << endl;
-
-    ckks->evaluator.add(a, b, a_plus_b);
-    ckks->evaluator.sub(a, b, a_minus_b);
+    ckks->evaluator.add(x, b, a_plus_b);
+    ckks->evaluator.sub(x, b, a_minus_b);
     sign = ckks->sgn_eval(a_minus_b, 2, 2);
 
     // (a - b) * sgn(a - b) / 2
@@ -38,32 +32,19 @@ void ArgmaxEvaluator::argmax(PhantomCiphertext &x, PhantomCiphertext &res, int l
     // a = max(a, b)
     a_plus_b.scale() = a_minus_b_sgn.scale();
     ckks->evaluator.mod_switch_to_inplace(a_plus_b, a_minus_b_sgn.params_id());
-    ckks->evaluator.add(a_plus_b, a_minus_b_sgn, a);
+    ckks->evaluator.add(a_plus_b, a_minus_b_sgn, x);
 
-    cout << "a level after: " << a.coeff_modulus_size() << endl;
-
-    auto end = high_resolution_clock::now();
-    time_elapsed += (end - start);
-    ckks->print_decrypted_ct(a, 8);
-    bootstrap(a);
-    ckks->print_decrypted_ct(a, 8);
-    // ckks->re_encrypt(a);
-    start = high_resolution_clock::now();
+    bootstrap(x);
   }
 
-  ckks->print_decrypted_ct(a, 8);
-
-  x.scale() = a.scale();
-  ckks->evaluator.mod_switch_to_inplace(x, a.params_id());
-  ckks->evaluator.sub(x, a, res);
+  res.scale() = x.scale();
+  ckks->evaluator.mod_switch_to_inplace(res, x.params_id());
+  ckks->evaluator.sub_inplace(res, x);
 
   res = ckks->sgn_eval(res, 2, 2, 1.0);
 
   ckks->encoder.encode(1.0, res.params_id(), res.scale(), one);
   ckks->evaluator.add_plain_inplace(res, one);
-
-  auto end = high_resolution_clock::now();
-  time_elapsed += (end - start);
 }
 
 void ArgmaxEvaluator::bootstrap(PhantomCiphertext &x) {
@@ -78,42 +59,16 @@ void ArgmaxEvaluator::bootstrap(PhantomCiphertext &x) {
     }
   }
 
-  PhantomCiphertext x_0 = x;
-  Bootstrapper bootstrapper(
-      loge,
-      logn,
-      logN - 1,
-      total_level,
-      ckks->scale,
-      boundary_K,
-      deg,
-      scale_factor,
-      inverse_deg,
-      ckks);
-
-  cout << "Generating Optimal Minimax Polynomials..." << endl;
-  bootstrapper.prepare_mod_polynomial();
-
-  cout << "Adding Bootstrapping Keys..." << endl;
-  vector<int> gal_steps_vector;
-  gal_steps_vector.push_back(0);
-  for (int i = 0; i < logN - 1; i++) {
-    gal_steps_vector.push_back((1 << i));
-  }
-  bootstrapper.addLeftRotKeys_Linear_to_vector_3(gal_steps_vector);
-  ckks->decryptor.create_galois_keys_from_steps(gal_steps_vector, *(ckks->galois_keys));
-  
-  bootstrapper.slot_vec.push_back(logn);
-
-  cout << "Generating Linear Transformation Coefficients..." << endl;
-  bootstrapper.generate_LT_coefficient_3();
-
   cout << "Bootstrapping..." << endl;
+  PhantomCiphertext rtn;
+  bootstrapper->set_final_scale(x.scale());
+
   auto start = system_clock::now();
-  bootstrapper.bootstrap_3(x, x_0);
+  bootstrapper->bootstrap_3(rtn, x);
   duration<double> sec = system_clock::now() - start;
+
+  x = rtn;
+
   cout << "Bootstrapping took: " << sec.count() << "s" << endl;
   cout << "New ciphertext depth: " << x.coeff_modulus_size() << endl;
-
-  ckks->decryptor.reset_galois_keys(*(ckks->galois_keys));
 }

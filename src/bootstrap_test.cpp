@@ -74,29 +74,27 @@ int main() {
   }
   coeff_bit_vec.push_back(log_special_prime);
 
-  cout << "Setting Parameters" << endl;
+  cout << "Setting Parameters..." << endl;
   EncryptionParameters parms(scheme_type::ckks);
+  double scale = pow(2.0, logp);
   size_t poly_modulus_degree = (size_t)(1 << logN);
   parms.set_poly_modulus_degree(poly_modulus_degree);
   parms.set_coeff_modulus(CoeffModulus::Create(poly_modulus_degree, coeff_bit_vec));
-  double scale = pow(2.0, logp);
-  // modified SEAL
   parms.set_secret_key_hamming_weight(secret_key_hamming_weight);
   parms.set_sparse_slots(sparse_slots);
 
   SEALContext context(parms, true, sec_level_type::none);
-  // KeyGenerator keygen(context, secret_key_hamming_weight);
 
-  // Load sk
-  ifstream sk_bytes_in;
-  sk_bytes_in.open("../bs_sk_bytes", ios::binary);
-  SecretKey secret_key;
-  secret_key.unsafe_load(context, sk_bytes_in);
+  // // Load sk
+  // ifstream sk_bytes_in;
+  // sk_bytes_in.open("../bs_sk_bytes", ios::binary);
+  // SecretKey secret_key;
+  // secret_key.unsafe_load(context, sk_bytes_in);
 
-  KeyGenerator keygen(context, secret_key);
-  // PublicKey public_key;
-  // keygen.create_public_key(public_key);
-  // auto secret_key = keygen.secret_key();
+  KeyGenerator keygen(context);
+  auto secret_key = keygen.secret_key();
+  PublicKey public_key;
+  keygen.create_public_key(public_key);
   RelinKeys relin_keys;
   keygen.create_relin_keys(relin_keys);
   GaloisKeys gal_keys;
@@ -111,8 +109,7 @@ int main() {
   // }
 
   CKKSEncoder encoder(context);
-  Encryptor encryptor(context, secret_key);
-  // Evaluator evaluator(context);
+  Encryptor encryptor(context, public_key);
   Evaluator evaluator(context, encoder);
   Decryptor decryptor(context, secret_key);
   size_t slot_count = encoder.slot_count();
@@ -203,18 +200,18 @@ int main() {
   // bootstrapper_2.addLeftRotKeys_Linear_to_vector_3(gal_steps_vector);
   // bootstrapper_3.addLeftRotKeys_Linear_to_vector_3(gal_steps_vector);
 
-  for(int i = 0; i < gal_steps_vector.size(); i++) {
-    cout << gal_steps_vector[i] << " ";
-  }
-  cout << endl;
+  // for(int i = 0; i < gal_steps_vector.size(); i++) {
+  //   cout << gal_steps_vector[i] << " ";
+  // }
+  // cout << endl;
   
   keygen.create_galois_keys(gal_steps_vector, gal_keys);
 
-  auto elts = context.key_context_data()->galois_tool()->get_elts_from_steps(gal_steps_vector);
-  for(auto elt: elts) {
-        cout << elt << " ";
-    }
-    cout << endl;
+  // auto elts = context.key_context_data()->galois_tool()->get_elts_from_steps(gal_steps_vector);
+  // for(auto elt: elts) {
+  //       cout << elt << " ";
+  //   }
+  //   cout << endl;
 
   bootstrapper.slot_vec.push_back(logn);
   // bootstrapper_2.slot_vec.push_back(logn_2);
@@ -255,7 +252,7 @@ int main() {
     }
 
     encoder.encode(input, scale, plain);
-    encryptor.encrypt_symmetric(plain, cipher);
+    encryptor.encrypt(plain, cipher);
 
     for (int i = 0; i < total_level; i++) {
       evaluator.mod_switch_to_next_inplace(cipher);

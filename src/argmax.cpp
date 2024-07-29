@@ -38,15 +38,8 @@ void ArgmaxEvaluator::argmax(Ciphertext &x, Ciphertext &res, int len) {
     ckks->evaluator->mod_switch_to_inplace(a_plus_b, a_minus_b_sgn.parms_id());
     ckks->evaluator->add(a_plus_b, a_minus_b_sgn, a);
 
-    auto end = high_resolution_clock::now();
-    time_elapsed += (end - start);
-    // ckks->print_decrypted_ct(a, 8);
     bootstrap(a);
-    // ckks->print_decrypted_ct(a, 8);
-    start = high_resolution_clock::now();
   }
-
-  // ckks->print_decrypted_ct(a, 8);
 
   x.scale() = a.scale();
   ckks->evaluator->mod_switch_to_inplace(x, a.parms_id());
@@ -54,13 +47,8 @@ void ArgmaxEvaluator::argmax(Ciphertext &x, Ciphertext &res, int len) {
 
   res = ckks->sgn_eval(res, 2, 2, 1.0);
 
-  // ckks->print_decrypted_ct(a, 8);
-
   ckks->encoder->encode(1.0, res.parms_id(), res.scale(), one);
   ckks->evaluator->add_plain_inplace(res, one);
-
-  auto end = high_resolution_clock::now();
-  time_elapsed += (end - start);
 }
 
 void ArgmaxEvaluator::bootstrap(Ciphertext &x) {

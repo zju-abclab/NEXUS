@@ -24,12 +24,20 @@ using namespace std::chrono;
 void MM_test();
 void argmax_test();
 
-int main() {
-  argmax_test();
-  exit(0);
+int TEST_TARGET_IDX = 1;
+vector<string> TEST_TARGETS = {"MatMul", "Argmax", "GELU", "LayerNorm", "SoftMax"};
+string TEST_TARGET = TEST_TARGETS[TEST_TARGET_IDX];
 
-  MM_test();
-  exit(0);
+int main() {
+  if (TEST_TARGET == TEST_TARGETS[0]) {
+    MM_test();
+    return 0;
+  }
+
+  if (TEST_TARGET == TEST_TARGETS[1]) {
+    argmax_test();
+    return 0;
+  }
 
   EncryptionParameters parms(scheme_type::ckks);
   long logN = 16;
@@ -69,77 +77,87 @@ int main() {
   /*
       GELU
   */
-  // double num;
-  // vector<double> input, gelu_calibration;
-  // ifstream input_file("data/input/gelu_input_32768.txt");
-  // while (input_file >> num) {
-  //     input.push_back(num);
-  // }
-  // input_file.close();
-  // ifstream calibration_file("data/calibration/gelu_calibration_32768.txt");
-  // while (calibration_file >> num) {
-  //     gelu_calibration.push_back(num);
-  // }
-  // calibration_file.close();
-  // ckks_evaluator.encoder->encode(input, scale, plain_input);
-  // ckks_evaluator.encryptor->encrypt(plain_input, cipher_input);
-  // auto start = high_resolution_clock::now();
-  // gelu_evaluator.gelu(cipher_input, cipher_output);
-  // auto end = high_resolution_clock::now();
-  // cout << "[GELU] 32768 takes:" << duration_cast<milliseconds>(end -
-  // start).count() << " milliseconds" << endl; cout << "Mean Absolute Error: "
-  // << ckks_evaluator.calculateMAE(gelu_calibration, cipher_output,
-  // poly_modulus_degree/2) << endl;
+  if (TEST_TARGET == TEST_TARGETS[2]) {
+    double num;
+    vector<double> input, gelu_calibration;
+    ifstream input_file("../data/input/gelu_input_32768.txt");
+    while (input_file >> num) {
+      input.push_back(num);
+    }
+    input_file.close();
+    ifstream calibration_file("../data/calibration/gelu_calibration_32768.txt");
+    while (calibration_file >> num) {
+      gelu_calibration.push_back(num);
+    }
+    calibration_file.close();
+    ckks_evaluator.encoder->encode(input, scale, plain_input);
+    ckks_evaluator.encryptor->encrypt(plain_input, cipher_input);
+    auto start = high_resolution_clock::now();
+    gelu_evaluator.gelu(cipher_input, cipher_output);
+    auto end = high_resolution_clock::now();
+    cout << "[GELU] 32768 takes:" << duration_cast<milliseconds>(end - start).count() << " milliseconds" << endl;
+    cout << "Mean Absolute Error: "
+         << ckks_evaluator.calculateMAE(gelu_calibration, cipher_output, poly_modulus_degree / 2)
+         << endl;
+    return 0;
+  }
 
   /*
       LayerNorm
   */
-  // double num;
-  // vector<double> input, layernorm_calibration;
-  // ifstream input_file("data/input/layernorm_input_16_768.txt");
-  // while (input_file >> num) {
-  //     input.push_back(num);
-  // }
-  // input_file.close();
-  // ifstream
-  // calibration_file("data/calibration/layernorm_calibration_16_768.txt");
-  // while (calibration_file >> num) {
-  //     layernorm_calibration.push_back(num);
-  // }
-  // calibration_file.close();
-  // ckks_evaluator.encoder->encode(input, scale, plain_input);
-  // ckks_evaluator.encryptor->encrypt(plain_input, cipher_input);
-  // auto start = high_resolution_clock::now();
-  // ln_evaluator.layer_norm(cipher_input, cipher_output, 1024);
-  // auto end = high_resolution_clock::now();
-  // cout << "[LayerNorm] 16 x 768 takes: " << duration_cast<milliseconds>(end -
-  // start).count() << " milliseconds" << endl; cout << "Mean Absolute Error: "
-  // << ckks_evaluator.calculateMAE(layernorm_calibration, cipher_output, 768)
-  // << endl;
+  if (TEST_TARGET == TEST_TARGETS[3]) {
+    double num;
+    vector<double> input, layernorm_calibration;
+    ifstream input_file("../data/input/layernorm_input_16_768.txt");
+    while (input_file >> num) {
+      input.push_back(num);
+    }
+    input_file.close();
+    ifstream
+        calibration_file("../data/calibration/layernorm_calibration_16_768.txt");
+    while (calibration_file >> num) {
+      layernorm_calibration.push_back(num);
+    }
+    calibration_file.close();
+    ckks_evaluator.encoder->encode(input, scale, plain_input);
+    ckks_evaluator.encryptor->encrypt(plain_input, cipher_input);
+    auto start = high_resolution_clock::now();
+    ln_evaluator.layer_norm(cipher_input, cipher_output, 1024);
+    auto end = high_resolution_clock::now();
+    cout << "[LayerNorm] 16 x 768 takes: " << duration_cast<milliseconds>(end - start).count() << " milliseconds" << endl;
+    cout << "Mean Absolute Error: "
+         << ckks_evaluator.calculateMAE(layernorm_calibration, cipher_output, 768)
+         << endl;
+    return 0;
+  }
 
   /*
       Softmax
   */
-  // double num;
-  // vector<double> input, softmax_calibration;
-  // ifstream input_file("../data/input/softmax_input_128_128.txt");
-  // while (input_file >> num) {
-  //   input.push_back(num);
-  // }
-  // input_file.close();
-  // ifstream calibration_file("../data/calibration/softmax_calibration_128_128.txt");
-  // while (calibration_file >> num) {
-  //   softmax_calibration.push_back(num);
-  // }
-  // calibration_file.close();
-  // ckks_evaluator.encoder->encode(input, scale, plain_input);
-  // ckks_evaluator.encryptor->encrypt(plain_input, cipher_input);
-  // auto start = high_resolution_clock::now();
-  // softmax_evaluator.softmax(cipher_input, cipher_output, 128);
-  // auto end = high_resolution_clock::now();
-  // cout << "[Softmax] 128 x 128 takes: " << duration_cast<milliseconds>(end - start).count() << " milliseconds"
-  //      << endl;
-  // cout << "Mean Absolute Error: " << ckks_evaluator.calculateMAE(softmax_calibration, cipher_output, 128) << endl;
+  if (TEST_TARGET == TEST_TARGETS[4]) {
+    double num;
+    vector<double> input, softmax_calibration;
+    ifstream input_file("../data/input/softmax_input_128_128.txt");
+    while (input_file >> num) {
+      input.push_back(num);
+    }
+    input_file.close();
+    ifstream calibration_file("../data/calibration/softmax_calibration_128_128.txt");
+    while (calibration_file >> num) {
+      softmax_calibration.push_back(num);
+    }
+    calibration_file.close();
+    ckks_evaluator.encoder->encode(input, scale, plain_input);
+    ckks_evaluator.encryptor->encrypt(plain_input, cipher_input);
+    auto start = high_resolution_clock::now();
+    softmax_evaluator.softmax(cipher_input, cipher_output, 128);
+    auto end = high_resolution_clock::now();
+    cout << "[Softmax] 128 x 128 takes: " << duration_cast<milliseconds>(end - start).count() << " milliseconds"
+         << endl;
+    cout << "Mean Absolute Error: " << ckks_evaluator.calculateMAE(softmax_calibration, cipher_output, 128)
+         << endl;
+    return 0;
+  }
 }
 
 void argmax_test() {
@@ -152,9 +170,9 @@ void argmax_test() {
   int log_special_prime = 58;
 
   // QuickMax: 17
-  int main_mod_count = 17;
+  int main_mod_count = 17;  // mod count after bootstrapping: 18
 
-  // Must be greater than 14: subsum 1 + coefftoslot 2 + ModReduction 9 + slottocoeff 2
+  // Subsum 1 + coefftoslot 2 + ModReduction 9 + slottocoeff 2
   int bs_mod_count = 14;
 
   int secret_key_hamming_weight = 192;
@@ -255,6 +273,7 @@ void MM_test() {
   parms.set_coeff_modulus(CoeffModulus::Create(poly_modulus_degree, {60, 40, 60}));
   SEALContext context(parms, true, sec_level_type::none);
 
+  // TODO: debugging, remove me
   ifstream sk_bytes_in;
   sk_bytes_in.open("../sk_bytes", ios::binary);
   SecretKey secret_key;

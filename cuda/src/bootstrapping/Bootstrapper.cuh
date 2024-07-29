@@ -5,8 +5,8 @@
 #include <fstream>
 #include <iostream>
 
-#include "ModularReducer.cuh"
 #include "../utils.cuh"
+#include "ModularReducer.cuh"
 
 using namespace std;
 using namespace nexus;
@@ -53,6 +53,10 @@ class Bootstrapper {
       long _scale_factor,
       long _inverse_deg,
       CKKSEvaluator *ckks);
+
+  inline void set_final_scale(double _final_scale) {
+    final_scale = _final_scale;
+  }
 
   // Add rotation keys needed in bootstrapping (private function)
   void addLeftRotKeys_Linear_to_vector(vector<int> &gal_steps_vector);

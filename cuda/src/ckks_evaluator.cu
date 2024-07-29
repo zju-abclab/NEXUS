@@ -100,7 +100,7 @@ void CKKSEvaluator::re_encrypt(PhantomCiphertext &ct) {
   vector<double> v;
   decryptor.decrypt(ct, temp);
   encoder.decode(temp, v);
-  encoder.encode(v, scale, temp);
+  encoder.encode(v, ct.scale(), temp);
   encryptor.encrypt(temp, ct);
 
   // data.resize(ct.save_size(compr_mode_type::zstd));
@@ -417,7 +417,6 @@ double CKKSEvaluator::calculate_MAE(vector<double> &y_true, PhantomCiphertext &c
 
   double sum_absolute_errors = 0.0;
   for (size_t i = 0; i < N; ++i) {
-    cout << y_true[i] << " -> " << y_pred[i] << endl;
     sum_absolute_errors += abs(y_true[i] - y_pred[i]);
   }
 

@@ -207,11 +207,18 @@ void argmax_test() {
 
   // QuickMax: 17
   int main_mod_count = TEST_COEFF_MODULI[0];
-
   // Must be greater than 14: subsum 1 + coefftoslot 2 + ModReduction 9 + slottocoeff 2
   int bs_mod_count = 14;
+  int total_level = main_mod_count + bs_mod_count;
 
   int secret_key_hamming_weight = 192;
+
+  // Bootstrapping parameters
+  long boundary_K = 25;
+  long deg = 59;
+  long scale_factor = 2;
+  long inverse_deg = 1;
+  long loge = 10;
 
   vector<int> coeff_bit_vec;
 
@@ -241,13 +248,25 @@ void argmax_test() {
   PhantomSecretKey secret_key(context);
   PhantomPublicKey public_key = secret_key.gen_publickey(context);
   PhantomRelinKey relin_keys = secret_key.gen_relinkey(context);
-  PhantomGaloisKey galois_keys = secret_key.create_galois_keys(context);
+  PhantomGaloisKey galois_keys;
 
   PhantomCKKSEncoder encoder(context);
 
   CKKSEvaluator ckks_evaluator(&context, &public_key, &secret_key, &encoder, &relin_keys, &galois_keys, scale);
-  ArgmaxEvaluator argmax_evaluator(ckks_evaluator, main_mod_count);
+  Bootstrapper bootstrapper(
+      loge,
+      logn,
+      logN - 1,
+      total_level,
+      scale,
+      boundary_K,
+      deg,
+      scale_factor,
+      inverse_deg,
+      &ckks_evaluator);
+  ArgmaxEvaluator argmax_evaluator(ckks_evaluator, bootstrapper, main_mod_count);
 
+  // Read Argmax input
   size_t slot_count = encoder.slot_count();
 
   PhantomPlaintext plain_input;
@@ -272,13 +291,42 @@ void argmax_test() {
   }
   calibration_file.close();
 
-  // Spare input
+  // Sparse input
   for (size_t i = 0; i < slot_count; i++) {
     input[i] = argmax_input[i % sparse_slots];
   }
 
+  // Initialize the bootstrapper
+  cout << "Generating Optimal Minimax Polynomials..." << endl;
+  bootstrapper.prepare_mod_polynomial();
+
+  cout << "Adding Bootstrapping Keys..." << endl;
+  vector<int> gal_steps_vector;
+
+  // Bootstrapping steps
+  gal_steps_vector.push_back(0);
+  for (int i = 0; i < logN - 1; i++) {
+    gal_steps_vector.push_back((1 << i));
+  }
+  bootstrapper.addLeftRotKeys_Linear_to_vector_3(gal_steps_vector);
+
+  // Argmax steps
+  gal_steps_vector.push_back(-argmax_input_size);
+  int log_step = log2(argmax_input_size);
+  for (int i = 0; i < log_step; ++i) {
+    gal_steps_vector.push_back(pow(2, i));
+  }
+
+  ckks_evaluator.decryptor.create_galois_keys_from_steps(gal_steps_vector, *(ckks_evaluator.galois_keys));
+  bootstrapper.slot_vec.push_back(logn);
+
+  cout << "Generating Linear Transformation Coefficients..." << endl;
+  bootstrapper.generate_LT_coefficient_3();
+
+  // Enc the input
   ckks_evaluator.encoder.encode(input, scale, plain_input);
   ckks_evaluator.encryptor.encrypt(plain_input, cipher_input);
+  ckks_evaluator.encryptor.encrypt(plain_input, cipher_output);
 
   // Mod switch to remaining level
   for (int i = 0; i < bs_mod_count; i++) {
@@ -291,7 +339,7 @@ void argmax_test() {
 
   cout << "[Argmax] " << argmax_input_size << " takes: "
        << timer.duration<milliseconds>() << " milliseconds" << endl;
-  ckks_evaluator.calculate_MAE(argmax_calibration, cipher_output, argmax_input_size);
+  cout << "Mean Absolute Error: " << ckks_evaluator.calculate_MAE(argmax_calibration, cipher_output, argmax_input_size) << endl;
 }
 
 int main() {

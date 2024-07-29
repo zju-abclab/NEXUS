@@ -25,7 +25,6 @@ class ArgmaxEvaluator {
   long logN;
   long logn;
   int total_level;
-  long sparse_slots;
 
   // CKKS
   KeyGenerator *keygen = nullptr;
@@ -33,9 +32,6 @@ class ArgmaxEvaluator {
  public:
   CKKSEvaluator *ckks = nullptr;
   GaloisKeys *bootstrapping_keys = nullptr;
-
-  // execution time minus bootstrapping setup time
-  chrono::duration<int64_t, nano> time_elapsed = chrono::duration<int64_t, nano>(0);
 
   ArgmaxEvaluator(CKKSEvaluator &ckks, KeyGenerator &keygen, int main_mod_count) {
     this->ckks = &ckks;
@@ -46,7 +42,6 @@ class ArgmaxEvaluator {
 
     this->logN = log2(ckks.degree);
     this->logn = logN - 2;
-    this->sparse_slots = (1 << logn);
 
     this->total_level = main_mod_count + bs_mod_count;
   }

@@ -3362,11 +3362,17 @@ void Bootstrapper::bootstrap_inplace(PhantomCiphertext &cipher) {
 }
 
 void Bootstrapper::bootstrap_3(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher) {
+  if (rtncipher.chain_index()) {
+    throw invalid_argument("Return cipher should initially be a new ciphertext.");
+  }
+
   initial_scale = cipher.scale();
   if (logn == logNh)
     bootstrap_full_3(rtncipher, cipher);
   else
     bootstrap_sparse_3(rtncipher, cipher);
+
+  cudaStreamSynchronize(cipher.data_ptr().get_stream());
 }
 
 void Bootstrapper::bootstrap_inplace_3(PhantomCiphertext &cipher) {
