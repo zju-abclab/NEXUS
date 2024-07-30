@@ -778,7 +778,7 @@ namespace seal
         SEALContext context_;
 
         std::size_t slots_;
-        
+
         std::size_t sparse_slots_;
 
         std::shared_ptr<util::ComplexRoots> complex_roots_;

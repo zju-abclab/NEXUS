@@ -29,7 +29,6 @@ This should produce two binary executables inside the `build` directory:
 ## TO-DO
 - Matrix Multiplication (Phantom)
   - Parallelization
-  - Fix `apply_galois`
 - Clean up
   - Comments and README
   - Revert PRNG changes

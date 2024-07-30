@@ -19,7 +19,7 @@ using namespace troy::utils;
 using namespace nexus;
 
 // Choose test target here:
-int TEST_TARGET_IDX = 2;
+int TEST_TARGET_IDX = 1;
 
 size_t N = 1ULL << 16;
 size_t MM_LOG_N = 13;
@@ -134,6 +134,7 @@ void MM_test_p() {
   PhantomContext context(parms);
   PhantomCKKSEncoder encoder(context);
 
+  // TODO: debugging, remove me:
   PhantomSecretKey secret_key(context);
   std::ifstream sk_in("../../sk.txt");
   secret_key.load_secret_key(context, sk_in);
@@ -148,9 +149,10 @@ void MM_test_p() {
   }
 
   CKKSEvaluator ckks_evaluator(&context, &public_key, &secret_key, &encoder, &relin_keys, &galois_keys, SCALE, galois_elts);
-  MMEvaluator mme(ckks_evaluator);
-
+  
   ckks_evaluator.decryptor.create_galois_keys_from_elts(galois_elts, *(ckks_evaluator.galois_keys));
+
+  MMEvaluator mme(ckks_evaluator);
 
   std::vector<std::vector<double>> matrix_4096x768 = mme.read_matrix("../../data/input/matrixmul_input_m_128_n_768_k_64_batch_128.txt", 4096, 768);
   std::vector<std::vector<double>> matrix_768x64 = mme.read_matrix("../../data/input/matrix_input_n_768_k_64.txt", 768, 64);

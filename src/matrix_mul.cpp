@@ -183,7 +183,7 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
     // }
     // cout << endl;
     expandEncode(y[i], ct);
-    ckks->print_decrypted_ct(ct, 10);
+    // ckks->print_decrypted_ct(ct, 10);
     b_compressed_cts.push_back(ct);
   }
 
@@ -304,6 +304,8 @@ void MMEvaluator::expandEncode(vector<double> &val, Ciphertext &ct) {
   // ckks->print_decoded_pt(p, 10);
 
   zero.scale() = p.scale();
+
+  ckks->print_decoded_pt(p, 10);
 
   //   for (int i = 0; i < 10; i++) {
   //     cout << zero[i] << " ";

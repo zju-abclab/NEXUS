@@ -32,6 +32,8 @@ namespace seal
                 return 438;
             case std::size_t(32768):
                 return 881;
+            case std::size_t(65536):
+                return 1792;
             }
             return 0;
         }

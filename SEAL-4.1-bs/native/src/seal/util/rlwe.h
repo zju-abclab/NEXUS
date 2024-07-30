@@ -3,16 +3,18 @@
 
 #pragma once
 
-#include <cstdint>
 #include "seal/ciphertext.h"
 #include "seal/context.h"
 #include "seal/encryptionparams.h"
 #include "seal/publickey.h"
 #include "seal/randomgen.h"
 #include "seal/secretkey.h"
+#include <cstdint>
 
-namespace seal {
-    namespace util {
+namespace seal
+{
+    namespace util
+    {
         /**
         Generate a uniform ternary polynomial and store in RNS representation.
 
@@ -20,9 +22,14 @@ namespace seal {
         @param[in] parms EncryptionParameters used to parameterize an RNS polynomial
         @param[out] destination Allocated space to store a random polynomial
         */
-        void sample_poly_ternary(std::shared_ptr<UniformRandomGenerator> prng, const EncryptionParameters &parms, std::uint64_t *destination);
+        void sample_poly_ternary(
+            std::shared_ptr<UniformRandomGenerator> prng, const EncryptionParameters &parms,
+            std::uint64_t *destination);
+        
+        void sample_poly_sparse_ternary(
+            std::shared_ptr<UniformRandomGenerator> prng, const EncryptionParameters &parms,
+            std::uint64_t *destination);
 
-        void sample_poly_sparse_ternary(std::shared_ptr<UniformRandomGenerator> prng, const EncryptionParameters &parms, std::uint64_t *destination);
         /**
         Generate a polynomial from a normal distribution and store in RNS representation.
 
@@ -30,7 +37,9 @@ namespace seal {
         @param[in] parms EncryptionParameters used to parameterize an RNS polynomial
         @param[out] destination Allocated space to store a random polynomial
         */
-        void sample_poly_normal(std::shared_ptr<UniformRandomGenerator> prng, const EncryptionParameters &parms, std::uint64_t *destination);
+        void sample_poly_normal(
+            std::shared_ptr<UniformRandomGenerator> prng, const EncryptionParameters &parms,
+            std::uint64_t *destination);
 
         /**
         Generate a polynomial from a centered binomial distribution and store in RNS representation.
@@ -39,7 +48,9 @@ namespace seal {
         @param[in] parms EncryptionParameters used to parameterize an RNS polynomial
         @param[out] destination Allocated space to store a random polynomial
         */
-        void sample_poly_cbd(std::shared_ptr<UniformRandomGenerator> prng, const EncryptionParameters &parms, std::uint64_t *destination);
+        void sample_poly_cbd(
+            std::shared_ptr<UniformRandomGenerator> prng, const EncryptionParameters &parms,
+            std::uint64_t *destination);
 
         /**
         Generate a uniformly random polynomial and store in RNS representation.
@@ -48,7 +59,9 @@ namespace seal {
         @param[in] parms EncryptionParameters used to parameterize an RNS polynomial
         @param[out] destination Allocated space to store a random polynomial
         */
-        void sample_poly_uniform(std::shared_ptr<UniformRandomGenerator> prng, const EncryptionParameters &parms, std::uint64_t *destination);
+        void sample_poly_uniform(
+            std::shared_ptr<UniformRandomGenerator> prng, const EncryptionParameters &parms,
+            std::uint64_t *destination);
 
         /**
         Generate a uniformly random polynomial and store in RNS representation.
@@ -58,7 +71,9 @@ namespace seal {
         @param[in] parms EncryptionParameters used to parameterize an RNS polynomial
         @param[out] destination Allocated space to store a random polynomial
         */
-        void sample_poly_uniform_seal_3_4(std::shared_ptr<UniformRandomGenerator> prng, const EncryptionParameters &parms, std::uint64_t *destination);
+        void sample_poly_uniform_seal_3_4(
+            std::shared_ptr<UniformRandomGenerator> prng, const EncryptionParameters &parms,
+            std::uint64_t *destination);
 
         /**
         Generate a uniformly random polynomial and store in RNS representation.
@@ -68,7 +83,9 @@ namespace seal {
         @param[in] parms EncryptionParameters used to parameterize an RNS polynomial
         @param[out] destination Allocated space to store a random polynomial
         */
-        void sample_poly_uniform_seal_3_5(std::shared_ptr<UniformRandomGenerator> prng, const EncryptionParameters &parms, std::uint64_t *destination);
+        void sample_poly_uniform_seal_3_5(
+            std::shared_ptr<UniformRandomGenerator> prng, const EncryptionParameters &parms,
+            std::uint64_t *destination);
 
         /**
         Create an encryption of zero with a public key and store in a ciphertext.
@@ -80,7 +97,8 @@ namespace seal {
         @param[out] destination The output ciphertext - an encryption of zero
         */
         void encrypt_zero_asymmetric(
-            const PublicKey &public_key, const SEALContext &context, parms_id_type parms_id, bool is_ntt_form, Ciphertext &destination);
+            const PublicKey &public_key, const SEALContext &context, parms_id_type parms_id, bool is_ntt_form,
+            Ciphertext &destination);
 
         /**
         Create an encryption of zero with a secret key and store in a ciphertext.
@@ -94,6 +112,7 @@ namespace seal {
         replaced with the random seed used to sample this component
         */
         void encrypt_zero_symmetric(
-            const SecretKey &secret_key, const SEALContext &context, parms_id_type parms_id, bool is_ntt_form, bool save_seed, Ciphertext &destination);
+            const SecretKey &secret_key, const SEALContext &context, parms_id_type parms_id, bool is_ntt_form,
+            bool save_seed, Ciphertext &destination);
     } // namespace util
 } // namespace seal

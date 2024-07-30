@@ -3206,6 +3206,17 @@ void Bootstrapper::print_decrypted_ct(Ciphertext &ct, int num) {
   cout << endl;
 }
 
+void print_ct(Ciphertext &ct, Decryptor &decryptor, CKKSEncoder &encoder) {
+    Plaintext tmp_pt;
+    decryptor.decrypt(ct, tmp_pt);
+    vector<double> tmp_vec;
+    encoder.decode(tmp_pt, tmp_vec);
+    for (int i = 0; i < 10; i++) {
+        cout << tmp_vec[i] << " ";
+    }
+    cout << endl;
+}
+
 void Bootstrapper::bootstrap_sparse_3(Ciphertext &rtncipher, Ciphertext &cipher)
 {
     cout << "Modulus Raising..." << endl;
@@ -3214,6 +3225,8 @@ void Bootstrapper::bootstrap_sparse_3(Ciphertext &rtncipher, Ciphertext &cipher)
     const auto &modulus = iter(context.first_context_data()->parms().coeff_modulus());
     cipher.scale() = ((double)modulus[0].value());
 
+    print_ct(cipher, decryptor, encoder);
+
     cout << "Subsum..." << endl;
     Ciphertext rot;
     for (long i = logn; i < logNh; ++i) {
@@ -3221,6 +3234,8 @@ void Bootstrapper::bootstrap_sparse_3(Ciphertext &rtncipher, Ciphertext &cipher)
         // evaluator.add_inplace_original(cipher, rot);
         evaluator.add_inplace(cipher, rot);
     }
+
+    print_ct(rot, decryptor, encoder);
 
     Ciphertext rtn;
     if (logn == 0) {
@@ -3242,11 +3257,15 @@ void Bootstrapper::bootstrap_sparse_3(Ciphertext &rtncipher, Ciphertext &cipher)
     else {
         cout << "Coefftoslot..." << endl;
         coefftoslot_3(rtn, cipher);
+        
+        print_ct(rtn, decryptor, encoder);
     }
 
     cout << "Modular reduction..." << endl;
     Ciphertext modrtn;
     mod_reducer->modular_reduction(modrtn, rtn);
+
+    print_ct(modrtn, decryptor, encoder);
 
     if (logn == 0) {
         const auto &modulus = iter(context.first_context_data()->parms().coeff_modulus());
@@ -3275,6 +3294,8 @@ void Bootstrapper::bootstrap_sparse_3(Ciphertext &rtncipher, Ciphertext &cipher)
     else {
         cout << "Slottocoeff..." << endl;
         slottocoeff_3(rtncipher, modrtn);
+
+        print_ct(rtncipher, decryptor, encoder);
     }
     rtncipher.scale() = final_scale;
 }

@@ -98,9 +98,11 @@ void MMEvaluator::multiply_power_of_x(PhantomCiphertext &encrypted, PhantomCiphe
 }
 
 void MMEvaluator::enc_compress_ciphertext(vector<double> &values, PhantomCiphertext &ct) {
+  size_t plain_scale = 10000000000;
+
   PhantomPlaintext zero_pt;
   PhantomCiphertext zero;
-  ckks->encoder.encode(0.0, 10000000000, zero_pt);
+  ckks->encoder.encode(0.0, plain_scale, zero_pt);
   ckks->encryptor.encrypt(zero_pt, zero);
 
   auto &context_data = ckks->context->first_context_data();
@@ -128,7 +130,7 @@ void MMEvaluator::enc_compress_ciphertext(vector<double> &values, PhantomCiphert
 
   // Coefficients of the two RNS polynomails should be the same except with different mod
   for (auto i = 0; i < poly_modulus_degree; i++) {
-    auto coeffd = std::round(values[i] * 10000000000);
+    auto coeffd = std::round(values[i] * plain_scale);
     bool is_negative = std::signbit(coeffd);
     auto coeffu = static_cast<std::uint64_t>(std::fabs(coeffd));
     if (is_negative) {
@@ -142,17 +144,25 @@ void MMEvaluator::enc_compress_ciphertext(vector<double> &values, PhantomCiphert
     }
   }
 
+  cudaStreamSynchronize(p.data_ptr().get_stream());
+
   // Copy plaintext data to GPU
-  cudaMemcpyAsync(p.data(), p_data, rns_coeff_count * sizeof(uint64_t), cudaMemcpyHostToDevice, stream);
+  cudaMemcpy(p.data(), p_data, rns_coeff_count * sizeof(uint64_t), cudaMemcpyHostToDevice);
 
   // Transform all 2 RNS polynomials to the NTT domain
   nwt_2d_radix8_forward_inplace(p.data(), ckks->context->gpu_rns_tables(), coeff_modulus_size, 0, stream);
 
+  cudaStreamSynchronize(p.data_ptr().get_stream());
+
   // Update plaintext parameters
   p.set_chain_index(context_data.chain_index());
-  p.scale() = 10000000000;
+  p.scale() = plain_scale;
+
+  ckks->print_decoded_pt(p, 10);
 
   ckks->evaluator.add_plain(zero, p, ct);
+
+  cudaStreamSynchronize(zero.data_ptr().get_stream());
 }
 
 vector<PhantomCiphertext> MMEvaluator::decompress_ciphertext(const PhantomCiphertext &encrypted) {
@@ -215,8 +225,8 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
   for (int i = 0; i < b_cts_count; i++) {
     PhantomCiphertext ct;
     enc_compress_ciphertext(y[i], ct);
+    // ckks->print_decrypted_ct(ct, 10);
     b_compressed_cts.emplace_back(ct);
-    ckks->print_decrypted_ct(b_compressed_cts[i], 10);
   }
 
   timer.stop();

@@ -229,7 +229,7 @@ void PhantomCKKSEncoder::decode_internal(const PhantomContext &context, const Ph
     // finally, bit-reverse and output
     auto out = make_cuda_auto_ptr<cuDoubleComplex>(sparse_slots_, stream);
     uint32_t log_sparse_n = log2(sparse_slots_);
-    uint64_t gridDimGlb = ceil(sparse_slots_ / blockDimGlb.x);
+    size_t gridDimGlb = ceil(sparse_slots_ / blockDimGlb.x);
     bit_reverse<<<gridDimGlb, blockDimGlb, 0, stream>>>(
             out.get(), gpu_ckks_msg_vec_->in(), sparse_slots_, log_sparse_n);
 
