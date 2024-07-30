@@ -245,6 +245,8 @@ endif()
 
 # [option] SEAL_THROW_ON_TRANSPARENT_CIPHERTEXT (default: ON)
 set(SEAL_THROW_ON_TRANSPARENT_CIPHERTEXT_STR "Throw an exception when Evaluator outputs a transparent ciphertext")
+
+# FIXME: change it to ON after fixing the issue with bootstrapping
 option(SEAL_THROW_ON_TRANSPARENT_CIPHERTEXT ${SEAL_THROW_ON_TRANSPARENT_CIPHERTEXT_STR} OFF)
 message(STATUS "SEAL_THROW_ON_TRANSPARENT_CIPHERTEXT: ${SEAL_THROW_ON_TRANSPARENT_CIPHERTEXT}")
 mark_as_advanced(FORCE SEAL_THROW_ON_TRANSPARENT_CIPHERTEXT)

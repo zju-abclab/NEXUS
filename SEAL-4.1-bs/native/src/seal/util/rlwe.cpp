@@ -156,7 +156,12 @@ namespace seal
                     // {
                     //     prng->generate(sizeof(uint64_t), reinterpret_cast<seal_byte *>(&rand));
                     // }
-                    rand = 1;
+                    
+                    // FIXME:
+                    // Modified SEAL 3.6 works, but modified SEAL 4.1 produces
+                    // wrong bootstrapping results with the above code
+                    rand = 10000000000000;
+                    
                     return barrett_reduce_64(rand, modulus);
                 });
                 destination += coeff_count;

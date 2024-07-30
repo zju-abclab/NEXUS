@@ -66,6 +66,10 @@ public:
         Evaluator &_evaluator,
         RelinKeys &_relin_keys,
         GaloisKeys &_gal_keys);
+    
+    inline void set_final_scale(double _final_scale) {
+        final_scale = _final_scale;
+    }
 
     void print_decrypted_ct(Ciphertext &ct, int num);
 

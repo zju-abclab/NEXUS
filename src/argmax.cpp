@@ -63,44 +63,10 @@ void ArgmaxEvaluator::bootstrap(Ciphertext &x) {
   }
 
   Ciphertext x_0 = x;
-  Bootstrapper bootstrapper(
-      loge,
-      logn,
-      logN - 1,
-      total_level,
-      ckks->scale,
-      boundary_K,
-      deg,
-      scale_factor,
-      inverse_deg,
-      *ckks->context,
-      *keygen,
-      *ckks->encoder,
-      *ckks->encryptor,
-      *ckks->decryptor,
-      *ckks->evaluator,
-      *ckks->relin_keys,
-      *bootstrapping_keys);
-
-  cout << "Generating Optimal Minimax Polynomials..." << endl;
-  bootstrapper.prepare_mod_polynomial();
-
-  cout << "Adding Bootstrapping Keys..." << endl;
-  vector<int> gal_steps_vector;
-  gal_steps_vector.push_back(0);
-  for (int i = 0; i < logN - 1; i++) {
-    gal_steps_vector.push_back((1 << i));
-  }
-  bootstrapper.addLeftRotKeys_Linear_to_vector_3(gal_steps_vector);
-  keygen->create_galois_keys(gal_steps_vector, *bootstrapping_keys);
-  bootstrapper.slot_vec.push_back(logn);
-
-  cout << "Generating Linear Transformation Coefficients..." << endl;
-  bootstrapper.generate_LT_coefficient_3();
-
+  bootstrapper->set_final_scale(x.scale());
   cout << "Bootstrapping..." << endl;
   auto start = system_clock::now();
-  bootstrapper.bootstrap_3(x, x_0);
+  bootstrapper->bootstrap_3(x, x_0);
   duration<double> sec = system_clock::now() - start;
   cout << "Bootstrapping took: " << sec.count() << "s" << endl;
   cout << "New ciphertext depth: " << x.coeff_modulus_size() << endl;

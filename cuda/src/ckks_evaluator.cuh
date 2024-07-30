@@ -372,12 +372,8 @@ class Evaluator {
   void add_inplace_reduced_error(PhantomCiphertext &ct1, const PhantomCiphertext &ct2);
 
   inline void sub_reduced_error(const PhantomCiphertext &ct1, const PhantomCiphertext &ct2, PhantomCiphertext &dest) {
-    if (&ct2 == &dest) {
-      sub_inplace_reduced_error(dest, ct1);
-    } else {
-      dest = ct1;
-      sub_inplace_reduced_error(dest, ct2);
-    }
+    dest = ct1;
+    sub_inplace_reduced_error(dest, ct2);
   }
 
   void sub_inplace_reduced_error(PhantomCiphertext &ct1, const PhantomCiphertext &ct2);

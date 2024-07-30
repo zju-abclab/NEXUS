@@ -85,16 +85,16 @@ int main() {
 
   SEALContext context(parms, true, sec_level_type::none);
 
-  // Load sk
-  ifstream sk_bytes_in;
-  sk_bytes_in.open("../bs_sk_bytes", ios::binary);
-  SecretKey secret_key;
-  secret_key.unsafe_load(context, sk_bytes_in);
+  // // Load sk
+  // ifstream sk_bytes_in;
+  // sk_bytes_in.open("../bs_sk_bytes", ios::binary);
+  // SecretKey secret_key;
+  // secret_key.unsafe_load(context, sk_bytes_in);
 
-  KeyGenerator keygen(context, secret_key);
-  // auto secret_key = keygen.secret_key();
-  // PublicKey public_key;
-  // keygen.create_public_key(public_key);
+  KeyGenerator keygen(context);
+  auto secret_key = keygen.secret_key();
+  PublicKey public_key;
+  keygen.create_public_key(public_key);
   RelinKeys relin_keys;
   keygen.create_relin_keys(relin_keys);
   GaloisKeys gal_keys;
@@ -109,7 +109,7 @@ int main() {
   // }
 
   CKKSEncoder encoder(context);
-  Encryptor encryptor(context, secret_key);
+  Encryptor encryptor(context, public_key);
   Evaluator evaluator(context, encoder);
   Decryptor decryptor(context, secret_key);
   size_t slot_count = encoder.slot_count();
@@ -252,7 +252,7 @@ int main() {
     }
 
     encoder.encode(input, scale, plain);
-    encryptor.encrypt_symmetric(plain, cipher);
+    encryptor.encrypt(plain, cipher);
 
     for (int i = 0; i < total_level; i++) {
       evaluator.mod_switch_to_next_inplace(cipher);

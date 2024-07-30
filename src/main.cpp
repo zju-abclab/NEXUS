@@ -24,7 +24,7 @@ using namespace std::chrono;
 void MM_test();
 void argmax_test();
 
-int TEST_TARGET_IDX = 2;
+int TEST_TARGET_IDX = 1;
 vector<string> TEST_TARGETS = {"MatMul", "Argmax", "GELU", "LayerNorm", "SoftMax"};
 string TEST_TARGET = TEST_TARGETS[TEST_TARGET_IDX];
 
@@ -171,9 +171,16 @@ void argmax_test() {
 
   // QuickMax: 17
   int main_mod_count = 17;  // mod count after bootstrapping: 18
-
   // Subsum 1 + coefftoslot 2 + ModReduction 9 + slottocoeff 2
   int bs_mod_count = 14;
+  int total_level = main_mod_count + bs_mod_count;
+
+  // Bootstrapping parameters
+  long boundary_K = 25;
+  long deg = 59;
+  long scale_factor = 2;
+  long inverse_deg = 1;
+  long loge = 10;
 
   int secret_key_hamming_weight = 192;
 
@@ -209,6 +216,7 @@ void argmax_test() {
   keygen.create_relin_keys(relin_keys);
   GaloisKeys galois_keys;
   keygen.create_galois_keys(galois_keys);
+  GaloisKeys bootstrapping_keys;
 
   CKKSEncoder encoder(context);
   Encryptor encryptor(context, public_key);
@@ -216,7 +224,42 @@ void argmax_test() {
   Decryptor decryptor(context, secret_key);
 
   CKKSEvaluator ckks_evaluator(context, encryptor, decryptor, encoder, evaluator, scale, relin_keys, galois_keys);
-  ArgmaxEvaluator argmax_evaluator(ckks_evaluator, keygen, main_mod_count);
+  Bootstrapper bootstrapper(
+      loge,
+      logn,
+      logN - 1,
+      total_level,
+      scale,
+      boundary_K,
+      deg,
+      scale_factor,
+      inverse_deg,
+      context,
+      keygen,
+      encoder,
+      encryptor,
+      decryptor,
+      evaluator,
+      relin_keys,
+      bootstrapping_keys);
+
+  cout << "Generating Optimal Minimax Polynomials..." << endl;
+  bootstrapper.prepare_mod_polynomial();
+
+  cout << "Adding Bootstrapping Keys..." << endl;
+  vector<int> gal_steps_vector;
+  gal_steps_vector.push_back(0);
+  for (int i = 0; i < logN - 1; i++) {
+    gal_steps_vector.push_back((1 << i));
+  }
+  bootstrapper.addLeftRotKeys_Linear_to_vector_3(gal_steps_vector);
+  keygen.create_galois_keys(gal_steps_vector, bootstrapping_keys);
+  bootstrapper.slot_vec.push_back(logn);
+
+  cout << "Generating Linear Transformation Coefficients..." << endl;
+  bootstrapper.generate_LT_coefficient_3();
+
+  ArgmaxEvaluator argmax_evaluator(ckks_evaluator, bootstrapper);
 
   size_t slot_count = encoder.slot_count();
 
