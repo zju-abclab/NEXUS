@@ -66,9 +66,6 @@ int main() {
   PhantomContext context(parms);
 
   PhantomSecretKey secret_key(context);
-  // std::ifstream sk_in("../../bs_sk.txt");
-  // secret_key.load_secret_key(context, sk_in);
-
   PhantomPublicKey public_key = secret_key.gen_publickey(context);
   PhantomRelinKey relin_keys = secret_key.gen_relinkey(context);
   PhantomGaloisKey galois_keys;
@@ -151,8 +148,7 @@ int main() {
 
   double mean_err = 0;
   for (long i = 0; i < sparse_slots; i++) {
-    if (i < 10)
-      std::cout << before[i] << " <----> " << after[i] << endl;
+    // if (i < 10) std::cout << before[i] << " <----> " << after[i] << endl;
     mean_err += abs(before[i] - after[i]);
   }
   mean_err /= sparse_slots;

@@ -1,9 +1,11 @@
 cmake_minimum_required(VERSION 3.20)
 
+# Must use CUDA 11.7
+set(CMAKE_CUDA_COMPILER "/usr/local/cuda-11.7/bin/nvcc")
+
 project(NEXUS-CUDA LANGUAGES CXX CUDA)
 
 # CMAKE config
-set(CMAKE_CUDA_COMPILER "/usr/local/cuda-11.7/bin/nvcc") # Must use CUDA 11.7
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
 if(NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
   set(CMAKE_BUILD_TYPE Release)
@@ -46,14 +48,6 @@ endif ()
 # PhantomFHE
 include_directories(thirdparty/phantom-fhe/include)
 
-# TroyNova config
-option(TROY_MEMORY_POOL "Use memory pool" ON)
-option(TROY_MEMORY_POOL_UNSAFE "Use unsafe memory pool" ON)
-
-# TroyNova
-find_package(Threads REQUIRED)
-include_directories(thirdparty/troy-nova/src)
-
 # NexusCUDA
 file(GLOB_RECURSE NEXUS_CUDA_SOURCE_FILES CONFIGURE_DEPENDS
   "src/main.cu"
@@ -66,9 +60,6 @@ file(GLOB_RECURSE NEXUS_CUDA_SOURCE_FILES CONFIGURE_DEPENDS
   "src/argmax.cu"
   "src/bootstrapping/*.cu"
   "thirdparty/phantom-fhe/src/*.cu"
-  "thirdparty/troy-nova/src/*.cu"
-  "thirdparty/troy-nova/src/*.cpp"
-  "thirdparty/troy-nova/src/*.c"
 )
 add_executable(main ${NEXUS_CUDA_SOURCE_FILES})
 target_link_libraries(main PRIVATE ntl gmp m pthread)
@@ -85,9 +76,6 @@ file(GLOB_RECURSE NEXUS_CUDA_BOOTSTRAPING_SOURCE_FILES CONFIGURE_DEPENDS
   "src/bootstrapping/*.cu"
   "src/ckks_evaluator.cu"
   "thirdparty/phantom-fhe/src/*.cu"
-  "thirdparty/troy-nova/src/*.cu"
-  "thirdparty/troy-nova/src/*.cpp"
-  "thirdparty/troy-nova/src/*.c"
 )
 
 add_executable(bootstrapping ${NEXUS_CUDA_BOOTSTRAPING_SOURCE_FILES})

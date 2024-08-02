@@ -2,12 +2,10 @@
 #include <complex>
 
 #include "phantom.h"
-#include "troy.cuh"
 
 namespace nexus {
 using namespace std;
 using namespace phantom;
-using namespace troy;
 
 class Encoder {
  private:
@@ -22,8 +20,6 @@ class Encoder {
     this->encoder = encoder;
   }
 
-  // TODO: consider removing this
-  inline size_t message_length() { return encoder->message_length(); }
   inline size_t slot_count() { return encoder->slot_count(); }
 
   inline void reset_sparse_slots() { encoder->reset_sparse_slots(); }
@@ -35,7 +31,6 @@ class Encoder {
       return;
     }
     values.resize(encoder->slot_count(), 0.0);
-    // if (values.size() != encoder->message_length()) encoder->reset_sparse_slots();
     encoder->encode(*context, values, scale, plain, chain_index);
   }
 
@@ -45,7 +40,6 @@ class Encoder {
       return;
     }
     values.resize(encoder->slot_count(), 0.0);
-    // if (values.size() != encoder->message_length()) encoder->reset_sparse_slots();
     encoder->encode(*context, values, scale, plain);
   }
 
@@ -55,13 +49,11 @@ class Encoder {
       return;
     }
     complex_values.resize(encoder->slot_count(), 0.0 + 0.0i);
-    // if (complex_values.size() != encoder->message_length()) encoder->reset_sparse_slots();
     encoder->encode(*context, complex_values, scale, plain);
   }
 
   // Value inputs (fill all slots with that value)
   inline void encode(double value, size_t chain_index, double scale, PhantomPlaintext &plain) {
-    // vector<double> values(encoder->message_length(), value);
     vector<double> values(encoder->slot_count(), value);
     encoder->encode(*context, values, scale, plain, chain_index);
   }
@@ -82,21 +74,40 @@ class Encoder {
   }
 };
 
+class Encryptor {
+ private:
+  PhantomContext *context;
+  PhantomPublicKey *encryptor;
+
+ public:
+  Encryptor() = default;
+
+  Encryptor(PhantomContext *context, PhantomPublicKey *encryptor) {
+    this->context = context;
+    this->encryptor = encryptor;
+  }
+
+  inline void encrypt(PhantomPlaintext &plain, PhantomCiphertext &ct) {
+    encryptor->encrypt_asymmetric(*context, plain, ct);
+  }
+};
+
+// Symmetric Encryptor
 // class Encryptor {
 //  private:
 //   PhantomContext *context;
-//   PhantomPublicKey *encryptor;
+//   PhantomSecretKey *encryptor;
 
 //  public:
 //   Encryptor() = default;
 
-//   Encryptor(PhantomContext *context, PhantomPublicKey *encryptor) {
+//   Encryptor(PhantomContext *context, PhantomSecretKey *encryptor) {
 //     this->context = context;
 //     this->encryptor = encryptor;
 //   }
 
 //   inline void encrypt(PhantomPlaintext &plain, PhantomCiphertext &ct) {
-//     encryptor->encrypt_asymmetric(*context, plain, ct);
+//     encryptor->encrypt_symmetric(*context, plain, ct);
 //   }
 
 //   inline void encrypt_zero(PhantomCiphertext &ct, size_t chain_index) {
@@ -105,42 +116,14 @@ class Encoder {
 
 //     ct.set_correction_factor(1);
 //     ct.set_scale(1.0);
+//     ct.SetNoiseScaleDeg(1);
 
-//     encryptor->encrypt_zero_asymmetric_internal(*context, ct, chain_index, stream);
+//     auto prng_seed_a = phantom::util::make_cuda_auto_ptr<uint8_t>(phantom::util::global_variables::prng_seed_byte_count, stream);
+//     random_bytes(prng_seed_a.get(), phantom::util::global_variables::prng_seed_byte_count, stream);
+
+//     encryptor->encrypt_zero_symmetric(*context, ct, prng_seed_a.get(), context->get_first_index(), true, stream);
 //   }
 // };
-
-class Encryptor {
- private:
-  PhantomContext *context;
-  PhantomSecretKey *encryptor;
-
- public:
-  Encryptor() = default;
-
-  Encryptor(PhantomContext *context, PhantomSecretKey *encryptor) {
-    this->context = context;
-    this->encryptor = encryptor;
-  }
-
-  inline void encrypt(PhantomPlaintext &plain, PhantomCiphertext &ct) {
-    encryptor->encrypt_symmetric(*context, plain, ct);
-  }
-
-  inline void encrypt_zero(PhantomCiphertext &ct, size_t chain_index) {
-    const phantom::util::cuda_stream_wrapper &stream_wrapper = *phantom::util::global_variables::default_stream;
-    const auto &stream = stream_wrapper.get_stream();
-
-    ct.set_correction_factor(1);
-    ct.set_scale(1.0);
-    ct.SetNoiseScaleDeg(1);
-
-    auto prng_seed_a = phantom::util::make_cuda_auto_ptr<uint8_t>(phantom::util::global_variables::prng_seed_byte_count, stream);
-    random_bytes(prng_seed_a.get(), phantom::util::global_variables::prng_seed_byte_count, stream);
-
-    encryptor->encrypt_zero_symmetric(*context, ct, prng_seed_a.get(), context->get_first_index(), true, stream);
-  }
-};
 
 class Evaluator {
  private:
@@ -307,7 +290,7 @@ class Evaluator {
   inline void transform_from_ntt_inplace(PhantomCiphertext &ct) {
     auto rns_coeff_count = ct.poly_modulus_degree() * ct.coeff_modulus_size();
 
-    const auto &stream = phantom::util::global_variables::default_stream->get_stream();
+    const auto stream = ct.data_ptr().get_stream();
 
     for (size_t i = 0; i < ct.size(); i++) {
       uint64_t *ci = ct.data() + i * rns_coeff_count;
@@ -325,7 +308,7 @@ class Evaluator {
 
   inline void transform_to_ntt_inplace(PhantomCiphertext &ct) {
     auto rns_coeff_count = ct.poly_modulus_degree() * ct.coeff_modulus_size();
-    const auto &stream = phantom::util::global_variables::default_stream->get_stream();
+    const auto stream = ct.data_ptr().get_stream();
 
     for (size_t i = 0; i < ct.size(); i++) {
       uint64_t *ci = ct.data() + i * rns_coeff_count;
@@ -487,16 +470,6 @@ class CKKSEvaluator {
   Evaluator evaluator;
   Decryptor decryptor;
 
-  // TroyNova
-  HeContextPointer troy_context;
-  GaloisKeys *troy_galois_keys;
-  std::vector<std::uint64_t> troy_galois_elts;
-
-  troy::CKKSEncoder *troy_encoder;
-  troy::Encryptor *troy_encryptor;
-  troy::Evaluator *troy_evaluator;
-  troy::Decryptor *troy_decryptor;
-
   size_t degree;
   double scale;
   size_t slot_count;
@@ -517,7 +490,7 @@ class CKKSEvaluator {
     Encoder ckks_encoder(context, encoder);
     this->encoder = ckks_encoder;
 
-    Encryptor ckks_encryptor(context, decryptor);
+    Encryptor ckks_encryptor(context, encryptor);
     this->encryptor = ckks_encryptor;
 
     Evaluator ckks_evaluator(context, encoder);
@@ -525,23 +498,6 @@ class CKKSEvaluator {
 
     Decryptor ckks_decryptor(context, decryptor);
     this->decryptor = ckks_decryptor;
-  }
-
-  CKKSEvaluator(HeContextPointer context, troy::Encryptor *encryptor, troy::Decryptor *decryptor,
-                troy::Evaluator *evaluator, troy::CKKSEncoder *encoder, troy::GaloisKeys *galois_keys,
-                double scale, vector<uint64_t> galois_elts = {}) {
-    this->troy_context = context;
-    this->troy_galois_keys = galois_keys;
-    this->troy_galois_elts = galois_elts;
-
-    this->scale = scale;
-    this->slot_count = encoder->slot_count();
-    this->degree = this->slot_count * 2;
-
-    this->troy_encoder = encoder;
-    this->troy_encryptor = encryptor;
-    this->troy_evaluator = evaluator;
-    this->troy_decryptor = decryptor;
   }
 
   // Helper functions

@@ -5,22 +5,17 @@
 
 #include "ckks_evaluator.cuh"
 #include "phantom.h"
-#include "troy.cuh"
 
 namespace nexus {
 using namespace std;
 using namespace phantom;
-using namespace troy;
 
 class MMEvaluator {
  private:
   CKKSEvaluator *ckks = nullptr;
 
   void enc_compress_ciphertext(vector<double> &values, PhantomCiphertext &ct);
-  void enc_compress_ciphertext(vector<double> &values, Ciphertext &ct);
-
-  vector<PhantomCiphertext> decompress_ciphertext(const PhantomCiphertext &encrypted);
-  vector<Ciphertext> decompress_ciphertext(const Ciphertext &encrypted);
+  vector<PhantomCiphertext> decompress_ciphertext(PhantomCiphertext &encrypted);
 
  public:
   MMEvaluator(CKKSEvaluator &ckks) : ckks(&ckks) {}
@@ -70,9 +65,6 @@ class MMEvaluator {
 
   // Evaluation function
   void matrix_mul(vector<vector<double>> &x, vector<vector<double>> &y, vector<PhantomCiphertext> &res);
-  void matrix_mul(vector<vector<double>> &x, vector<vector<double>> &y, vector<Ciphertext> &res);
-
   void multiply_power_of_x(PhantomCiphertext &encrypted, PhantomCiphertext &destination, int index);
-  void multiply_power_of_x(Ciphertext &encrypted, Ciphertext &destination, int index);
 };
 }  // namespace nexus

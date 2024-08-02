@@ -81,7 +81,9 @@ vector<Ciphertext> MMEvaluator::expand_ciphertext(const Ciphertext &encrypted, u
       ckks->evaluator->apply_galois(temp[a], ckks->rots[i], *(ckks->galois_keys), tempctxt_rotated);  // sub
       ckks->evaluator->add(temp[a], tempctxt_rotated, newtemp[a]);
       multiply_power_of_X(temp[a], tempctxt_shifted, index_raw);  // x**-1
+      // if (temp.size() == 1) ckks->print_decrypted_ct(tempctxt_shifted, 10);
       multiply_power_of_X(tempctxt_rotated, tempctxt_rotatedshifted, index);
+      // if (temp.size() == 1) ckks->print_decrypted_ct(tempctxt_rotatedshifted, 10);
       ckks->evaluator->add(tempctxt_shifted, tempctxt_rotatedshifted, newtemp[a + temp.size()]);
     }
     temp = newtemp;
@@ -124,6 +126,7 @@ void MMEvaluator::multiply_power_of_X(Ciphertext &encrypted, Ciphertext &destina
           destination.data(i) + (j * coeff_count));
     }
   }
+
   ckks->evaluator->transform_to_ntt_inplace(encrypted);
   ckks->evaluator->transform_to_ntt_inplace(destination);
 }
