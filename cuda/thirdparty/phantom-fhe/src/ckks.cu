@@ -112,7 +112,7 @@ void PhantomCKKSEncoder::encode_internal(const PhantomContext &context, const cu
         uint32_t log_sparse_slots = ceil(log2(values_size));
         sparse_slots_ = 1 << log_sparse_slots;
     } else {
-        // Newly commened, not sure if we need this:
+        // Newly commented, not sure if we need this:
         // if (values_size > sparse_slots_) {
         //     throw std::invalid_argument("values_size exceeds previous message length: " + std::to_string(values_size) + " > " + std::to_string(sparse_slots_));
         // }

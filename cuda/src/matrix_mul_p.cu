@@ -8,11 +8,12 @@ using namespace phantom::util;
 using namespace phantom::arith;
 using namespace nexus;
 
-__global__ void kernel_compress_ciphertext(uint64_t *plain_data, size_t degree, const DModulus *moduli, const double *values) {
+__global__ void kernel_compress_ciphertext(uint64_t *plain_data, size_t plain_scale, size_t degree,
+                                           const DModulus *moduli, const double *values) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
 
   if (i < degree) {
-    auto coeffd = std::round(values[i] * 10000000000);
+    auto coeffd = std::round(values[i] * plain_scale);
     bool is_negative = std::signbit(coeffd);
     auto coeffu = static_cast<std::uint64_t>(std::fabs(coeffd));
 
@@ -29,6 +30,7 @@ __global__ void kernel_compress_ciphertext(uint64_t *plain_data, size_t degree, 
   }
 }
 
+// FIXME:
 __global__ void kernel_negacyclic_shift(const uint64_t *cipher_data, size_t cipher_count, uint64_t coeff_count, size_t mod_count,
                                         int shift, const DModulus *moduli, uint64_t *result) {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -100,18 +102,11 @@ void MMEvaluator::multiply_power_of_x(PhantomCiphertext &encrypted, PhantomCiphe
 void MMEvaluator::enc_compress_ciphertext(vector<double> &values, PhantomCiphertext &ct) {
   size_t plain_scale = 10000000000;
 
-  PhantomPlaintext zero_pt;
-  PhantomCiphertext zero;
-  ckks->encoder.encode(0.0, plain_scale, zero_pt);
-  ckks->encryptor.encrypt(zero_pt, zero);
-
   auto &context_data = ckks->context->first_context_data();
   auto param = context_data.parms();
-  auto moduli = param.coeff_modulus();
-  // auto moduli = ckks->context->gpu_rns_tables().modulus();
+  auto moduli = ckks->context->gpu_rns_tables().modulus();
   auto coeff_modulus_size = param.coeff_modulus().size();
   auto poly_modulus_degree = param.poly_modulus_degree();
-  auto rns_coeff_count = poly_modulus_degree * coeff_modulus_size;
 
   const phantom::util::cuda_stream_wrapper &stream_wrapper = *phantom::util::global_variables::default_stream;
   const auto &stream = stream_wrapper.get_stream();
@@ -120,49 +115,26 @@ void MMEvaluator::enc_compress_ciphertext(vector<double> &values, PhantomCiphert
   PhantomPlaintext p;
   p.resize(coeff_modulus_size, poly_modulus_degree, stream);
 
-  // auto gpu_values = make_cuda_auto_ptr<double>(values.size(), stream);
-  // cudaMemcpyAsync(gpu_values.get(), values.data(), values.size() * sizeof(double), cudaMemcpyHostToDevice, stream);
+  auto gpu_values = make_cuda_auto_ptr<double>(values.size(), stream);
+  cudaMemcpyAsync(gpu_values.get(), values.data(), values.size() * sizeof(double), cudaMemcpyHostToDevice, stream);
 
-  // kernel_compress_ciphertext<<<poly_modulus_degree / blockDimGlb.x, blockDimGlb, 0, stream>>>(
-  //     p.data(), poly_modulus_degree, moduli, gpu_values.get());
+  kernel_compress_ciphertext<<<poly_modulus_degree / blockDimGlb.x, blockDimGlb, 0, stream>>>(
+      p.data(), plain_scale, poly_modulus_degree, moduli, gpu_values.get());
 
-  auto p_data = new uint64_t[rns_coeff_count];
-
-  // Coefficients of the two RNS polynomails should be the same except with different mod
-  for (auto i = 0; i < poly_modulus_degree; i++) {
-    auto coeffd = std::round(values[i] * plain_scale);
-    bool is_negative = std::signbit(coeffd);
-    auto coeffu = static_cast<std::uint64_t>(std::fabs(coeffd));
-    if (is_negative) {
-      for (std::size_t j = 0; j < 2; j++) {
-        p_data[i + (j * poly_modulus_degree)] = negate_uint_mod(barrett_reduce_64(coeffu, moduli[j]), moduli[j]);
-      }
-    } else {
-      for (std::size_t j = 0; j < 2; j++) {
-        p_data[i + (j * poly_modulus_degree)] = barrett_reduce_64(coeffu, moduli[j]);
-      }
-    }
-  }
-
-  cudaStreamSynchronize(p.data_ptr().get_stream());
-
-  // Copy plaintext data to GPU
-  cudaMemcpy(p.data(), p_data, rns_coeff_count * sizeof(uint64_t), cudaMemcpyHostToDevice);
-
-  // Transform all 2 RNS polynomials to the NTT domain
+  // Transform polynomials to the NTT domain
   nwt_2d_radix8_forward_inplace(p.data(), ckks->context->gpu_rns_tables(), coeff_modulus_size, 0, stream);
-
-  cudaStreamSynchronize(p.data_ptr().get_stream());
 
   // Update plaintext parameters
   p.set_chain_index(context_data.chain_index());
   p.scale() = plain_scale;
 
-  ckks->print_decoded_pt(p, 10);
+  // Create a ciphertext encrypting zero
+  PhantomPlaintext zero_pt;
+  PhantomCiphertext zero;
+  ckks->encoder.encode(0.0, p.chain_index(), plain_scale, zero_pt);
+  ckks->encryptor.encrypt(zero_pt, zero);
 
   ckks->evaluator.add_plain(zero, p, ct);
-
-  cudaStreamSynchronize(zero.data_ptr().get_stream());
 }
 
 vector<PhantomCiphertext> MMEvaluator::decompress_ciphertext(const PhantomCiphertext &encrypted) {
@@ -225,7 +197,7 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
   for (int i = 0; i < b_cts_count; i++) {
     PhantomCiphertext ct;
     enc_compress_ciphertext(y[i], ct);
-    // ckks->print_decrypted_ct(ct, 10);
+    ckks->print_decrypted_ct(ct, 10);
     b_compressed_cts.emplace_back(ct);
   }
 

@@ -26,6 +26,7 @@ int main() {
   long scale_factor = 2;
   long inverse_deg = 1;
 
+  // The following parameters have been adjusted to satisfy the memory constraints of an A100 GPU
   long logN = 15;  // 16 -> 15
   long loge = 10;
 
@@ -39,7 +40,7 @@ int main() {
   int secret_key_hamming_weight = 192;
 
   int remaining_level = 16;
-  int boot_level = 14;  // greater than: subsum 1 + coefftoslot 2 + ModReduction 9 + slottocoeff 2
+  int boot_level = 14;  // Greater than: subsum 1 + coefftoslot 2 + ModReduction 9 + slottocoeff 2
   int total_level = remaining_level + boot_level;
 
   vector<int> coeff_bit_vec;
@@ -109,41 +110,19 @@ int main() {
   std::cout << "Generating Linear Transformation Coefficients..." << endl;
   bootstrapper.generate_LT_coefficient_3();
 
-  // vector<double> sparse(sparse_slots, 0.0);
+  vector<double> sparse(sparse_slots, 0.0);
   vector<double> input(slot_count, 0.0);
   vector<double> before(slot_count, 0.0);
   vector<double> after(slot_count, 0.0);
 
-  // random_real(sparse, sparse_slots);
+  random_real(sparse, sparse_slots);
 
   PhantomPlaintext plain;
   PhantomCiphertext cipher;
 
-  // // Create input cipher
-  // for (size_t i = 0; i < slot_count; i++) {
-  //   input[i] = sparse[i % sparse_slots];
-  // }
-
-  double num;
-  int argmax_input_size = 0;
-  vector<double> argmax_input(sparse_slots, 0.0), argmax_calibration;
-
-  ifstream input_file("../../data/input/argmax_input_8.txt");
-  while (input_file >> num) {
-    argmax_input[argmax_input_size] = num;
-    argmax_input_size++;
-  }
-  input_file.close();
-
-  ifstream calibration_file("../../data/calibration/argmax_calibration_8.txt");
-  while (calibration_file >> num) {
-    argmax_calibration.push_back(num);
-  }
-  calibration_file.close();
-
-  // Spare input
+  // Create input cipher
   for (size_t i = 0; i < slot_count; i++) {
-    input[i] = argmax_input[i % sparse_slots];
+    input[i] = sparse[i % sparse_slots];
   }
 
   ckks_evaluator.encoder.encode(input, scale, plain);
@@ -167,18 +146,8 @@ int main() {
   std::cout << "Bootstrapping took: " << sec.count() << "s" << endl;
   std::cout << "Return cipher level: " << rtn.coeff_modulus_size() << endl;
 
-  // rtn = ckks_evaluator.sgn_eval(rtn, 2, 2);
-
   ckks_evaluator.decryptor.decrypt(rtn, plain);
   ckks_evaluator.encoder.decode(plain, after);
-
-  // for (long i = 0; i < sparse_slots; i++) {
-  //   if (before[i] > 0) {
-  //     before[i] = 0.5;
-  //   } else {
-  //     before[i] = -0.5;
-  //   }
-  // }
 
   double mean_err = 0;
   for (long i = 0; i < sparse_slots; i++) {

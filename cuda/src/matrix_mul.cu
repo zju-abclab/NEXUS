@@ -89,8 +89,6 @@ vector<Ciphertext> MMEvaluator::decompress_ciphertext(const Ciphertext &encrypte
     int index_raw = (N << 1) - (1 << i);
     int index = (index_raw * galois_elt) % (N << 1);
 
-    cout << i << " => " << temp.size() << endl;
-
     for (uint32_t a = 0; a < temp.size(); a++) {
       ckks->troy_evaluator->apply_galois(temp[a], galois_elt, *(ckks->troy_galois_keys), tempctxt_rotated);  // sub
       ckks->troy_evaluator->add(temp[a], tempctxt_rotated, newtemp[a]);

@@ -23,13 +23,3 @@ make
 This should produce two binary executables inside the `build` directory:
   - `bin/main`
   - `bin/bootstrapping`
-
-<br>
-
-## TO-DO
-- Matrix Multiplication (Phantom)
-  - Parallelization
-- Clean up
-  - Comments and README
-  - Revert PRNG changes
-- Use an environment variable to indicate which GPU to use

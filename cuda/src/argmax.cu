@@ -1,6 +1,6 @@
 #include "argmax.cuh"
 
-void ArgmaxEvaluator::argmax(PhantomCiphertext &x, PhantomCiphertext &res, int len) {
+void ArgmaxEvaluator::argmax(PhantomCiphertext &x, PhantomCiphertext &x_copy, int len) {
   PhantomCiphertext tmp, b, sign, a_plus_b, a_minus_b, a_minus_b_sgn;
   PhantomPlaintext one, half;
 
@@ -37,14 +37,14 @@ void ArgmaxEvaluator::argmax(PhantomCiphertext &x, PhantomCiphertext &res, int l
     bootstrap(x);
   }
 
-  res.scale() = x.scale();
-  ckks->evaluator.mod_switch_to_inplace(res, x.params_id());
-  ckks->evaluator.sub_inplace(res, x);
+  x_copy.scale() = x.scale();
+  ckks->evaluator.mod_switch_to_inplace(x_copy, x.params_id());
+  ckks->evaluator.sub_inplace(x_copy, x);
 
-  res = ckks->sgn_eval(res, 2, 2, 1.0);
+  x_copy = ckks->sgn_eval(x_copy, 2, 2, 1.0);
 
-  ckks->encoder.encode(1.0, res.params_id(), res.scale(), one);
-  ckks->evaluator.add_plain_inplace(res, one);
+  ckks->encoder.encode(1.0, x_copy.params_id(), x_copy.scale(), one);
+  ckks->evaluator.add_plain_inplace(x_copy, one);
 }
 
 void ArgmaxEvaluator::bootstrap(PhantomCiphertext &x) {
@@ -64,11 +64,12 @@ void ArgmaxEvaluator::bootstrap(PhantomCiphertext &x) {
   bootstrapper->set_final_scale(x.scale());
 
   auto start = system_clock::now();
+
   bootstrapper->bootstrap_3(rtn, x);
+
   duration<double> sec = system_clock::now() - start;
-
-  x = rtn;
-
   cout << "Bootstrapping took: " << sec.count() << "s" << endl;
   cout << "New ciphertext depth: " << x.coeff_modulus_size() << endl;
+
+  x = rtn;
 }

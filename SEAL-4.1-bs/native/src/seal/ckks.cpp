@@ -33,7 +33,7 @@ namespace seal
         matrix_reps_index_map_ = allocate<size_t>(coeff_count, pool_);
 
         // Copy from the matrix to the value vectors
-        uint64_t gen = 3;
+        uint64_t gen = 5;
         uint64_t pos = 1;
         uint64_t m = static_cast<uint64_t>(coeff_count) << 1;
         for (size_t i = 0; i < slots_; i++)

@@ -166,7 +166,7 @@ namespace seal
 
             std::size_t coeff_count_ = 0;
 
-            static constexpr std::uint32_t generator_ = 3;
+            static constexpr std::uint32_t generator_ = 5;
 
             mutable Pointer<Pointer<std::uint32_t>> permutation_tables_;
 

@@ -149,7 +149,7 @@ void MM_test_p() {
   }
 
   CKKSEvaluator ckks_evaluator(&context, &public_key, &secret_key, &encoder, &relin_keys, &galois_keys, SCALE, galois_elts);
-  
+
   ckks_evaluator.decryptor.create_galois_keys_from_elts(galois_elts, *(ckks_evaluator.galois_keys));
 
   MMEvaluator mme(ckks_evaluator);
@@ -184,7 +184,7 @@ void MM_test_p() {
   std::vector<std::vector<double>> matrix_4096x64 = mme.read_matrix("../../data/calibration/matrix_output_m_128_k_64_batch_128.txt", 4096, 64);
   auto matrix_4096x64_T = mme.transpose_matrix(matrix_4096x64);
 
-  // err of the first col
+  // Error of the first col
   PhantomPlaintext res_pt;
   vector<double> mm_res;
   ckks_evaluator.decryptor.decrypt(res[0], res_pt);
@@ -209,10 +209,11 @@ void argmax_test() {
 
   // QuickMax: 17
   int main_mod_count = TEST_COEFF_MODULI[0];
+
   // Must be greater than 14: subsum 1 + coefftoslot 2 + ModReduction 9 + slottocoeff 2
   int bs_mod_count = 14;
+  
   int total_level = main_mod_count + bs_mod_count;
-
   int secret_key_hamming_weight = 192;
 
   // Bootstrapping parameters
@@ -223,17 +224,13 @@ void argmax_test() {
   long loge = 10;
 
   vector<int> coeff_bit_vec;
-
   coeff_bit_vec.push_back(logq);
-
   for (int i = 0; i < main_mod_count; i++) {
     coeff_bit_vec.push_back(logp);
   }
-
   for (int i = 0; i < bs_mod_count; i++) {
     coeff_bit_vec.push_back(logq);
   }
-
   coeff_bit_vec.push_back(log_special_prime);
 
   phantom::EncryptionParameters parms(scheme_type::ckks);
@@ -328,6 +325,8 @@ void argmax_test() {
   // Enc the input
   ckks_evaluator.encoder.encode(input, scale, plain_input);
   ckks_evaluator.encryptor.encrypt(plain_input, cipher_input);
+
+  // Output should originally be a copy of the input
   ckks_evaluator.encryptor.encrypt(plain_input, cipher_output);
 
   // Mod switch to remaining level
@@ -345,9 +344,6 @@ void argmax_test() {
 }
 
 int main() {
-  /*
-    MatMul
-  */
   if (TEST_TARGET == "MatMul") {
     MM_test();
     return 0;
