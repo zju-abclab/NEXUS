@@ -123,5 +123,5 @@ vector<double> GeLUEvaluator::gelu_plain(vector<double>& input) {
         output.push_back(gelu_x);
     }
 
-    return output;
+  return output;
 }

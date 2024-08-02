@@ -1,0 +1,38 @@
+cmake_minimum_required(VERSION 3.20)
+
+project(Phantom LANGUAGES CXX CUDA VERSION 2.0 DESCRIPTION "CUDA-Accelerated Homomorphic Encryption Library")
+
+# [option] PHANTOM_USE_CUDA_PTX (default: ON)
+option(PHANTOM_USE_CUDA_PTX "Use CUDA PTX Assembly" ON)
+message(STATUS "Use CUDA PTX Assembly: ${PHANTOM_USE_CUDA_PTX}")
+if (PHANTOM_USE_CUDA_PTX)
+    add_compile_definitions(PHANTOM_USE_CUDA_PTX)
+endif ()
+
+if (NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+    set(CMAKE_CUDA_ARCHITECTURES native)
+endif ()
+
+# use C++20
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CUDA_STANDARD 17)
+set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+
+# CUDA separable compilation
+set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
+
+# -fPIC
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
+
+# library
+add_subdirectory(src)
+
+# config for installation
+install(TARGETS Phantom EXPORT PhantomConfig)
+install(EXPORT PhantomConfig NAMESPACE phantom:: DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/phantom)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/phantom)

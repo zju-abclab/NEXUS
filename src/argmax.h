@@ -1,17 +1,29 @@
+#include <seal/seal.h>
+
+#include <chrono>
 #include <iostream>
 #include <vector>
-#include <seal/seal.h>
+
+#include "Bootstrapper.h"
 #include "ckks_evaluator.h"
 
-class ArgmaxEvaluator
-{
-private:
-    /* data */
+using namespace std;
+using namespace chrono;
+using namespace seal;
 
-public:
-    CKKSEvaluator *ckks = nullptr;
-    ArgmaxEvaluator(CKKSEvaluator &ckks) {
-        this->ckks = &ckks;
-    }
-    void argmax(Ciphertext &x, Ciphertext &res, int len);
+class ArgmaxEvaluator {
+ private:
+  Bootstrapper *bootstrapper = nullptr;
+
+ public:
+  CKKSEvaluator *ckks = nullptr;
+
+  ArgmaxEvaluator(CKKSEvaluator &ckks, Bootstrapper &bootstrapper) {
+    this->ckks = &ckks;
+    this->bootstrapper = &bootstrapper;
+  }
+
+  void argmax(Ciphertext &x, Ciphertext &res, int len);
+
+  void bootstrap(Ciphertext &x);
 };

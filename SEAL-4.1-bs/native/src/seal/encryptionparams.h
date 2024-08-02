@@ -3,25 +3,27 @@
 
 #pragma once
 
-#include <functional>
-#include <iostream>
-#include <memory>
-#include <numeric>
 #include "seal/memorymanager.h"
 #include "seal/modulus.h"
 #include "seal/randomgen.h"
 #include "seal/serialization.h"
+#include "seal/version.h"
 #include "seal/util/defines.h"
 #include "seal/util/globals.h"
 #include "seal/util/hash.h"
 #include "seal/util/ztools.h"
-#include "seal/version.h"
+#include <functional>
+#include <iostream>
+#include <memory>
+#include <numeric>
 
-namespace seal {
+namespace seal
+{
     /**
     Describes the type of encryption scheme to be used.
     */
-    enum class scheme_type : std::uint8_t {
+    enum class scheme_type : std::uint8_t
+    {
         // No scheme set; cannot be used for encryption
         none = 0x0,
 
@@ -81,7 +83,8 @@ namespace seal {
     an expert in RLWE-based encryption when selecting parameters, as this is where
     inexperienced users seem to most often make critical mistakes.
     */
-    class EncryptionParameters {
+    class EncryptionParameters
+    {
         friend struct std::hash<EncryptionParameters>;
 
     public:
@@ -105,7 +108,8 @@ namespace seal {
         EncryptionParameters(std::uint8_t scheme)
         {
             // Check that a valid scheme is given
-            if (!is_valid_scheme(scheme)) {
+            if (!is_valid_scheme(scheme))
+            {
                 throw std::invalid_argument("unsupported scheme");
             }
 
@@ -155,7 +159,8 @@ namespace seal {
         */
         inline void set_poly_modulus_degree(std::size_t poly_modulus_degree)
         {
-            if (scheme_ == scheme_type::none && poly_modulus_degree) {
+            if (scheme_ == scheme_type::none && poly_modulus_degree)
+            {
                 throw std::logic_error("poly_modulus_degree is not supported for this scheme");
             }
 
@@ -165,9 +170,25 @@ namespace seal {
             // Re-compute the parms_id
             compute_parms_id();
         }
+
+        /*
+        J.-W. Lee: newly inserted for secret key hamming weight. The original 
+        SEAL library uses only the uniform ternary secret key distribution.
+        Since the bootstrapping requires sparse secret key distrubition for 
+        some parameters, the secret key hamming weight is added in 
+        EncryptionParameters as a member variable. If the secret key distribution
+        is not sparse, the secret key hamming weight is set to be zero. Non-zero
+        secret key hamming weight means the sparse secret key distribution.
+
+        @param[in] secret_key_hamming_weight The new secret key hamming weight 
+        @throws std::logic_error if a valid scheme is not set and secret key
+        hamming weight is non-zero
+        */
+
         inline void set_secret_key_hamming_weight(std::size_t secret_key_hamming_weight)
         {
-            if (scheme_ == scheme_type::none && secret_key_hamming_weight) {
+            if (scheme_ == scheme_type::none && secret_key_hamming_weight)
+            {
                 throw std::logic_error("secret key hamming weight is not supported for this scheme");
             }
 
@@ -179,36 +200,39 @@ namespace seal {
         }
 
         /*
-        J.-W. Lee: newly inserted for the number of sparse slots. The original
-        SEAL library uses only the full slot, which is the half of polynomial
+        J.-W. Lee: newly inserted for the number of sparse slots. The original 
+        SEAL library uses only the full slot, which is the half of polynomial 
         modulus degree. However, the runtime of the bootstrapping is affected
         by the number of sparse slots, and thus we add the number of sparse
-        slots as a member variable. The number of sparse slots should be
+        slots as a member variable. The number of sparse slots should be 
         positive power-of-two integer less than polynomial modulus degree.
         If the full slot is used, the sparse_slots is set to be zero. Non-zero
         sparse_slots means to use the sparse slot.
 
-        @param[in] sparse_slots The number of sparse slots
+        @param[in] sparse_slots The number of sparse slots 
         @throws std::logic_error if a valid scheme is not set and sparse_slots
         is non-zero, or if sparse_slots is not power-of-two integer or zero.
         */
 
         inline void set_sparse_slots(std::size_t sparse_slots)
         {
-            if (scheme_ == scheme_type::none && sparse_slots) {
+            if (scheme_ == scheme_type::none && sparse_slots)
+            {
                 throw std::logic_error("secret key hamming weight is not supported for this scheme");
             }
 
-            if ((sparse_slots & (sparse_slots - 1)) != 0) {
+            if ((sparse_slots & (sparse_slots - 1)) != 0)
+            {
                 throw std::logic_error("secret key hamming weight is not zero or power-of-two");
             }
 
             // Set the degree
-            sparse_slots_ = sparse_slots;
+            sparse_slots_= sparse_slots;
 
             // Re-compute the parms_id
             compute_parms_id();
         }
+
         /**
         Sets the coefficient modulus parameter. The coefficient modulus consists
         of a list of distinct prime numbers, and is represented by a vector of
@@ -226,11 +250,15 @@ namespace seal {
         inline void set_coeff_modulus(const std::vector<Modulus> &coeff_modulus)
         {
             // Check that a scheme is set
-            if (scheme_ == scheme_type::none) {
-                if (!coeff_modulus.empty()) {
+            if (scheme_ == scheme_type::none)
+            {
+                if (!coeff_modulus.empty())
+                {
                     throw std::logic_error("coeff_modulus is not supported for this scheme");
                 }
-            } else if (coeff_modulus.size() > SEAL_COEFF_MOD_COUNT_MAX || coeff_modulus.size() < SEAL_COEFF_MOD_COUNT_MIN) {
+            }
+            else if (coeff_modulus.size() > SEAL_COEFF_MOD_COUNT_MAX || coeff_modulus.size() < SEAL_COEFF_MOD_COUNT_MIN)
+            {
                 throw std::invalid_argument("coeff_modulus is invalid");
             }
 
@@ -257,7 +285,8 @@ namespace seal {
         inline void set_plain_modulus(const Modulus &plain_modulus)
         {
             // Check that scheme is BFV
-            if (scheme_ != scheme_type::bfv && scheme_ != scheme_type::bgv && !plain_modulus.is_zero()) {
+            if (scheme_ != scheme_type::bfv && scheme_ != scheme_type::bgv && !plain_modulus.is_zero())
+            {
                 throw std::logic_error("plain_modulus is not supported for this scheme");
             }
 
@@ -314,6 +343,10 @@ namespace seal {
         {
             return poly_modulus_degree_;
         }
+
+        /**
+        J.-W. Lee: Returns the secret key hamming weight.
+        */
         SEAL_NODISCARD inline std::size_t secret_key_hamming_weight() const noexcept
         {
             return secret_key_hamming_weight_;
@@ -326,6 +359,7 @@ namespace seal {
         {
             return sparse_slots_;
         }
+
         /**
         Returns a const reference to the currently set coefficient modulus parameter.
         */
@@ -392,10 +426,13 @@ namespace seal {
         @throws std::invalid_argument if the compression mode is not supported
         @throws std::logic_error if the size does not fit in the return type
         */
-        SEAL_NODISCARD inline std::streamoff save_size(compr_mode_type compr_mode = Serialization::compr_mode_default) const
+        SEAL_NODISCARD inline std::streamoff save_size(
+            compr_mode_type compr_mode = Serialization::compr_mode_default) const
         {
             std::size_t coeff_modulus_total_size =
-                coeff_modulus_.empty() ? std::size_t(0) : util::safe_cast<std::size_t>(coeff_modulus_[0].save_size(compr_mode_type::none));
+                coeff_modulus_.empty()
+                    ? std::size_t(0)
+                    : util::safe_cast<std::size_t>(coeff_modulus_[0].save_size(compr_mode_type::none));
             coeff_modulus_total_size = util::mul_safe(coeff_modulus_total_size, coeff_modulus_.size());
 
             std::size_t members_size = Serialization::ComprSizeEstimate(
@@ -422,10 +459,13 @@ namespace seal {
         compression failed
         @throws std::runtime_error if I/O operations failed
         */
-        inline std::streamoff save(std::ostream &stream, compr_mode_type compr_mode = Serialization::compr_mode_default) const
+        inline std::streamoff save(
+            std::ostream &stream, compr_mode_type compr_mode = Serialization::compr_mode_default) const
         {
             using namespace std::placeholders;
-            return Serialization::Save(std::bind(&EncryptionParameters::save_members, this, _1), save_size(compr_mode_type::none), stream, compr_mode, false);
+            return Serialization::Save(
+                std::bind(&EncryptionParameters::save_members, this, _1), save_size(compr_mode_type::none), stream,
+                compr_mode, false);
         }
 
         /**
@@ -441,7 +481,8 @@ namespace seal {
         {
             using namespace std::placeholders;
             EncryptionParameters new_parms(scheme_type::none);
-            auto in_size = Serialization::Load(std::bind(&EncryptionParameters::load_members, &new_parms, _1, _2), stream, false);
+            auto in_size =
+                Serialization::Load(std::bind(&EncryptionParameters::load_members, &new_parms, _1, _2), stream, false);
             std::swap(*this, new_parms);
             return in_size;
         }
@@ -459,11 +500,13 @@ namespace seal {
         compression failed
         @throws std::runtime_error if I/O operations failed
         */
-        inline std::streamoff save(seal_byte *out, std::size_t size, compr_mode_type compr_mode = Serialization::compr_mode_default) const
+        inline std::streamoff save(
+            seal_byte *out, std::size_t size, compr_mode_type compr_mode = Serialization::compr_mode_default) const
         {
             using namespace std::placeholders;
             return Serialization::Save(
-                std::bind(&EncryptionParameters::save_members, this, _1), save_size(compr_mode_type::none), out, size, compr_mode, false);
+                std::bind(&EncryptionParameters::save_members, this, _1), save_size(compr_mode_type::none), out, size,
+                compr_mode, false);
         }
 
         /**
@@ -482,7 +525,8 @@ namespace seal {
         {
             using namespace std::placeholders;
             EncryptionParameters new_parms(scheme_type::none);
-            auto in_size = Serialization::Load(std::bind(&EncryptionParameters::load_members, &new_parms, _1, _2), in, size, false);
+            auto in_size = Serialization::Load(
+                std::bind(&EncryptionParameters::load_members, &new_parms, _1, _2), in, size, false);
             std::swap(*this, new_parms);
             return in_size;
         }
@@ -500,7 +544,8 @@ namespace seal {
         */
         SEAL_NODISCARD bool is_valid_scheme(std::uint8_t scheme) const noexcept
         {
-            switch (scheme) {
+            switch (scheme)
+            {
             case static_cast<std::uint8_t>(scheme_type::none):
                 /* fall through */
 
@@ -525,11 +570,12 @@ namespace seal {
         MemoryPoolHandle pool_ = MemoryManager::GetPool();
 
         scheme_type scheme_;
+
+        std::size_t poly_modulus_degree_ = 0;
+
         std::size_t secret_key_hamming_weight_ = 0;
 
         std::size_t sparse_slots_ = 0;
-
-        std::size_t poly_modulus_degree_ = 0;
 
         std::vector<Modulus> coeff_modulus_{};
 
@@ -544,9 +590,11 @@ namespace seal {
 /**
 Specializes the std::hash template for parms_id_type.
 */
-namespace std {
+namespace std
+{
     template <>
-    struct hash<seal::parms_id_type> {
+    struct hash<seal::parms_id_type>
+    {
         std::size_t operator()(const seal::parms_id_type &parms_id) const
         {
             std::uint64_t result = 17;
@@ -559,7 +607,8 @@ namespace std {
     };
 
     template <>
-    struct hash<seal::EncryptionParameters> {
+    struct hash<seal::EncryptionParameters>
+    {
         std::size_t operator()(const seal::EncryptionParameters &parms) const
         {
             hash<seal::parms_id_type> parms_id_hash;
