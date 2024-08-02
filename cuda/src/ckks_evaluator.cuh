@@ -199,8 +199,7 @@ class Evaluator {
   }
 
   inline void multiply_plain(PhantomCiphertext &ct, PhantomPlaintext &plain, PhantomCiphertext &dest) {
-    dest = ct;
-    multiply_plain_inplace(dest, plain);
+    dest = ::multiply_plain(*context, ct, plain);
   }
 
   inline void multiply_plain_inplace(PhantomCiphertext &ct, PhantomPlaintext &plain) {
@@ -225,7 +224,13 @@ class Evaluator {
   }
 
   inline void add_many(vector<PhantomCiphertext> &cts, PhantomCiphertext &dest) {
-    ::add_many(*context, cts, dest);
+    size_t size = cts.size();
+    if (size < 2) throw invalid_argument("add_many requires at least 2 ciphertexts");
+
+    add(cts[0], cts[1], dest);
+    for (size_t i = 2; i < size; i++) {
+      add_inplace(dest, cts[i]);
+    }
   }
 
   // Subtraction

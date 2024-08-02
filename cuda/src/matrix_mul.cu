@@ -73,8 +73,6 @@ vector<Ciphertext> MMEvaluator::decompress_ciphertext(const Ciphertext &encrypte
   auto N = ckks->degree;
   uint32_t logN = ceil(log2(N));
 
-  cout << logN << endl;
-
   vector<Ciphertext> temp;
   temp.push_back(encrypted);
 
@@ -130,6 +128,16 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
   for (int i = 0; i < b_cts_count; i++) {
     Ciphertext ct;
     enc_compress_ciphertext(y[i], ct);
+
+    vector<complex<double>> vals;
+    Plaintext pt;
+    ckks->troy_decryptor->decrypt(ct, pt);
+    ckks->troy_encoder->decode_complex64_simd(pt, vals);
+    for (int i = 0; i < 10; i++) {
+      cout << vals[i].real() << " ";
+    }
+    cout << endl;
+
     b_compressed_cts.push_back(ct);
   }
 

@@ -91,8 +91,8 @@ namespace seal
                 uint64_t flag = static_cast<uint64_t>(-static_cast<int64_t>(noise < 0));
                 SEAL_ITERATE(
                     iter(StrideIter<uint64_t *>(&I, coeff_count), coeff_modulus), coeff_modulus_size,
-                    [&](auto J) { *get<0>(J) = static_cast<uint64_t>(noise) + (flag & get<1>(J).value()); });
-                    // [&](auto J) { *get<0>(J) = 1; });
+                    // [&](auto J) { *get<0>(J) = static_cast<uint64_t>(noise) + (flag & get<1>(J).value()); });
+                    [&](auto J) { *get<0>(J) = 1; });
             });
         }
 
@@ -129,8 +129,8 @@ namespace seal
                 uint64_t flag = static_cast<uint64_t>(-static_cast<int64_t>(noise < 0));
                 SEAL_ITERATE(
                     iter(StrideIter<uint64_t *>(&I, coeff_count), coeff_modulus), coeff_modulus_size,
-                    [&](auto J) { *get<0>(J) = static_cast<uint64_t>(noise) + (flag & get<1>(J).value()); });
-                    // [&](auto J) { *get<0>(J) = 1; });
+                    // [&](auto J) { *get<0>(J) = static_cast<uint64_t>(noise) + (flag & get<1>(J).value()); });
+                    [&](auto J) { *get<0>(J) = 1; });
             });
         }
 
@@ -153,12 +153,12 @@ namespace seal
                 auto &modulus = coeff_modulus[j];
                 uint64_t max_multiple = max_random - barrett_reduce_64(max_random, modulus) - 1;
                 transform(destination, destination + coeff_count, destination, [&](uint64_t rand) {
-                    // This ensures uniform distribution
-                    while (rand >= max_multiple)
-                    {
-                        prng->generate(sizeof(uint64_t), reinterpret_cast<seal_byte *>(&rand));
-                    }
-                    // rand = 1;
+                    // // This ensures uniform distribution
+                    // while (rand >= max_multiple)
+                    // {
+                    //     prng->generate(sizeof(uint64_t), reinterpret_cast<seal_byte *>(&rand));
+                    // }
+                    rand = 1;
                     return barrett_reduce_64(rand, modulus);
                 });
                 destination += coeff_count;

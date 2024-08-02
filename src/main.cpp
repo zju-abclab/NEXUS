@@ -24,7 +24,7 @@ using namespace std::chrono;
 void MM_test();
 void argmax_test();
 
-int TEST_TARGET_IDX = 1;
+int TEST_TARGET_IDX = 0;
 vector<string> TEST_TARGETS = {"MatMul", "Argmax", "GELU", "LayerNorm", "SoftMax"};
 string TEST_TARGET = TEST_TARGETS[TEST_TARGET_IDX];
 

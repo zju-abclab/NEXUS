@@ -61,14 +61,13 @@ std::vector<std::vector<double>> MMEvaluator::readMatrix(const std::string &file
   return matrix;
 }
 
-vector<Ciphertext> MMEvaluator::expand_ciphertext(
-    const Ciphertext &encrypted, uint32_t m, GaloisKeys &galkey, vector<uint32_t> &galois_elts) {
+vector<Ciphertext> MMEvaluator::expand_ciphertext(const Ciphertext &encrypted, uint32_t m, GaloisKeys &galkey, vector<uint32_t> &galois_elts) {
   uint32_t logm = ceil(log2(m));
-  Plaintext two("2");
   auto n = ckks->N;
+
   vector<Ciphertext> temp;
   temp.push_back(encrypted);
-  Ciphertext tempctxt;
+
   Ciphertext tempctxt_rotated;
   Ciphertext tempctxt_shifted;
   Ciphertext tempctxt_rotatedshifted;
@@ -78,20 +77,12 @@ vector<Ciphertext> MMEvaluator::expand_ciphertext(
     int index_raw = (n << 1) - (1 << i);
     int index = (index_raw * galois_elts[i]) % (n << 1);
 
-    // cout << "elt: " << galois_elts[i] << "|" << ckks->rots[i] << ", index_raw: " << index_raw << ", index: " << index << endl;
-
     for (uint32_t a = 0; a < temp.size(); a++) {
-      // if (temp.size() == 1) ckks->print_decrypted_ct(temp[a], 10);
       ckks->evaluator->apply_galois(temp[a], ckks->rots[i], *(ckks->galois_keys), tempctxt_rotated);  // sub
-      // if (temp.size() == 1) ckks->print_decrypted_ct(tempctxt_rotated, 10);
       ckks->evaluator->add(temp[a], tempctxt_rotated, newtemp[a]);
-      //   if(temp.size() == 1) ckks->print_decrypted_ct(newtemp[a], 10);
       multiply_power_of_X(temp[a], tempctxt_shifted, index_raw);  // x**-1
-                                                                  //   if(temp.size() == 1) ckks->print_decrypted_ct(tempctxt_shifted, 10);
       multiply_power_of_X(tempctxt_rotated, tempctxt_rotatedshifted, index);
-      //   if(temp.size() == 1) ckks->print_decrypted_ct(tempctxt_rotatedshifted, 10);
       ckks->evaluator->add(tempctxt_shifted, tempctxt_rotatedshifted, newtemp[a + temp.size()]);
-      //   if(temp.size() == 1) ckks->print_decrypted_ct(newtemp[a + temp.size()], 10);
     }
     temp = newtemp;
   }
@@ -164,6 +155,7 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
   // }
 
   // exit(0);
+
   chrono::high_resolution_clock::time_point time_start, time_end;
 
   vector<Plaintext> a_pts;
@@ -176,14 +168,8 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
 
   vector<Ciphertext> b_compressed_cts;
   for (int i = 0; i < 768 * 64 / ckks->degree; i++) {
-    Plaintext pt;
     Ciphertext ct;
-    // for (int j = 0; j < 10; j++) {
-    //   cout << y[i][j] << " ";
-    // }
-    // cout << endl;
     expandEncode(y[i], ct);
-    ckks->print_decrypted_ct(ct, 10);
     b_compressed_cts.push_back(ct);
   }
 
@@ -193,47 +179,34 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
     auto ctt = ckks->encryptor->encrypt_symmetric(a_pts[0]);
     send_size += ctt.save(ct_bytes.data(), ct_bytes.size());
   }
-
   cout << send_size / 1024.0 / 1024.0 << " MB" << endl;
 
   time_start = high_resolution_clock::now();
   vector<Ciphertext> b_expanded_cts;
 
   for (auto i = 0; i < b_compressed_cts.size(); i++) {
-    vector<Ciphertext> temp_cts =
-        expand_ciphertext(b_compressed_cts[i], ckks->degree, *ckks->galois_keys, ckks->rots);
+    vector<Ciphertext> temp_cts = expand_ciphertext(b_compressed_cts[i], ckks->degree, *ckks->galois_keys, ckks->rots);
     cout << "Expanded ciphertext #" << i + 1 << endl;
-    ckks->print_decrypted_ct(temp_cts[0], 10);
-    b_expanded_cts.insert(
-        b_expanded_cts.end(), make_move_iterator(temp_cts.begin()), make_move_iterator(temp_cts.end()));
+    b_expanded_cts.insert(b_expanded_cts.end(), make_move_iterator(temp_cts.begin()), make_move_iterator(temp_cts.end()));
   }
 
   time_end = high_resolution_clock::now();
   cout << "expanding time: " << duration_cast<std::chrono::seconds>(time_end - time_start).count() << " seconds"
        << endl;
 
-  Plaintext pt;
-  Ciphertext zero;
-  ckks->encoder->encode(std::vector<double>(ckks->N / 2, 0.0), ckks->scale, pt);
-  ckks->encryptor->encrypt_symmetric(pt, zero);
-
   time_start = high_resolution_clock::now();
   Ciphertext temp;
 
   for (int i = 0; i < 64; i++) {
-    Ciphertext res_col_ct = zero;
+    Ciphertext res_col_ct;
     vector<Ciphertext> temp_cts(768);
+
     for (int j = 0; j < 768; j++) {
       ckks->evaluator->multiply_plain(b_expanded_cts[i * 768 + j], a_pts[j], temp_cts[j]);
-      // if (j == 0) {
-      //   ckks->print_decrypted_ct(b_expanded_cts[i * 768 + j], 10);
-      //   ckks->print_decoded_pt(a_pts[j], 10);
-      //   cout << endl;
-      // }
     }
+
     res_col_ct.scale() = temp_cts[0].scale();
     ckks->evaluator->add_many(temp_cts, res_col_ct);
-    // ckks->print_decrypted_ct(res_col_ct, 10);
 
     res_col_ct.scale() *= 4096;
     res.push_back(res_col_ct);
@@ -244,6 +217,7 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
       ckks->evaluator->rescale_to_next_inplace(ct);
     }
   }
+
   vector<seal::seal_byte> rece_bytes(res[0].save_size());
   auto rece_size = 0;
   for (auto &ct : res) {
@@ -270,9 +244,6 @@ void MMEvaluator::expandEncode(vector<double> &val, Ciphertext &ct) {
 
   Plaintext p(poly_modulus_degree * 2);
 
-  // for (auto i = 0; i < poly_modulus_degree; i++) {
-  //     val[i] = 10.0 * 2.0 * (1.0 * rand() / RAND_MAX - 0.5);
-  // }
   for (auto i = 0; i < poly_modulus_degree; i++) {
     auto coeffd = std::round(val[i] * 10000000000);
     bool is_negative = std::signbit(coeffd);
@@ -289,11 +260,6 @@ void MMEvaluator::expandEncode(vector<double> &val, Ciphertext &ct) {
     }
   }
 
-  // for (auto i = 0; i < 10; i++) {
-  //   cout << p[i] << " ";
-  // }
-  // cout << endl;
-
   for (std::size_t i = 0; i < 2; i++) {
     util::ntt_negacyclic_harvey(p.data(i * poly_modulus_degree), ntt_tables[i]);
   }
@@ -301,21 +267,7 @@ void MMEvaluator::expandEncode(vector<double> &val, Ciphertext &ct) {
   p.parms_id() = context.first_parms_id();
   p.scale() = 10000000000;
 
-  // ckks->print_decoded_pt(p, 10);
-
   zero.scale() = p.scale();
 
-  // ckks->print_decoded_pt(p, 10);
-
-  //   for (int i = 0; i < 10; i++) {
-  //     cout << zero[i] << " ";
-  //   }
-  //   cout << endl;
-
   ckks->evaluator->add_plain(zero, p, ct);
-
-  //     for (int i = 0; i < 10; i++) {
-  //       cout << ct[i] << " ";
-  //     }
-  //     cout << endl;
 }

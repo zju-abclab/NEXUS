@@ -55,6 +55,10 @@ public:
         return parms_id_;
     }
 
+    [[nodiscard]] auto &parms_id() noexcept {
+        return parms_id_;
+    }
+
     [[nodiscard]] auto &chain_index() const noexcept {
         return chain_index_;
     }

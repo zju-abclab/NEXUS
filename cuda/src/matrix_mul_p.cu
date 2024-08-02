@@ -125,15 +125,17 @@ void MMEvaluator::enc_compress_ciphertext(vector<double> &values, PhantomCiphert
   nwt_2d_radix8_forward_inplace(p.data(), ckks->context->gpu_rns_tables(), coeff_modulus_size, 0, stream);
 
   // Update plaintext parameters
+  p.parms_id() = context_data.parms().parms_id();
   p.set_chain_index(context_data.chain_index());
   p.scale() = plain_scale;
 
   // Create a ciphertext encrypting zero
   PhantomPlaintext zero_pt;
   PhantomCiphertext zero;
-  ckks->encoder.encode(0.0, p.chain_index(), plain_scale, zero_pt);
+  ckks->encoder.encode(0.0, ckks->scale, zero_pt);
   ckks->encryptor.encrypt(zero_pt, zero);
 
+  zero.scale() = p.scale();
   ckks->evaluator.add_plain(zero, p, ct);
 }
 
@@ -154,8 +156,6 @@ vector<PhantomCiphertext> MMEvaluator::decompress_ciphertext(const PhantomCipher
     uint32_t galois_elt = ckks->galois_elts[i];
     int index_raw = (N << 1) - (1 << i);
     int index = (index_raw * galois_elt) % (N << 1);
-
-    // cout << i << " => " << temp.size() << endl;
 
     for (uint32_t a = 0; a < temp.size(); a++) {
       ckks->evaluator.apply_galois(temp[a], galois_elt, *(ckks->galois_keys), tempctxt_rotated);  // sub
@@ -197,7 +197,6 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
   for (int i = 0; i < b_cts_count; i++) {
     PhantomCiphertext ct;
     enc_compress_ciphertext(y[i], ct);
-    ckks->print_decrypted_ct(ct, 10);
     b_compressed_cts.emplace_back(ct);
   }
 
@@ -212,7 +211,6 @@ void MMEvaluator::matrix_mul(vector<vector<double>> &x, vector<vector<double>> &
   for (auto i = 0; i < b_compressed_cts.size(); i++) {
     vector<PhantomCiphertext> temp_cts = decompress_ciphertext(b_compressed_cts[i]);
     cout << "Expanded ciphertext #" << i + 1 << endl;
-    ckks->print_decrypted_ct(temp_cts[1], 10);
     b_expanded_cts.insert(b_expanded_cts.end(), make_move_iterator(temp_cts.begin()), make_move_iterator(temp_cts.end()));
   }
 

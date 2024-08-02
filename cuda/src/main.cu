@@ -89,12 +89,12 @@ void MM_test() {
 
   std::vector<std::vector<double>> row_pack;
 
-  std::vector<double> row_ct(4096, 0.0);
+  std::vector<double> row_ct(MM_N, 0.0);
   for (auto i = 0; i < 64 * 768; i++) {
     int row = i / 768;
     int col = i % 768;
-    row_ct[i % 4096] = matrix_768x64_T[row][col];
-    if (i % 4096 == 4095) {
+    row_ct[i % MM_N] = matrix_768x64_T[row][col];
+    if (i % MM_N == (MM_N - 1)) {
       row_pack.push_back(row_ct);
     }
   }
@@ -184,7 +184,7 @@ void MM_test_p() {
   std::vector<std::vector<double>> matrix_4096x64 = mme.read_matrix("../../data/calibration/matrix_output_m_128_k_64_batch_128.txt", 4096, 64);
   auto matrix_4096x64_T = mme.transpose_matrix(matrix_4096x64);
 
-  // Error of the first col
+  // Calculate the error of the first col
   PhantomPlaintext res_pt;
   vector<double> mm_res;
   ckks_evaluator.decryptor.decrypt(res[0], res_pt);
