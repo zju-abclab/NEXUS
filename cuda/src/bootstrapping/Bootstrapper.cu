@@ -2993,9 +2993,8 @@ void Bootstrapper::bootstrap_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphe
   modraise_inplace(cipher);
 
   timer.stop();
-  std::cout << timer.duration<milliseconds>() << "ms" << endl;
-
-  // ckks->print_decrypted_ct(cipher, 10);
+  std::cout << timer.duration<milliseconds>() << "ms\n";
+  ckks->print_decrypted_ct(cipher, 10);
 
   const auto modulus = ckks->context->first_context_data().parms().coeff_modulus();
   cipher.scale() = ((double)modulus[0].value());
@@ -3010,9 +3009,8 @@ void Bootstrapper::bootstrap_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphe
   }
 
   timer.stop();
-  std::cout << timer.duration<milliseconds>() << "ms" << endl;
-
-  // ckks->print_decrypted_ct(cipher, 10);
+  std::cout << timer.duration<milliseconds>() << "ms\n";
+  ckks->print_decrypted_ct(cipher, 10);
 
   PhantomCiphertext rtn;
   if (logn == 0) {
@@ -3038,10 +3036,9 @@ void Bootstrapper::bootstrap_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphe
     std::cout << "Coeff-to-slot... ";
     coefftoslot_3(rtn, cipher);
 
-    // ckks->print_decrypted_ct(rtn, 10);
-
     timer.stop();
-    std::cout << timer.duration<milliseconds>() << "ms" << endl;
+    std::cout << timer.duration<milliseconds>() << "ms\n";
+    ckks->print_decrypted_ct(rtn, 10);
   }
 
   // Modular Reduction
@@ -3051,10 +3048,9 @@ void Bootstrapper::bootstrap_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphe
   PhantomCiphertext modrtn;
   mod_reducer->modular_reduction(modrtn, rtn);
 
-  // ckks->print_decrypted_ct(modrtn, 10);
-
   timer.stop();
-  std::cout << timer.duration<milliseconds>() << "ms" << endl;
+  std::cout << timer.duration<milliseconds>() << "ms\n";
+  ckks->print_decrypted_ct(modrtn, 10);
 
   if (logn == 0) {
     const auto modulus = ckks->context->first_context_data().parms().coeff_modulus();
@@ -3087,10 +3083,9 @@ void Bootstrapper::bootstrap_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphe
     std::cout << "Slot-to-coeff... ";
     slottocoeff_3(rtncipher, modrtn);
 
-    // ckks->print_decrypted_ct(rtncipher, 10);
-
     timer.stop();
-    std::cout << timer.duration<milliseconds>() << "ms" << endl;
+    std::cout << timer.duration<milliseconds>() << "ms\n";
+    ckks->print_decrypted_ct(rtncipher, 10);
   }
 
   rtncipher.scale() = final_scale;

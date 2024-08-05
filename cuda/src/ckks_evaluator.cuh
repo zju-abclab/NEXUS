@@ -391,7 +391,6 @@ class Evaluator {
     PhantomPlaintext plain;
 
     values.resize(encoder->slot_count(), 0.0);
-    // if (values.size() != encoder->message_length()) encoder->reset_sparse_slots();
     encoder->encode(*context, values, ct.scale(), plain);
     mod_switch_to_inplace(plain, ct.params_id());
     multiply_plain_inplace(ct, plain);
@@ -401,7 +400,6 @@ class Evaluator {
     PhantomPlaintext plain;
 
     values.resize(encoder->slot_count(), 0.0 + 0.0i);
-    // if (values.size() != encoder->message_length()) encoder->reset_sparse_slots();
     encoder->encode(*context, values, ct.scale(), plain);
     mod_switch_to_inplace(plain, ct.params_id());
     multiply_plain_inplace(ct, plain);
@@ -412,14 +410,12 @@ class Decryptor {
  private:
   PhantomContext *context;
   PhantomSecretKey *decryptor;
-  vector<uint32_t> original_galois_elts;
 
  public:
   Decryptor() = default;
   Decryptor(PhantomContext *context, PhantomSecretKey *decryptor) {
     this->context = context;
     this->decryptor = decryptor;
-    this->original_galois_elts = context->key_galois_tool_->galois_elts();
   }
 
   inline void decrypt(PhantomCiphertext &ct, PhantomPlaintext &plain) {
@@ -432,10 +428,6 @@ class Decryptor {
 
   inline void create_galois_keys_from_elts(vector<uint32_t> &elts, PhantomGaloisKey &galois_keys) {
     galois_keys = decryptor->create_galois_keys_from_elts(*context, elts);
-  }
-
-  inline void reset_galois_keys(PhantomGaloisKey &galois_keys) {
-    galois_keys = decryptor->create_galois_keys_from_elts(*context, original_galois_elts);
   }
 };
 
@@ -459,12 +451,13 @@ class CKKSEvaluator {
   void eval_odd_deg9_poly(vector<double> &a, PhantomCiphertext &x, PhantomCiphertext &dest);
 
  public:
-  // PhantomFHE
+  // Memory managed outside of the evaluator
   PhantomContext *context;
   PhantomRelinKey *relin_keys;
   PhantomGaloisKey *galois_keys;
   std::vector<std::uint32_t> galois_elts;
 
+  // Component classes
   Encoder encoder;
   Encryptor encryptor;
   Evaluator evaluator;

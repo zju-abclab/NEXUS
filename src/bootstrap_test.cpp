@@ -1,17 +1,17 @@
 #include <NTL/RR.h>
 
+#include <chrono>
 #include <cmath>
 #include <complex>
 #include <fstream>
 #include <iostream>
+#include <random>
 
 #include "Bootstrapper.h"
 #include "ModularReducer.h"
 #include "Polynomial.h"
-#include "seal/seal.h"
 #include "ckks_evaluator.h"
-#include <chrono>
-#include <random>
+#include "seal/seal.h"
 
 using namespace std;
 using namespace NTL;
@@ -27,7 +27,6 @@ void random_real(vector<double> &vec, size_t size) {
 
   for (size_t i = 0; i < size; i++) {
     vec[i] = distribution(rnd);
-    // vec[i] = 0.5;
   }
 }
 
@@ -46,8 +45,6 @@ int main() {
   long loge = 10;
 
   long logn = 13;
-  // long logn_2 = 13;
-  // long logn_3 = 12;
   long sparse_slots = (1 << logn);
 
   int logp = 46;
@@ -58,9 +55,9 @@ int main() {
 
   int log_integer_part = logq - logp - loge + 5;
 
-  // int remaining_level = 14; // Calculation required
-  int remaining_level = 16;  // Calculation required
-  int boot_level = 14;       // greater than: subsum 1 + coefftoslot 2 + ModReduction 9 + slottocoeff 2
+  // Calculation required
+  int remaining_level = 16;
+  int boot_level = 14;  // Greater than: subsum 1 + coefftoslot 2 + ModReduction 9 + slottocoeff 2
   int total_level = remaining_level + boot_level;
 
   vector<int> coeff_bit_vec;
@@ -114,22 +111,6 @@ int main() {
   Decryptor decryptor(context, secret_key);
   size_t slot_count = encoder.slot_count();
 
-  // vector<double> output;
-  // vector<complex<double>> output2;
-  // vector<double> input = {1.0, 2.0, 3.0, 4.0, 5.0};
-  // vector<double> input2 = {1.0, 2.0, 3.0, 4.0};
-  // vector<complex<double>> input3 = {1.0 + 2.0i, 3.0 + 4.0i, 5.0 + 6.0i};
-  // Plaintext plain;
-  // Ciphertext cipher;
-  // encoder.encode(input, scale, plain);
-  // encryptor.encrypt_symmetric(plain, cipher);
-
-  // for (int i = 0; i < 10; i++) {
-  //   cout << cipher[i] << " ";
-  // }
-  // cout << endl;
-
-  // -------------------------------------------------------------------
   Bootstrapper bootstrapper(
       loge,
       logn,
@@ -148,79 +129,24 @@ int main() {
       evaluator,
       relin_keys,
       gal_keys);
-  // Bootstrapper bootstrapper_2(
-  //     loge,
-  //     logn_2,
-  //     logN - 1,
-  //     total_level,
-  //     scale,
-  //     boundary_K,
-  //     deg,
-  //     scale_factor,
-  //     inverse_deg,
-  //     context,
-  //     keygen,
-  //     encoder,
-  //     encryptor,
-  //     decryptor,
-  //     evaluator,
-  //     relin_keys,
-  //     gal_keys);
-  // Bootstrapper bootstrapper_3(
-  //     loge,
-  //     logn_3,
-  //     logN - 1,
-  //     total_level,
-  //     scale,
-  //     boundary_K,
-  //     deg,
-  //     scale_factor,
-  //     inverse_deg,
-  //     context,
-  //     keygen,
-  //     encoder,
-  //     encryptor,
-  //     decryptor,
-  //     evaluator,
-  //     relin_keys,
-  //     gal_keys);
 
   cout << "Generating Optimal Minimax Polynomials..." << endl;
   bootstrapper.prepare_mod_polynomial();
-  // bootstrapper_2.prepare_mod_polynomial();
-  // bootstrapper_3.prepare_mod_polynomial();
+
   cout << "Adding Bootstrapping Keys..." << endl;
-  // bootstrapper.addBootKeys_3_other_slots(gal_keys, slot_vec);
   vector<int> gal_steps_vector;
   gal_steps_vector.push_back(0);
   for (int i = 0; i < logN - 1; i++) {
     gal_steps_vector.push_back((1 << i));
   }
   bootstrapper.addLeftRotKeys_Linear_to_vector_3(gal_steps_vector);
-  // bootstrapper_2.addLeftRotKeys_Linear_to_vector_3(gal_steps_vector);
-  // bootstrapper_3.addLeftRotKeys_Linear_to_vector_3(gal_steps_vector);
 
-  // for(int i = 0; i < gal_steps_vector.size(); i++) {
-  //   cout << gal_steps_vector[i] << " ";
-  // }
-  // cout << endl;
-  
   keygen.create_galois_keys(gal_steps_vector, gal_keys);
 
-  // auto elts = context.key_context_data()->galois_tool()->get_elts_from_steps(gal_steps_vector);
-  // for(auto elt: elts) {
-  //       cout << elt << " ";
-  //   }
-  //   cout << endl;
-
   bootstrapper.slot_vec.push_back(logn);
-  // bootstrapper_2.slot_vec.push_back(logn_2);
-  // bootstrapper_3.slot_vec.push_back(logn_3);
 
   cout << "Generating Linear Transformation Coefficients..." << endl;
   bootstrapper.generate_LT_coefficient_3();
-  // bootstrapper_2.generate_LT_coefficient_3();
-  // bootstrapper_3.generate_LT_coefficient_3();
 
   double tot_err = 0, mean_err;
   size_t iterations = 1;
@@ -237,87 +163,43 @@ int main() {
 
   CKKSEvaluator ckks_evaluator(context, encryptor, decryptor, encoder, evaluator, scale, relin_keys, gal_keys);
 
-  for (size_t _ = 0; _ < iterations; _++) {
-    if (_ == 0)
-      sparse_slots = (1 << logn);
-    // else if (_ == 1)
-    // sparse_slots = (1 << logn_2);
-    // else if (_ == 2)
-    // sparse_slots = (1 << logn_3);
+  cout << "Setting sparse slots to: " << sparse_slots << endl;
 
-    cout << _ << "-th iteration : sparse_slots = " << sparse_slots << endl;
-
-    for (size_t i = 0; i < slot_count; i++) {
-      input[i] = sparse[i % sparse_slots];
-    }
-
-    encoder.encode(input, scale, plain);
-    encryptor.encrypt(plain, cipher);
-
-    for (int i = 0; i < total_level; i++) {
-      evaluator.mod_switch_to_next_inplace(cipher);
-    }
-
-    Ciphertext rtn;
-
-    decryptor.decrypt(cipher, plain);
-    // encoder.decode(plain, before, sparse_slots);
-    encoder.decode(plain, before);
-
-    auto start = system_clock::now();
-
-    if (_ == 0)
-      bootstrapper.bootstrap_3(rtn, cipher);
-    // else if (_ == 1)
-    // bootstrapper_2.bootstrap_3(rtn, cipher);
-    // else if (_ == 2)
-    // bootstrapper_3.bootstrap_3(rtn, cipher);
-
-    duration<double> sec = system_clock::now() - start;
-    cout << "bootstrapping time : " << sec.count() << "s" << endl;
-
-    cout << "return cipher level: " << rtn.coeff_modulus_size() << endl;
-
-    // rtn = ckks_evaluator.sgn_eval(rtn, 2, 2);
-
-    decryptor.decrypt(rtn, plain);
-    // encoder.decode(plain, after, sparse_slots);
-    encoder.decode(plain, after);
-
-    // for (long i = 0; i < sparse_slots; i++) {
-    //     if (before[i] > 0) {
-    //         before[i] = 0.5;
-    //     } else {
-    //         before[i] = -0.5;
-    //     }
-    // }
-
-    mean_err = 0;
-    for (long i = 0; i < sparse_slots; i++) {
-      // cout << i << "m: " << recover_vefore(before[i].real(), boundary_K) << "\td: " << after[i].real()<< endl;
-
-      if (i < 10)
-        cout << i << " " << before[i] << "<---->" << after[i] << endl;
-
-      mean_err += abs(before[i] - after[i]);
-      // if (file.is_open())
-      // {
-      //     file << before[i].real() - after[i].real() << ","
-      //      << before[i].imag() - after[i].imag() << "," << flush;
-      // }
-    }
-    mean_err /= sparse_slots;
-    cout << "Absolute mean of error: " << mean_err << endl;
-    tot_err += mean_err;
+  for (size_t i = 0; i < slot_count; i++) {
+    input[i] = sparse[i % sparse_slots];
   }
-  tot_err /= iterations;
 
-  // if (file.is_open())
-  // {
-  //     file << endl;
-  // }
-  cout << " mean error: " << tot_err << endl;
-  // file.close();
+  encoder.encode(input, scale, plain);
+  encryptor.encrypt(plain, cipher);
+
+  for (int i = 0; i < total_level; i++) {
+    evaluator.mod_switch_to_next_inplace(cipher);
+  }
+
+  Ciphertext rtn;
+
+  decryptor.decrypt(cipher, plain);
+  encoder.decode(plain, before);
+
+  auto start = system_clock::now();
+
+  bootstrapper.bootstrap_3(rtn, cipher);
+
+  duration<double> sec = system_clock::now() - start;
+  cout << "Bootstrapping time : " << sec.count() << "s" << endl;
+  cout << "Return cipher level: " << rtn.coeff_modulus_size() << endl;
+
+  decryptor.decrypt(rtn, plain);
+  encoder.decode(plain, after);
+
+  mean_err = 0;
+  for (long i = 0; i < sparse_slots; i++) {
+    // if (i < 10)
+    //   cout << i << " " << before[i] << "<---->" << after[i] << endl;
+    mean_err += abs(before[i] - after[i]);
+  }
+  mean_err /= sparse_slots;
+  cout << "Mean absolute error: " << mean_err << endl;
 
   return 0;
 }

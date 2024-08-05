@@ -3,7 +3,7 @@
 #include <seal/util/defines.h>
 using namespace std::chrono;
 
-// NOTE: DONE
+// @deprecated Bootstrapping has been implemented
 void CKKSEvaluator::re_encrypt(Ciphertext &ct) {
   auto start = high_resolution_clock::now();
   while (ct.coeff_modulus_size() > 1) {
@@ -445,11 +445,7 @@ pair<Ciphertext, Ciphertext> CKKSEvaluator::goldSchmidtIter(Ciphertext v, Cipher
 
   for (int i = 0; i < d; i++) {
     encoder->encode(0.5, scale, constant);
-    // r = 0.5 - xh
-    // if (context->get_context_data(x.parms_id())->chain_index() < 3) {
-    //     re_encrypt(x);
-    //     re_encrypt(h);
-    // }
+
     evaluator->multiply(x, h, r);
     evaluator->relinearize_inplace(r, *relin_keys);
     evaluator->rescale_to_next_inplace(r);
@@ -534,7 +530,6 @@ Ciphertext CKKSEvaluator::initGuess(Ciphertext x) {
 }
 
 Ciphertext CKKSEvaluator::evalLine(Ciphertext x, Plaintext m, Plaintext c) {
-  // cout << "line\n";
   evaluator->mod_switch_to_inplace(m, x.parms_id());
   evaluator->multiply_plain_inplace(x, m);
   evaluator->rescale_to_next_inplace(x);
@@ -559,86 +554,3 @@ Ciphertext CKKSEvaluator::exp(Ciphertext x) {
   }
   return x;
 }
-
-// Ciphertext CKKSEvaluator::exp(Ciphertext x)
-// {
-//     // vector<double> exp_coeff = { 9.91306343e-01, 0.998104199650, 0.501415542413, 0.169660297661, 0.042133244334,
-//     //                0.007501312598, 0.000879175634, 1.53797061e-05, 3.16556292e-07 };
-
-//     vector<double> exp_coeff = { 9.99990542e-01, 9.99850000e-01, 4.99408975e-01, 1.65644933e-01, 4.06938380e-02,
-//                    7.75757649e-03, 1.16076785e-03, 1.34778466e-04, 1.18166114e-05, 7.50101646e-07, 3.23109248e-08, 8.40653502e-10,
-//                    9.93527706e-12};
-
-//     vector<Plaintext> coeff(13);
-//     for (size_t i = 0; i < 13; i++) {
-//         encoder->encode(exp_coeff[i], scale, coeff[i]);
-//     }
-
-//     vector<Ciphertext> x_pow(13);
-//     x_pow[1] = x;
-//     evaluator->square(x, x_pow[2]);
-//     evaluator->relinearize_inplace(x_pow[2], *relin_keys);
-//     evaluator->rescale_to_next_inplace(x_pow[2]);
-
-//     evaluator->mod_switch_to_inplace(x, x_pow[2].parms_id());
-//     evaluator->multiply(x_pow[2], x, x_pow[3]);
-//     evaluator->relinearize_inplace(x_pow[3], *relin_keys);
-//     evaluator->rescale_to_next_inplace(x_pow[3]);
-
-//     evaluator->square(x_pow[2], x_pow[4]);
-//     evaluator->relinearize_inplace(x_pow[4], *relin_keys);
-//     evaluator->rescale_to_next_inplace(x_pow[4]);
-
-//     evaluator->mod_switch_to_inplace(x_pow[2], x_pow[3].parms_id());
-//     evaluator->multiply(x_pow[2], x_pow[3], x_pow[5]);
-//     evaluator->relinearize_inplace(x_pow[5], *relin_keys);
-//     evaluator->rescale_to_next_inplace(x_pow[5]);
-
-//     evaluator->square(x_pow[3], x_pow[6]);
-//     evaluator->relinearize_inplace(x_pow[6], *relin_keys);
-//     evaluator->rescale_to_next_inplace(x_pow[6]);
-
-//     evaluator->mod_switch_to_inplace(x_pow[3], x_pow[4].parms_id());
-//     evaluator->multiply(x_pow[3], x_pow[4], x_pow[7]);
-//     evaluator->relinearize_inplace(x_pow[7], *relin_keys);
-//     evaluator->rescale_to_next_inplace(x_pow[7]);
-
-//     evaluator->square(x_pow[4], x_pow[8]);
-//     evaluator->relinearize_inplace(x_pow[8], *relin_keys);
-//     evaluator->rescale_to_next_inplace(x_pow[8]);
-
-//     evaluator->mod_switch_to_inplace(x_pow[3], x_pow[6].parms_id());
-//     evaluator->multiply(x_pow[3], x_pow[6], x_pow[9]);
-//     evaluator->relinearize_inplace(x_pow[9], *relin_keys);
-//     evaluator->rescale_to_next_inplace(x_pow[9]);
-
-//     evaluator->square(x_pow[5], x_pow[10]);
-//     evaluator->relinearize_inplace(x_pow[10], *relin_keys);
-//     evaluator->rescale_to_next_inplace(x_pow[10]);
-
-//     evaluator->mod_switch_to_inplace(x_pow[5], x_pow[6].parms_id());
-//     evaluator->multiply(x_pow[5], x_pow[6], x_pow[11]);
-//     evaluator->relinearize_inplace(x_pow[11], *relin_keys);
-//     evaluator->rescale_to_next_inplace(x_pow[11]);
-
-//     evaluator->square(x_pow[6], x_pow[12]);
-//     evaluator->relinearize_inplace(x_pow[12], *relin_keys);
-//     evaluator->rescale_to_next_inplace(x_pow[12]);
-
-//     vector<Ciphertext> item(exp_coeff.size());
-
-//     for (size_t i = 1; i < coeff.size(); i++) {
-//         evaluator->mod_switch_to_inplace(coeff[i], x_pow[i].parms_id());
-//         evaluator->multiply_plain(x_pow[i], coeff[i], item[i]);
-//         evaluator->rescale_to_next_inplace(item[i]);
-//     }
-//     item[coeff.size() - 1].scale() = scale;
-//     for (size_t i = 1; i < coeff.size() - 1; i++) {
-//         item[i].scale() = scale;
-//         evaluator->mod_switch_to_inplace(item[i], item[coeff.size() - 1].parms_id());
-//         evaluator->add_inplace(item[coeff.size() - 1], item[i]);
-//     }
-//     evaluator->mod_switch_to_inplace(coeff[0], item[coeff.size() - 1].parms_id());
-//     evaluator->add_plain_inplace(item[coeff.size() - 1], coeff[0]);
-//     return item[coeff.size() - 1];
-// }

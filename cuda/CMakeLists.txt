@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.20)
 
-# Must use CUDA 11.7
-set(CMAKE_CUDA_COMPILER "/usr/local/cuda-11.7/bin/nvcc")
+# Must use CUDA 11
+if (UNIX)
+  set(CMAKE_CUDA_COMPILER "/usr/local/cuda-11/bin/nvcc")
+endif()
 
 project(NEXUS-CUDA LANGUAGES CXX CUDA)
 
@@ -28,7 +30,7 @@ set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 # CUDA config
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES OR CMAKE_CUDA_ARCHITECTURES STREQUAL "")
   set(CMAKE_CUDA_ARCHITECTURES native) # auto-detect GPU
-endif ()
+endif()
 set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -std=c++17 --default-stream per-thread")
 
@@ -43,7 +45,7 @@ option(PHANTOM_USE_CUDA_PTX "Use CUDA PTX Assembly" ON)
 message(STATUS "Use CUDA PTX Assembly: ${PHANTOM_USE_CUDA_PTX}")
 if (PHANTOM_USE_CUDA_PTX)
     add_compile_definitions(PHANTOM_USE_CUDA_PTX)
-endif ()
+endif()
 
 # PhantomFHE
 include_directories(thirdparty/phantom-fhe/include)

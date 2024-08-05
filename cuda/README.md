@@ -3,8 +3,9 @@ CUDA implementation of NEXUS
 
 <br/>
 
-## Dependencies
-- CUDA 11.7
+## Prerequisites
+- CUDA 11
+- Tested on A100 GPUs
 
 <br/>
 

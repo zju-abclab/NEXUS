@@ -148,7 +148,7 @@ int main() {
 
   double mean_err = 0;
   for (long i = 0; i < sparse_slots; i++) {
-    // if (i < 10) std::cout << before[i] << " <----> " << after[i] << endl;
+    if (i < 10) std::cout << before[i] << " <----> " << after[i] << endl;
     mean_err += abs(before[i] - after[i]);
   }
   mean_err /= sparse_slots;

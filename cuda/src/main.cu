@@ -58,7 +58,6 @@ void MM_test() {
   }
 
   CKKSEvaluator ckks_evaluator(&context, &public_key, &secret_key, &encoder, &relin_keys, &galois_keys, SCALE, galois_elts);
-
   ckks_evaluator.decryptor.create_galois_keys_from_elts(galois_elts, *(ckks_evaluator.galois_keys));
 
   MMEvaluator mme(ckks_evaluator);
@@ -66,13 +65,10 @@ void MM_test() {
   std::vector<std::vector<double>> matrix_4096x768 = mme.read_matrix("../../data/input/matrixmul_input_m_128_n_768_k_64_batch_128.txt", 4096, 768);
   std::vector<std::vector<double>> matrix_768x64 = mme.read_matrix("../../data/input/matrix_input_n_768_k_64.txt", 768, 64);
 
-  vector<PhantomCiphertext> res;
-
   auto matrix_4096x768_T = mme.transpose_matrix(matrix_4096x768);
   auto matrix_768x64_T = mme.transpose_matrix(matrix_768x64);
 
   std::vector<std::vector<double>> row_pack;
-
   std::vector<double> row_ct(MM_N, 0.0);
   for (auto i = 0; i < 64 * 768; i++) {
     int row = i / 768;
@@ -83,6 +79,7 @@ void MM_test() {
     }
   }
 
+  vector<PhantomCiphertext> res;
   auto timer = Timer();
 
   mme.matrix_mul(matrix_4096x768_T, row_pack, res);
@@ -93,7 +90,7 @@ void MM_test() {
   std::vector<std::vector<double>> matrix_4096x64 = mme.read_matrix("../../data/calibration/matrix_output_m_128_k_64_batch_128.txt", 4096, 64);
   auto matrix_4096x64_T = mme.transpose_matrix(matrix_4096x64);
 
-  // Calculate the error of the first col
+  // Calculate the error of the first column
   PhantomPlaintext res_pt;
   vector<double> mm_res;
   ckks_evaluator.decryptor.decrypt(res[0], res_pt);

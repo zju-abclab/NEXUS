@@ -31,8 +31,8 @@ class CKKSEvaluator {
   // should be divided by (1 << 10)
   int g4_scale = (1 << 10);
   Plaintext a, b, half, div_b, neg_p, err, M1, M2, C1, C2;
+
   Ciphertext poly_eval(Ciphertext x, vector<Plaintext> coeff);
-  Ciphertext exp_poly_eval(vector<Ciphertext> x_pow, vector<Plaintext> coeff);
   Ciphertext newtonIter(Ciphertext x, Ciphertext res, int iter = 4);
   pair<Ciphertext, Ciphertext> goldSchmidtIter(Ciphertext v, Ciphertext y, int d = 1);
   Ciphertext initGuess(Ciphertext x);
@@ -46,6 +46,7 @@ class CKKSEvaluator {
   Evaluator *evaluator = nullptr;
   RelinKeys *relin_keys = nullptr;
   GaloisKeys *galois_keys = nullptr;
+
   double scale;
   size_t N;
   size_t slot_count;
@@ -93,13 +94,16 @@ class CKKSEvaluator {
   void re_encrypt(Ciphertext &ct);
   void print_decrypted_ct(Ciphertext &ct, int nums);
   void print_decoded_pt(Plaintext &pt, int num);
+
   vector<double> init_vec_with_value(int N, double init_value);
-  double calculateMAE(vector<double> &y_true, Ciphertext &ct, int N);
   vector<double> init_mask(int N, int m);
   uint64_t get_modulus(Ciphertext &x, int k);
-  Ciphertext invert_sqrt(Ciphertext x, int d_newt = 5, int d_gold = 2);
   void eval_odd_deg9_poly(vector<double> &a, Ciphertext &x, Ciphertext &dest);
+
+  Ciphertext invert_sqrt(Ciphertext x, int d_newt = 5, int d_gold = 2);
   Ciphertext sgn_eval(Ciphertext x, int d_g, int d_f, double sgn_factor = 0.5);
   Ciphertext exp(Ciphertext x);
   Ciphertext inverse(Ciphertext x, int iter = 4);
+
+  double calculateMAE(vector<double> &y_true, Ciphertext &ct, int N);
 };

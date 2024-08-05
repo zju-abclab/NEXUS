@@ -53,6 +53,7 @@ void ArgmaxEvaluator::argmax(Ciphertext &x, Ciphertext &res, int len) {
 
 void ArgmaxEvaluator::bootstrap(Ciphertext &x) {
   cout << "Bootstrapping started" << endl;
+
   if (x.coeff_modulus_size() > 1) {
     cout << "Ciphertext is not at lowest level, remaining level(s): " + to_string(x.coeff_modulus_size()) << endl;
     cout << "Mod switching to the lowest level..." << endl;
@@ -65,8 +66,11 @@ void ArgmaxEvaluator::bootstrap(Ciphertext &x) {
   Ciphertext x_0 = x;
   bootstrapper->set_final_scale(x.scale());
   cout << "Bootstrapping..." << endl;
+
   auto start = system_clock::now();
+
   bootstrapper->bootstrap_3(x, x_0);
+
   duration<double> sec = system_clock::now() - start;
   cout << "Bootstrapping took: " << sec.count() << "s" << endl;
   cout << "New ciphertext depth: " << x.coeff_modulus_size() << endl;
