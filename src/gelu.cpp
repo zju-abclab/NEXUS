@@ -1,7 +1,6 @@
 #include "gelu.h"
 
-using namespace std;
-using namespace seal;
+#include <iostream>
 
 void GeLUEvaluator::gelu(Ciphertext &x, Ciphertext &res) {
   Ciphertext b0, b1, b2;

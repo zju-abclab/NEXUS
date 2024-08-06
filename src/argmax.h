@@ -1,14 +1,11 @@
-#include <seal/seal.h>
+#pragma once
 
-#include <chrono>
-#include <iostream>
-#include <vector>
+#include <seal/seal.h>
 
 #include "Bootstrapper.h"
 #include "ckks_evaluator.h"
 
 using namespace std;
-using namespace chrono;
 using namespace seal;
 
 class ArgmaxEvaluator {

@@ -1,14 +1,8 @@
 #pragma once
-#include <math.h>
-#include <seal/seal.h>
-#include <sys/types.h>
 
-#include <chrono>
-#include <cmath>
-#include <cstdint>
-#include <iostream>
-#include <random>
-#include <string>
+#include <seal/seal.h>
+#include <seal/util/uintarith.h>
+
 #include <vector>
 
 using namespace std;

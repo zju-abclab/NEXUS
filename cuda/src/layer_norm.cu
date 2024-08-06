@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "layer_norm.cuh"
 
 using namespace nexus;

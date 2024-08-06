@@ -1,11 +1,5 @@
 #include "matrix_mul.h"
 
-#include <seal/ciphertext.h>
-#include <seal/plaintext.h>
-#include <seal/util/defines.h>
-#include <seal/valcheck.h>
-
-#include <cmath>
 #include <fstream>
 #include <iostream>
 #include <sstream>

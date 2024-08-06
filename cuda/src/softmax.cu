@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "softmax.cuh"
 
 using namespace nexus;

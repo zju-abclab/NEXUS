@@ -1,3 +1,6 @@
+#include <iostream>
+#include <vector>
+
 #include "argmax.cuh"
 
 void ArgmaxEvaluator::argmax(PhantomCiphertext &x, PhantomCiphertext &x_copy, int len) {

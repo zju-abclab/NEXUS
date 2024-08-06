@@ -1,11 +1,13 @@
 #include "softmax.h"
 
-using namespace std;
-using namespace seal;
+#include <iostream>
+#include <vector>
 
 void SoftmaxEvaluator::softmax(Ciphertext &x, Ciphertext &res, int len) {
   Ciphertext tmp, exp_x;
+
   int log_step = log2(len);
+
   ckks->evaluator->rotate_vector(x, -len, *ckks->galois_keys, tmp);
   ckks->evaluator->add_inplace(x, tmp);
 
@@ -35,4 +37,6 @@ void SoftmaxEvaluator::softmax(Ciphertext &x, Ciphertext &res, int len) {
   ckks->evaluator->multiply(res, exp_x, res);
   ckks->evaluator->relinearize_inplace(res, *ckks->relin_keys);
   ckks->evaluator->rescale_to_next_inplace(res);
+
+  // cout << "Moduli left after SoftMax: " << res.coeff_modulus_size() << endl;
 }

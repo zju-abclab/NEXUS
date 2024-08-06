@@ -1,4 +1,5 @@
 #pragma once
+
 #include "ckks_evaluator.cuh"
 #include "phantom.h"
 

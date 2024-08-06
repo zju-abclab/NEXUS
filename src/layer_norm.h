@@ -1,15 +1,20 @@
-#include <seal/seal.h>
+#pragma once
 
-#include <iostream>
-#include <vector>
+#include <seal/seal.h>
 
 #include "ckks_evaluator.h"
 
+using namespace std;
+using namespace seal;
+
 class LNEvaluator {
- public:
+ private:
   CKKSEvaluator *ckks = nullptr;
+
+ public:
   LNEvaluator(CKKSEvaluator &ckks) {
     this->ckks = &ckks;
   }
+
   void layer_norm(Ciphertext &x, Ciphertext &res, int len);
 };

@@ -1,6 +1,4 @@
 #pragma once
-#include <iostream>
-#include <vector>
 
 #include "ckks_evaluator.cuh"
 #include "phantom.h"

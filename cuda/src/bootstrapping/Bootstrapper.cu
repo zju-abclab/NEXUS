@@ -2984,7 +2984,6 @@ void Bootstrapper::bootstrap_full(PhantomCiphertext &rtncipher, PhantomCiphertex
   rtncipher.scale() = final_scale;
 }
 
-// NOTE:: main
 void Bootstrapper::bootstrap_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphertext &cipher) {
   // ModRaise
   auto timer = Timer();
@@ -2994,7 +2993,7 @@ void Bootstrapper::bootstrap_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphe
 
   timer.stop();
   std::cout << timer.duration<milliseconds>() << "ms\n";
-  ckks->print_decrypted_ct(cipher, 10);
+  // ckks->print_decrypted_ct(cipher, 10);
 
   const auto modulus = ckks->context->first_context_data().parms().coeff_modulus();
   cipher.scale() = ((double)modulus[0].value());
@@ -3010,7 +3009,7 @@ void Bootstrapper::bootstrap_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphe
 
   timer.stop();
   std::cout << timer.duration<milliseconds>() << "ms\n";
-  ckks->print_decrypted_ct(cipher, 10);
+  // ckks->print_decrypted_ct(cipher, 10);
 
   PhantomCiphertext rtn;
   if (logn == 0) {
@@ -3038,7 +3037,7 @@ void Bootstrapper::bootstrap_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphe
 
     timer.stop();
     std::cout << timer.duration<milliseconds>() << "ms\n";
-    ckks->print_decrypted_ct(rtn, 10);
+    // ckks->print_decrypted_ct(rtn, 10);
   }
 
   // Modular Reduction
@@ -3050,7 +3049,7 @@ void Bootstrapper::bootstrap_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphe
 
   timer.stop();
   std::cout << timer.duration<milliseconds>() << "ms\n";
-  ckks->print_decrypted_ct(modrtn, 10);
+  // ckks->print_decrypted_ct(modrtn, 10);
 
   if (logn == 0) {
     const auto modulus = ckks->context->first_context_data().parms().coeff_modulus();
@@ -3085,7 +3084,7 @@ void Bootstrapper::bootstrap_sparse_3(PhantomCiphertext &rtncipher, PhantomCiphe
 
     timer.stop();
     std::cout << timer.duration<milliseconds>() << "ms\n";
-    ckks->print_decrypted_ct(rtncipher, 10);
+    // ckks->print_decrypted_ct(rtncipher, 10);
   }
 
   rtncipher.scale() = final_scale;

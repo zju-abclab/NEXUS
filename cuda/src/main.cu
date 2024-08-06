@@ -1,5 +1,7 @@
 #include <fstream>
 #include <iostream>
+#include <string>
+#include <vector>
 
 #include "argmax.cuh"
 #include "ckks_evaluator.cuh"
@@ -17,7 +19,7 @@ using namespace phantom::util;
 using namespace nexus;
 
 // Choose test target here:
-int TEST_TARGET_IDX = 0;
+int TEST_TARGET_IDX = 4;
 
 size_t N = 1ULL << 16;
 size_t MM_LOG_N = 13;
@@ -39,10 +41,10 @@ string TEST_TARGET = TEST_TARGETS[TEST_TARGET_IDX];
 vector<int> TEST_COEFF_MODULI = COEFF_MODULI[TEST_TARGET_IDX];
 
 void MM_test() {
-  phantom::EncryptionParameters parms(scheme_type::ckks);
+  EncryptionParameters parms(scheme_type::ckks);
 
   parms.set_poly_modulus_degree(MM_N);
-  parms.set_coeff_modulus(phantom::arith::CoeffModulus::Create(MM_N, TEST_COEFF_MODULI));
+  parms.set_coeff_modulus(CoeffModulus::Create(MM_N, TEST_COEFF_MODULI));
 
   PhantomContext context(parms);
   PhantomCKKSEncoder encoder(context);
@@ -138,12 +140,12 @@ void argmax_test() {
   }
   coeff_bit_vec.push_back(log_special_prime);
 
-  phantom::EncryptionParameters parms(scheme_type::ckks);
+  EncryptionParameters parms(scheme_type::ckks);
   size_t poly_modulus_degree = (size_t)(1 << logN);
   double scale = pow(2.0, logp);
 
   parms.set_poly_modulus_degree(poly_modulus_degree);
-  parms.set_coeff_modulus(phantom::arith::CoeffModulus::Create(poly_modulus_degree, coeff_bit_vec));
+  parms.set_coeff_modulus(CoeffModulus::Create(poly_modulus_degree, coeff_bit_vec));
   parms.set_secret_key_hamming_weight(secret_key_hamming_weight);
   parms.set_sparse_slots(sparse_slots);
 
@@ -259,10 +261,10 @@ int main() {
     return 0;
   }
 
-  phantom::EncryptionParameters params(scheme_type::ckks);
+  EncryptionParameters params(scheme_type::ckks);
 
   params.set_poly_modulus_degree(N);
-  params.set_coeff_modulus(phantom::arith::CoeffModulus::Create(N, TEST_COEFF_MODULI));
+  params.set_coeff_modulus(CoeffModulus::Create(N, TEST_COEFF_MODULI));
 
   PhantomContext context(params);
 

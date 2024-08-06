@@ -1,12 +1,9 @@
-#include <math.h>
-#include <seal/ciphertext.h>
-#include <seal/plaintext.h>
 #include <seal/seal.h>
+#include <seal/util/uintarith.h>
 
 #include <chrono>
 #include <fstream>
 #include <iostream>
-#include <random>
 #include <string>
 #include <vector>
 
@@ -24,8 +21,14 @@ using namespace std::chrono;
 void MM_test();
 void argmax_test();
 
+// Choose a test target here:
 int TEST_TARGET_IDX = 0;
+
 vector<string> TEST_TARGETS = {"MatMul", "Argmax", "GELU", "LayerNorm", "SoftMax"};
+vector<int> COEFF_MODULI = {58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58};
+vector<int> MM_COEFF_MODULI = {60, 40, 60};
+double SCALE = pow(2.0, 40);
+
 string TEST_TARGET = TEST_TARGETS[TEST_TARGET_IDX];
 
 int main() {
@@ -41,13 +44,10 @@ int main() {
 
   long logN = 16;
   size_t poly_modulus_degree = 1 << logN;
-  double scale = pow(2.0, 40);
 
   EncryptionParameters parms(scheme_type::ckks);
   parms.set_poly_modulus_degree(poly_modulus_degree);
-  parms.set_coeff_modulus(CoeffModulus::Create(
-      poly_modulus_degree,
-      {58, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 58}));
+  parms.set_coeff_modulus(CoeffModulus::Create(poly_modulus_degree, COEFF_MODULI));
 
   SEALContext context(parms, true, sec_level_type::none);
 
@@ -65,7 +65,7 @@ int main() {
   Evaluator evaluator(context, encoder);
   Decryptor decryptor(context, secret_key);
 
-  CKKSEvaluator ckks_evaluator(context, encryptor, decryptor, encoder, evaluator, scale, relin_keys, galois_keys);
+  CKKSEvaluator ckks_evaluator(context, encryptor, decryptor, encoder, evaluator, SCALE, relin_keys, galois_keys);
   GeLUEvaluator gelu_evaluator(ckks_evaluator);
   LNEvaluator ln_evaluator(ckks_evaluator);
   SoftmaxEvaluator softmax_evaluator(ckks_evaluator);
@@ -94,7 +94,7 @@ int main() {
     }
     calibration_file.close();
 
-    ckks_evaluator.encoder->encode(input, scale, plain_input);
+    ckks_evaluator.encoder->encode(input, SCALE, plain_input);
     ckks_evaluator.encryptor->encrypt(plain_input, cipher_input);
 
     auto start = high_resolution_clock::now();
@@ -128,7 +128,7 @@ int main() {
     }
     calibration_file.close();
 
-    ckks_evaluator.encoder->encode(input, scale, plain_input);
+    ckks_evaluator.encoder->encode(input, SCALE, plain_input);
     ckks_evaluator.encryptor->encrypt(plain_input, cipher_input);
 
     auto start = high_resolution_clock::now();
@@ -162,7 +162,7 @@ int main() {
     }
     calibration_file.close();
 
-    ckks_evaluator.encoder->encode(input, scale, plain_input);
+    ckks_evaluator.encoder->encode(input, SCALE, plain_input);
     ckks_evaluator.encryptor->encrypt(plain_input, cipher_input);
 
     auto start = high_resolution_clock::now();
@@ -311,11 +311,10 @@ void argmax_test() {
 void MM_test() {
   long logN = 13;
   size_t poly_modulus_degree = 1 << logN;
-  double scale = pow(2.0, 40);
 
   EncryptionParameters parms(scheme_type::ckks);
   parms.set_poly_modulus_degree(poly_modulus_degree);
-  parms.set_coeff_modulus(CoeffModulus::Create(poly_modulus_degree, {60, 40, 60}));
+  parms.set_coeff_modulus(CoeffModulus::Create(poly_modulus_degree, MM_COEFF_MODULI));
 
   SEALContext context(parms, true, sec_level_type::none);
 
@@ -338,7 +337,7 @@ void MM_test() {
   Evaluator evaluator(context, encoder);
   Decryptor decryptor(context, secret_key);
 
-  CKKSEvaluator ckks_evaluator(context, encryptor, decryptor, encoder, evaluator, scale, relin_keys, galois_keys);
+  CKKSEvaluator ckks_evaluator(context, encryptor, decryptor, encoder, evaluator, SCALE, relin_keys, galois_keys);
   MMEvaluator mme(ckks_evaluator);
 
   std::vector<std::vector<double>> matrix_4096x768 = mme.readMatrix("../data/input/matrixmul_input_m_128_n_768_k_64_batch_128.txt", 4096, 768);

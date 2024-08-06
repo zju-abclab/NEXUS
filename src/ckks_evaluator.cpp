@@ -1,7 +1,9 @@
 #include "ckks_evaluator.h"
 
-#include <seal/util/defines.h>
-using namespace std::chrono;
+#include <chrono>
+#include <iostream>
+
+using namespace chrono;
 
 // @deprecated Bootstrapping has been implemented
 void CKKSEvaluator::re_encrypt(Ciphertext &ct) {
@@ -9,23 +11,24 @@ void CKKSEvaluator::re_encrypt(Ciphertext &ct) {
   while (ct.coeff_modulus_size() > 1) {
     evaluator->mod_switch_to_next_inplace(ct);
   }
+
   vector<seal_byte> data;
   data.resize(ct.save_size(compr_mode_type::zstd));
   comm += ct.save(data.data(), data.size(), compr_mode_type::zstd);
-  round++;
   // cout << "Communication cost:  " <<
   // ct.save(data.data(),data.size(),compr_mode_type::zstd) << " bytes" << endl;
+
   Plaintext temp;
   vector<double> v;
   decryptor->decrypt(ct, temp);
   encoder->decode(temp, v);
-  // encoder->encode(v, scale, temp);
+
   encoder->encode(v, ct.scale(), temp);
   encryptor->encrypt(temp, ct);
-  data.resize(ct.save_size(compr_mode_type::zstd));
-  comm += ct.save(data.data(), data.size(), compr_mode_type::zstd);
+
   auto end = high_resolution_clock::now();
   cout << duration_cast<milliseconds>(end - start).count() / 2 << " milliseconds" << endl;
+
   // cout << "depth = " <<
   // context->get_context_data(ct.parms_id())->chain_index() << "\n";
 }
@@ -97,6 +100,7 @@ vector<double> CKKSEvaluator::init_mask(int N, int m) {
 Ciphertext CKKSEvaluator::poly_eval(Ciphertext x, vector<Plaintext> coeff) {
   // cout << "Initial depth " <<
   // context->get_context_data(x.parms_id())->chain_index() << "\n"; x^2
+
   Ciphertext x_2;
   evaluator->square(x, x_2);
   evaluator->relinearize_inplace(x_2, *relin_keys);
@@ -157,11 +161,6 @@ Ciphertext CKKSEvaluator::poly_eval(Ciphertext x, vector<Plaintext> coeff) {
   evaluator->rescale_to_next_inplace(sum_5_7);
 
   // c7*x^7 + c5*x^5 + c3*x^3 + c1*x
-  // x.scale() = scale;
-  // x_3.scale() = scale;
-  // x_5.scale() = scale;
-  // x_7.scale() = scale;
-
   new_x.scale() = scale;
   new_x3.scale() = scale;
   sum_5_7.scale() = scale;
@@ -171,13 +170,6 @@ Ciphertext CKKSEvaluator::poly_eval(Ciphertext x, vector<Plaintext> coeff) {
 
   evaluator->add_inplace(sum_5_7, new_x);
   evaluator->add_inplace(sum_5_7, new_x3);
-
-  // evaluator->mod_switch_to_inplace(x, x_7.parms_id());
-  // evaluator->mod_switch_to_inplace(x_3, x_7.parms_id());
-  // evaluator->mod_switch_to_inplace(x_5, x_7.parms_id());
-  // evaluator->add_inplace(x, x_3);
-  // evaluator->add_inplace(x, x_5);
-  // evaluator->add_inplace(x, x_7);
 
   // cout << "Final depth " <<
   // context->get_context_data(x.parms_id())->chain_index() << "\n";

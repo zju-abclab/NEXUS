@@ -1,9 +1,13 @@
 #include "argmax.h"
 
+#include <chrono>
+#include <iostream>
+#include <vector>
+
+using namespace chrono;
+
 void ArgmaxEvaluator::argmax(Ciphertext &x, Ciphertext &res, int len) {
   // TODO: Assert len is << N, and a power of 2
-
-  auto start = high_resolution_clock::now();
 
   Ciphertext tmp, a, b, sign, a_plus_b, a_minus_b, a_minus_b_sgn;
   Plaintext one, half;

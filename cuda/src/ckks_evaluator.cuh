@@ -1,4 +1,5 @@
 #pragma once
+
 #include <complex>
 
 #include "phantom.h"
@@ -108,20 +109,6 @@ class Encryptor {
 
 //   inline void encrypt(PhantomPlaintext &plain, PhantomCiphertext &ct) {
 //     encryptor->encrypt_symmetric(*context, plain, ct);
-//   }
-
-//   inline void encrypt_zero(PhantomCiphertext &ct, size_t chain_index) {
-//     const phantom::util::cuda_stream_wrapper &stream_wrapper = *phantom::util::global_variables::default_stream;
-//     const auto &stream = stream_wrapper.get_stream();
-
-//     ct.set_correction_factor(1);
-//     ct.set_scale(1.0);
-//     ct.SetNoiseScaleDeg(1);
-
-//     auto prng_seed_a = phantom::util::make_cuda_auto_ptr<uint8_t>(phantom::util::global_variables::prng_seed_byte_count, stream);
-//     random_bytes(prng_seed_a.get(), phantom::util::global_variables::prng_seed_byte_count, stream);
-
-//     encryptor->encrypt_zero_symmetric(*context, ct, prng_seed_a.get(), context->get_first_index(), true, stream);
 //   }
 // };
 

@@ -1,4 +1,3 @@
-#include <chrono>
 #include <random>
 
 #include "bootstrapping/Bootstrapper.cuh"
@@ -6,7 +5,6 @@
 
 using namespace std;
 using namespace phantom;
-using namespace chrono;
 
 void random_real(vector<double> &vec, size_t size) {
   random_device rn;
@@ -148,7 +146,7 @@ int main() {
 
   double mean_err = 0;
   for (long i = 0; i < sparse_slots; i++) {
-    if (i < 10) std::cout << before[i] << " <----> " << after[i] << endl;
+    // if (i < 10) std::cout << before[i] << " <----> " << after[i] << endl;
     mean_err += abs(before[i] - after[i]);
   }
   mean_err /= sparse_slots;

@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "ckks_evaluator.cuh"
 #include "phantom.h"
 #include "utils.cuh"
@@ -36,7 +38,6 @@ void CKKSEvaluator::print_decrypted_ct(PhantomCiphertext &ct, int num) {
 }
 
 vector<double> CKKSEvaluator::init_vec_with_value(double value) {
-  // std::vector<double> vec(encoder.message_length(), value);
   std::vector<double> vec(encoder.slot_count(), value);
   return vec;
 }
@@ -89,13 +90,6 @@ void CKKSEvaluator::re_encrypt(PhantomCiphertext &ct) {
     evaluator.mod_switch_to_next_inplace(ct);
   }
 
-  // vector<seal_byte> data;
-  // data.resize(ct.save_size(compr_mode_type::zstd));
-  // comm += ct.save(data.data(), data.size(), compr_mode_type::zstd);
-  // round++;
-  // cout << "Communication cost:  " <<
-  // ct.save(data.data(),data.size(),compr_mode_type::zstd) << " bytes" << endl;
-
   PhantomPlaintext temp;
   vector<double> v;
   decryptor.decrypt(ct, temp);
@@ -103,13 +97,10 @@ void CKKSEvaluator::re_encrypt(PhantomCiphertext &ct) {
   encoder.encode(v, ct.scale(), temp);
   encryptor.encrypt(temp, ct);
 
-  // data.resize(ct.save_size(compr_mode_type::zstd));
-  // comm += ct.save(data.data(), data.size(), compr_mode_type::zstd);
-
   timer.stop();
   cout << timer.duration() << " milliseconds" << endl;
 
-  // cout << "depth = " <<
+  // cout << "Re-encrypted cipher depth: " <<
   // context.get_context_data(ct.params_id()).chain_depth() << "\n";
 }
 

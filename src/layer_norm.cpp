@@ -1,7 +1,7 @@
 #include "layer_norm.h"
 
-using namespace std;
-using namespace seal;
+#include <iostream>
+#include <vector>
 
 void LNEvaluator::layer_norm(Ciphertext &x, Ciphertext &res, int len) {
   Ciphertext tmp, x2;

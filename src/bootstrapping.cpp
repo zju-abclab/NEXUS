@@ -1,20 +1,14 @@
 #include <NTL/RR.h>
+#include <seal/seal.h>
 
 #include <chrono>
-#include <cmath>
-#include <complex>
-#include <fstream>
 #include <iostream>
 #include <random>
 
 #include "Bootstrapper.h"
-#include "ModularReducer.h"
-#include "Polynomial.h"
 #include "ckks_evaluator.h"
-#include "seal/seal.h"
 
 using namespace std;
-using namespace NTL;
 using namespace seal;
 using namespace chrono;
 
@@ -52,8 +46,6 @@ int main() {
   int log_special_prime = 51;
 
   int secret_key_hamming_weight = 192;
-
-  int log_integer_part = logq - logp - loge + 5;
 
   // Calculation required
   int remaining_level = 16;
