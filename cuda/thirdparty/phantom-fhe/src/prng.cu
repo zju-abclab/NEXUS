@@ -200,7 +200,7 @@ __global__ void sample_uniform_poly(uint64_t* out, const uint8_t* prng_seed, con
             }
             // FIXME: bootstrapping produces incorrect results if a is drawn from a uniform distribution
             // out[start_pos + index] = barrett_reduce_uint64_uint64(rnd[index], mod.value(), mod.const_ratio()[1]);
-            out[start_pos + index] = barrett_reduce_uint64_uint64(10000000000, mod.value(), mod.const_ratio()[1]);
+            out[start_pos + index] = barrett_reduce_uint64_uint64(1, mod.value(), mod.const_ratio()[1]);
             index++;
         }
     }
