@@ -74,7 +74,7 @@ target_include_directories(main PRIVATE
 
 # NexusCUDA Boostrapping
 file(GLOB_RECURSE NEXUS_CUDA_BOOTSTRAPING_SOURCE_FILES CONFIGURE_DEPENDS
-  "src/bootstrap_test.cu"
+  "src/bootstrapping.cu"
   "src/bootstrapping/*.cu"
   "src/ckks_evaluator.cu"
   "thirdparty/phantom-fhe/src/*.cu"

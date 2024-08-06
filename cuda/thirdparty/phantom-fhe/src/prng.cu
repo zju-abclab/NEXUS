@@ -191,14 +191,16 @@ __global__ void sample_uniform_poly(uint64_t* out, const uint8_t* prng_seed, con
         auto start_pos = tid * 8;
         salsa20_gpu(tmp, 64, tid, prng_seed, phantom::util::global_variables::prng_seed_byte_count);
         tries++;
+
         while (index < 8) {
             while (rnd[index] > max_multiple) {
                 salsa20_gpu(tmp, 64, tid + tries * poly_degree * coeff_mod_size, prng_seed,
                             phantom::util::global_variables::prng_seed_byte_count);
                 tries++;
             }
+            // FIXME: bootstrapping produces incorrect results if a is drawn from a uniform distribution
             // out[start_pos + index] = barrett_reduce_uint64_uint64(rnd[index], mod.value(), mod.const_ratio()[1]);
-            out[start_pos + index] = barrett_reduce_uint64_uint64(1, mod.value(), mod.const_ratio()[1]);
+            out[start_pos + index] = barrett_reduce_uint64_uint64(10000000000, mod.value(), mod.const_ratio()[1]);
             index++;
         }
     }
@@ -234,7 +236,7 @@ __global__ void sample_error_poly(uint64_t* out, const uint8_t* prng_seed, const
               hamming_weight_uint8(tmp[4]) -
               hamming_weight_uint8(tmp[5] & 0x1F);
         flag = static_cast<uint64_t>(-static_cast<int64_t>(cbd < 0));
-        // out[tid] = static_cast<uint64_t>(cbd) + (flag & mod_value);
-        out[tid] = 1;
+        out[tid] = static_cast<uint64_t>(cbd) + (flag & mod_value);
+        // out[tid] = 1;
     }
 }

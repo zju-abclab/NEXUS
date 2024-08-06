@@ -43,7 +43,7 @@ target_link_libraries(main PRIVATE ntl gmp m pthread SEAL::seal)
 # Nexus Bootstrapping
 add_executable(
     bootstrapping
-    ${CMAKE_SOURCE_DIR}/src/bootstrap_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/bootstrapping.cpp
     ${CMAKE_SOURCE_DIR}/src/ckks_evaluator.cpp
     ${COMMON_SOURCE_FILES}
     ${BOOTSTRAPPING_SOURCE_FILES}

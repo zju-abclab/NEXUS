@@ -424,7 +424,7 @@ void PhantomSecretKey::gen_secretkey(const PhantomContext &context, const cudaSt
     if (auto sk_hamming_weight = context.key_context_data().parms().secret_key_hamming_weight()) {
 			std::cout << "Generating secret key with hamming weight: " << sk_hamming_weight << std::endl;
 
-	  	// Make device has finished previous kernels
+	  	// Make sure device has finished previous kernels
       cudaStreamSynchronize(s);
 
       // Copy sk data from device to host
@@ -647,9 +647,9 @@ void PhantomSecretKey::ckks_decrypt(const PhantomContext &context, const Phantom
     }
 
     uint64_t *c0 = encrypted.data();
-
     cudaMemcpyAsync(destination.data(), c0, coeff_mod_size * poly_degree * sizeof(uint64_t),
                     cudaMemcpyDeviceToDevice, stream);
+
     uint64_t gridDimGlb = poly_degree * coeff_mod_size / blockDimGlb.x;
     for (size_t i = 1; i <= needed_sk_power; i++) {
         uint64_t *ci = encrypted.data() + i * coeff_mod_size * poly_degree;

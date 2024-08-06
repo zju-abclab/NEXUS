@@ -57,7 +57,7 @@ int main() {
 
   // Calculation required
   int remaining_level = 16;
-  int boot_level = 14;  // Greater than: subsum 1 + coefftoslot 2 + ModReduction 9 + slottocoeff 2
+  int boot_level = 14;  // >= subsum 1 + coefftoslot 2 + ModReduction 9 + slottocoeff 2
   int total_level = remaining_level + boot_level;
 
   vector<int> coeff_bit_vec;
@@ -82,12 +82,6 @@ int main() {
 
   SEALContext context(parms, true, sec_level_type::none);
 
-  // // Load sk
-  // ifstream sk_bytes_in;
-  // sk_bytes_in.open("../bs_sk_bytes", ios::binary);
-  // SecretKey secret_key;
-  // secret_key.unsafe_load(context, sk_bytes_in);
-
   KeyGenerator keygen(context);
   auto secret_key = keygen.secret_key();
   PublicKey public_key;
@@ -95,15 +89,6 @@ int main() {
   RelinKeys relin_keys;
   keygen.create_relin_keys(relin_keys);
   GaloisKeys gal_keys;
-
-  // // Save sk
-  // ofstream sk_bytes_out, sk_out("sk.txt");
-  // sk_bytes_out.open("sk_bytes", ios::binary);
-  // secret_key.save(sk_bytes_out);
-
-  // for (long i = 0; i < secret_key.data().coeff_count(); i++) {
-  //   sk_out << secret_key.data()[i] << endl;
-  // }
 
   CKKSEncoder encoder(context);
   Encryptor encryptor(context, public_key);
@@ -194,8 +179,6 @@ int main() {
 
   mean_err = 0;
   for (long i = 0; i < sparse_slots; i++) {
-    // if (i < 10)
-    //   cout << i << " " << before[i] << "<---->" << after[i] << endl;
     mean_err += abs(before[i] - after[i]);
   }
   mean_err /= sparse_slots;

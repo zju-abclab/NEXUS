@@ -6,7 +6,7 @@
 ## Installing SEAL
 NEXUS uses a modified (bootstrapping-friendly) version of [Microsoft SEAL version 4.1](https://github.com/microsoft/SEAL/tree/4.1.2).
 
-Please install the SEAL library `SEAL-4.1-bs` included as part of this repository (follow the instructions in the above link) before compiling NEXUS.
+Please install the SEAL library `thirdparty/SEAL-4.1-bs` included as part of this repository (follow the instructions in the above link) before compiling NEXUS.
 
 <br/>
 

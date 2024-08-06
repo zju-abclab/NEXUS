@@ -2839,7 +2839,7 @@ void Bootstrapper::modraise_inplace(PhantomCiphertext &cipher) {
   }
 
   // Resize to the full level.
-  cipher.resize(*ckks->context, context_data.chain_index(), 2, stream);
+  cipher.resize(*ckks->context, context_data.chain_index(), stream);
 
   auto ciphertext_size = cipher.size();
   PhantomCiphertext cipher_copy = cipher;

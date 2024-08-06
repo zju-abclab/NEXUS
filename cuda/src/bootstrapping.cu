@@ -40,7 +40,7 @@ int main() {
   int secret_key_hamming_weight = 192;
 
   int remaining_level = 16;
-  int boot_level = 14;  // Greater than: subsum 1 + coefftoslot 2 + ModReduction 9 + slottocoeff 2
+  int boot_level = 14;  // >= subsum 1 + coefftoslot 2 + ModReduction 9 + slottocoeff 2
   int total_level = remaining_level + boot_level;
 
   vector<int> coeff_bit_vec;
