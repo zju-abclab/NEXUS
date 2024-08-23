@@ -1,6 +1,8 @@
 # NEXUS-CUDA
 CUDA implementation of NEXUS, the first non-interactive protocol for secure transformer inference.
 
+<br/>
+
 > [!IMPORTANT]  
 > This is a research project and is not intended for production use.
 

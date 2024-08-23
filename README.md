@@ -30,3 +30,16 @@ This should produce two binary executables inside the `build` directory:
 We also provide a GPU accelerated implementation of NEXUS under the directory `cuda`.
 
 For detailed instructions on how to compile and run NEXUS-CUDA, see [README.md](https://github.com/Kevin-Zh-CS/NEXUS/tree/main/cuda/README.md)
+
+<br/>
+
+## Preprint
+```tex
+@misc{cryptoeprint:2024/136,
+      author = {Jiawen Zhang and Jian Liu and Lipeng He and Xinpeng Yang and Wen-jie Lu and Yinghao Wang and Kejia Chen and Xiaoyang Hou and Kui Ren and Xiaohu Yang},
+      title = {Secure Transformer Inference Made Non-interactive},
+      howpublished = {Cryptology {ePrint} Archive, Paper 2024/136},
+      year = {2024},
+      url = {https://eprint.iacr.org/2024/136}
+}
+```

@@ -286,7 +286,7 @@ void argmax_test() {
   }
   calibration_file.close();
 
-  // Spare input (TODO: create a dedicated encoding function: encode_sparse in ckks evaluator)
+  // Sparse input (TODO: create a dedicated encoding function: encode_sparse in ckks evaluator)
   for (size_t i = 0; i < slot_count; i++) {
     input[i] = argmax_input[i % sparse_slots];
   }
