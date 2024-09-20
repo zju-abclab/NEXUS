@@ -36,7 +36,7 @@ For detailed instructions on how to compile and run NEXUS-CUDA, see [README.md](
 ## Preprint
 ```tex
 @misc{cryptoeprint:2024/136,
-      author = {Jiawen Zhang and Jian Liu and Lipeng He and Xinpeng Yang and Wen-jie Lu and Yinghao Wang and Kejia Chen and Xiaoyang Hou and Kui Ren and Xiaohu Yang},
+      author = {Jiawen Zhang and Xinpeng Yang and Lipeng He and Kejia Chen and Wen-jie Lu and Yinghao Wang and Xiaoyang Hou and Jian Liu and Kui Ren and Xiaohu Yang},
       title = {Secure Transformer Inference Made Non-interactive},
       howpublished = {Cryptology {ePrint} Archive, Paper 2024/136},
       year = {2024},
